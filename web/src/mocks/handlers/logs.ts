@@ -1,5 +1,6 @@
 import { delay, http } from 'msw'
 import { consoleById, consoleSeeds, DOWN_ERROR, isDown } from '../data/consoles'
+import { recordAudit } from '../data/audit'
 import { addLogs, findLog, visibleLogs } from '../data/logs'
 import { fail, guard, latency, ok, page, url } from '../http'
 import { mockConfig } from '../scenarios'
@@ -74,6 +75,15 @@ export const logHandlers = [
       addLogs(c.slug as 'hr', n)
       return { console: ref, ok: true, fetched: n, message: null }
     })
+    recordAudit(
+      g.user,
+      'logs.synced',
+      { type: null, id: null },
+      body.console_id ? (targets[0]?.slug ?? null) : null,
+      {
+        results: results.map((x) => ({ console: x.console.slug, ok: x.ok, fetched: x.fetched })),
+      },
+    )
     return ok({ data: { results } }, 202)
   }),
 ]

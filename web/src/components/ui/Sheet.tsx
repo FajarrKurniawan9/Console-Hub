@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { Dialog } from 'radix-ui'
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 
 /** Side panel for details and edits. Esc and the close button both close it. */
 export function Sheet({
@@ -18,11 +18,22 @@ export function Sheet({
   children: ReactNode
   footer?: ReactNode
 }) {
+  // Panels open from rows/buttons, not a Radix Trigger, so restore focus ourselves.
+  const returnTo = useRef<HTMLElement | null>(null)
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/20" />
         <Dialog.Content
+          onOpenAutoFocus={() => {
+            returnTo.current = document.activeElement as HTMLElement | null
+          }}
+          onCloseAutoFocus={(e) => {
+            if (returnTo.current?.isConnected) {
+              e.preventDefault()
+              returnTo.current.focus()
+            }
+          }}
           className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l bg-bg"
           aria-describedby={description ? undefined : undefined}
         >

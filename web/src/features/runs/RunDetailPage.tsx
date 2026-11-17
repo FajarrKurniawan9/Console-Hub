@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { ErrorState } from '../../components/ErrorState'
-import { PageHeader, Panel, Section } from '../../components/PageHeader'
+import { DetailShell, PageHeader, Panel, Section } from '../../components/PageHeader'
 import { RowsSkeleton } from '../../components/Skeletons'
 import { RunStatusDot } from '../../components/StatusDot'
 import { TimeText } from '../../components/TimeText'
@@ -24,9 +24,18 @@ export function RunDetailPage() {
   const q = useRun(id)
   const [selected, setSelected] = useState<number | null>(null)
 
-  if (q.isPending) return <RowsSkeleton rows={8} label="Memuat eksekusi" />
+  if (q.isPending)
+    return (
+      <DetailShell title="Eksekusi" backTo="/runs" backLabel="Semua eksekusi">
+        <RowsSkeleton rows={8} label="Memuat eksekusi" />
+      </DetailShell>
+    )
   if (q.isError && !q.data)
-    return <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
+    return (
+      <DetailShell title="Eksekusi" backTo="/runs" backLabel="Semua eksekusi">
+        <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
+      </DetailShell>
+    )
   const run = q.data!
   return (
     <div className="flex flex-col gap-6">

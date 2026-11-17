@@ -1,4 +1,5 @@
 import { http } from 'msw'
+import { recordAudit } from '../data/audit'
 import { findProcess, processes } from '../data/processes'
 import { startRun } from '../data/runs'
 import { fail, guard, latency, ok, page, url } from '../http'
@@ -57,6 +58,10 @@ export const processHandlers = [
       return fail('VALIDATION_FAILED', 'Input proses tidak valid.', { fields })
 
     const run = startRun(p, input, { id: g.user.id, name: g.user.name })
+    recordAudit(g.user, 'run.started', { type: 'run', id: run.id }, null, {
+      process: p.name,
+      input,
+    })
     return ok({ data: { id: run.id, status: run.status } }, 202)
   }),
 ]

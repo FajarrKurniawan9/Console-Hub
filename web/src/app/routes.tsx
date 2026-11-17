@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router'
+import { AuditPage } from '../features/audit/AuditPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { ConsoleDetailPage } from '../features/consoles/ConsoleDetailPage'
 import { ConsolesPage } from '../features/consoles/ConsolesPage'
@@ -11,7 +12,7 @@ import { RunsPage } from '../features/runs/RunsPage'
 import { OverviewPage } from '../features/overview/OverviewPage'
 import { AppLayout } from './AppLayout'
 import { RequireAdmin, RequireAuth } from './guards'
-import { NotFoundPage, PendingPage } from './StatusPages'
+import { NotFoundPage } from './StatusPages'
 
 export function AppRoutes() {
   return (
@@ -29,7 +30,7 @@ export function AppRoutes() {
           <Route path="runs" element={<RunsPage />} />
           <Route path="runs/:id" element={<RunDetailPage />} />
           <Route element={<RequireAdmin />}>
-            <Route path="audit" element={<PendingPage title="Audit" phase={5} />} />
+            <Route path="audit" element={<AuditPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>

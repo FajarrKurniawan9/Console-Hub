@@ -1,4 +1,5 @@
 import { http } from 'msw'
+import { recordAudit } from '../data/audit'
 import { findProcess } from '../data/processes'
 import { cancelRun, findRun, isFinal, startRun, visibleRuns } from '../data/runs'
 import { fail, guard, latency, ok, page, url } from '../http'
@@ -55,6 +56,9 @@ export const runHandlers = [
         },
       )
     cancelRun(run)
+    recordAudit(g.user, 'run.canceled', { type: 'run', id: run.id }, null, {
+      process: run.process.name,
+    })
     return ok({ data: structuredClone(run) })
   }),
 
@@ -74,6 +78,11 @@ export const runHandlers = [
       )
     const proc = findProcess(run.process.id)!
     const next = startRun(proc, run.input, { id: g.user.id, name: g.user.name }, run)
+    recordAudit(g.user, 'run.retried', { type: 'run', id: next.id }, null, {
+      process: proc.name,
+      retry_of: run.id,
+      mode: retryMode(run),
+    })
     return ok({ data: { id: next.id, status: next.status } }, 202)
   }),
 ]

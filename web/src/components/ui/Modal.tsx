@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { Dialog } from 'radix-ui'
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 
 export function Modal({
   open,
@@ -15,11 +15,24 @@ export function Modal({
   description: ReactNode
   children: ReactNode
 }) {
+  // Opened from a plain button, not a Radix Trigger, so restore focus ourselves.
+  const returnTo = useRef<HTMLElement | null>(null)
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/30" />
-        <Dialog.Content className="fixed top-[12vh] left-1/2 z-50 flex max-h-[76vh] w-[calc(100%-32px)] max-w-md -translate-x-1/2 flex-col rounded-md border bg-bg shadow-pop">
+        <Dialog.Content
+          onOpenAutoFocus={() => {
+            returnTo.current = document.activeElement as HTMLElement | null
+          }}
+          onCloseAutoFocus={(e) => {
+            if (returnTo.current?.isConnected) {
+              e.preventDefault()
+              returnTo.current.focus()
+            }
+          }}
+          className="fixed top-[12vh] left-1/2 z-50 flex max-h-[76vh] w-[calc(100%-32px)] max-w-md -translate-x-1/2 flex-col rounded-md border bg-bg shadow-pop"
+        >
           <div className="flex items-start justify-between gap-3 border-b px-4 py-3">
             <div className="flex flex-col gap-0.5">
               <Dialog.Title className="font-semibold">{title}</Dialog.Title>

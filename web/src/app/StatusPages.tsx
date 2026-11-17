@@ -27,13 +27,3 @@ export function NotFoundPage() {
     </div>
   )
 }
-
-/** Temporary page for routes built in a later phase. Removed when the phase lands. */
-export function PendingPage({ title, phase }: { title: string; phase: number }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <PageHeader title={title} />
-      <p className="text-muted">Halaman ini belum dibangun (fase {phase}).</p>
-    </div>
-  )
-}

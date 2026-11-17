@@ -1,3 +1,4 @@
+import { auditHandlers } from './audit'
 import { authHandlers } from './auth'
 import { consoleHandlers } from './consoles'
 import { logHandlers } from './logs'
@@ -14,4 +15,5 @@ export const handlers = [
   ...processHandlers,
   ...runHandlers,
   ...resourceHandlers,
+  ...auditHandlers,
 ]

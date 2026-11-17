@@ -31,7 +31,11 @@ export function JsonView({ value, label }: { value: unknown; label?: string }) {
           {copied ? 'Tersalin' : 'Salin'}
         </button>
       </div>
-      <pre className="max-h-96 overflow-auto p-3 font-mono text-xs leading-5 whitespace-pre-wrap break-all">
+      <pre
+        tabIndex={0}
+        aria-label={label ?? 'JSON'}
+        className="max-h-96 overflow-auto p-3 font-mono text-xs leading-5 whitespace-pre-wrap break-all"
+      >
         {value === undefined ? <span className="text-muted">Tidak ada data</span> : text}
       </pre>
     </div>

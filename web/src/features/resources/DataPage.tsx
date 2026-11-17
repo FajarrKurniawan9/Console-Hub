@@ -6,7 +6,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { ErrorState } from '../../components/ErrorState'
 import { PageHeader, Panel } from '../../components/PageHeader'
 import { RowsSkeleton } from '../../components/Skeletons'
-import { ConsoleStatusDot } from '../../components/StatusDot'
+import { ConsoleStatusDot, Dot } from '../../components/StatusDot'
 import { Button } from '../../components/ui/Button'
 import { inputClass } from '../../components/ui/Input'
 import { Table, Td, Th, Tr } from '../../components/ui/Table'
@@ -65,9 +65,7 @@ export function DataPage() {
                   <span className="text-muted">{c.name.replace(/^Web /, '')}</span>
                   {r.label}
                   {c.status === 'down' ? (
-                    <span className="text-xs text-error" aria-label="console mati">
-                      ● mati
-                    </span>
+                    <Dot tone="error" label="mati" className="text-xs text-error" />
                   ) : null}
                 </Tabs.Trigger>
               )),

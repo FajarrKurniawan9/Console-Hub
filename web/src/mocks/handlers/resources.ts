@@ -1,4 +1,5 @@
 import { http } from 'msw'
+import { recordAudit } from '../data/audit'
 import { consoleById, DOWN_ERROR, isDown } from '../data/consoles'
 import { DIVISIONS, RESOURCES, type DataRow } from '../data/resources'
 import { fail, guard, latency, ok, page, url } from '../http'
@@ -100,7 +101,20 @@ export const resourceHandlers = [
     if (Object.keys(fields).length)
       return fail('VALIDATION_FAILED', 'Sebagian field tidak valid.', { fields })
 
+    const changes = Object.fromEntries(
+      Object.keys(input).map((k) => [k, { old: row[k], new: input[k] }]),
+    )
     Object.assign(row, input)
+    recordAudit(
+      g.user,
+      'resource.updated',
+      { type: String(params.key), id: String(row[l.res.key]) },
+      l.seed.slug,
+      {
+        resource: params.key,
+        changes,
+      },
+    )
     if ('division_id' in input)
       row.division = DIVISIONS.find((d) => d.id === input.division_id)!.name
     if ('updated_at' in row) row.updated_at = new Date().toISOString()

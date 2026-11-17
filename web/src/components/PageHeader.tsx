@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import type { ReactNode } from 'react'
 
 export function PageHeader({
@@ -42,4 +43,31 @@ export function Section({
 
 export function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`overflow-hidden rounded-md border bg-bg ${className}`}>{children}</div>
+}
+
+/** Loading / error shell for detail pages: keeps the title and the way back visible. */
+export function DetailShell({
+  title,
+  backTo,
+  backLabel,
+  children,
+}: {
+  title: string
+  backTo: string
+  backLabel: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <PageHeader
+        title={title}
+        meta={
+          <Link to={backTo} className="hover:text-fg">
+            ← {backLabel}
+          </Link>
+        }
+      />
+      <Panel>{children}</Panel>
+    </div>
+  )
 }

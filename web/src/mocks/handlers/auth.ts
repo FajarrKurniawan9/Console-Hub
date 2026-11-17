@@ -1,4 +1,5 @@
 import { http } from 'msw'
+import { recordAudit } from '../data/audit'
 import { PASSWORD, users } from '../data/users'
 import { fail, guard, issueToken, latency, ok, revokeToken, url } from '../http'
 
@@ -15,6 +16,7 @@ export const authHandlers = [
     const user = users.find((u) => u.email === body.email)
     if (!user || body.password !== PASSWORD)
       return fail('UNAUTHENTICATED', 'Email atau sandi salah.')
+    recordAudit(user, 'auth.login', { type: 'user', id: String(user.id) }, null, null)
     return ok({ data: { token: issueToken(user.id), user } })
   }),
 

@@ -3,10 +3,10 @@ import type { RunStep } from '../../lib/schemas'
 import { STEP_STATUS } from '../../lib/status'
 
 const BOX: Record<string, string> = {
-  ok: 'border-ok bg-ok/10',
-  warn: 'border-warn bg-warn/10',
-  error: 'border-error bg-error/10',
-  accent: 'border-accent bg-accent/10',
+  ok: 'border-ok bg-ok/[0.06]',
+  warn: 'border-warn bg-warn/[0.06]',
+  error: 'border-error bg-error/[0.06]',
+  accent: 'border-accent bg-accent/[0.06]',
   muted: 'border-border bg-surface',
 }
 
@@ -48,7 +48,7 @@ export function StepStrip({
                   {meta.label}
                 </span>
               </span>
-              <span className="truncate text-xs text-muted">{s.name}</span>
+              <span className="truncate text-xs">{s.name}</span>
             </button>
           </li>
         )

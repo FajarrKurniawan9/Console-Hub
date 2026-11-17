@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ConsoleChip } from '../../components/ConsoleChip'
 import { ErrorState } from '../../components/ErrorState'
-import { PageHeader, Panel, Section } from '../../components/PageHeader'
+import { DetailShell, PageHeader, Panel, Section } from '../../components/PageHeader'
 import { RowsSkeleton } from '../../components/Skeletons'
 import { Button } from '../../components/ui/Button'
 import { useConsoles } from '../consoles/queries'
@@ -16,9 +16,18 @@ export function ProcessDetailPage() {
   const consoles = useConsoles()
   const [open, setOpen] = useState(false)
 
-  if (q.isPending) return <RowsSkeleton rows={6} label="Memuat proses" />
+  if (q.isPending)
+    return (
+      <DetailShell title="Proses" backTo="/processes" backLabel="Semua proses">
+        <RowsSkeleton rows={6} label="Memuat proses" />
+      </DetailShell>
+    )
   if (q.isError)
-    return <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
+    return (
+      <DetailShell title="Proses" backTo="/processes" backLabel="Semua proses">
+        <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
+      </DetailShell>
+    )
   const p = q.data
   const down = (slug: string) =>
     consoles.data?.some((c) => c.slug === slug && c.status === 'down') ?? false

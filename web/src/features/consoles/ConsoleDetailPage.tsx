@@ -1,7 +1,7 @@
 import { CircleAlert, CircleCheck, PlugZap } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { ErrorState } from '../../components/ErrorState'
-import { PageHeader, Panel, Section } from '../../components/PageHeader'
+import { DetailShell, PageHeader, Panel, Section } from '../../components/PageHeader'
 import { RowsSkeleton } from '../../components/Skeletons'
 import { ConsoleStatusDot } from '../../components/StatusDot'
 import { TimeText } from '../../components/TimeText'
@@ -18,9 +18,18 @@ export function ConsoleDetailPage() {
   const q = useConsole(id)
   const test = useTestConsole(id)
 
-  if (q.isPending) return <RowsSkeleton rows={6} label="Memuat console" />
+  if (q.isPending)
+    return (
+      <DetailShell title="Console" backTo="/consoles" backLabel="Semua console">
+        <RowsSkeleton rows={6} label="Memuat console" />
+      </DetailShell>
+    )
   if (q.isError)
-    return <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
+    return (
+      <DetailShell title="Console" backTo="/consoles" backLabel="Semua console">
+        <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
+      </DetailShell>
+    )
   const c = q.data
   const since = downSince(c)
 
