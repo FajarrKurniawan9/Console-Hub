@@ -1,4 +1,5 @@
 import type { HubProcess, Run, RunStep, StepStatus } from '../../lib/schemas'
+import { retryMode } from '../../lib/runs'
 import { getScenario, mockConfig } from '../scenarios'
 import { consoleBySlug, isDown } from './consoles'
 import { PEOPLE } from './people'
@@ -207,12 +208,12 @@ function schedule(id: string, fn: () => void, ms: number) {
   timers.set(id, [...(timers.get(id) ?? []), t])
 }
 
-const stepDelay = () => (mockConfig.instant ? 0 : 400 + Math.random() * 2100)
+const stepDelay = () => (mockConfig.instantRuns ? 0 : 400 + Math.random() * 2100)
 
 /** Play a run forward over time so 2-second polling sees it move step by step. */
 function simulate(run: Run, proc: HubProcess, from: number) {
   const p = plan(proc, run.input, from)
-  let at = mockConfig.instant ? 0 : 600
+  let at = mockConfig.instantRuns ? 0 : 600
   schedule(
     run.id,
     () => {
@@ -301,9 +302,10 @@ export function startRun(
     retry_of: retryOf?.id ?? null,
     steps: blankSteps(proc),
   }
-  // "Retry from failed step" keeps earlier successful steps as they were.
+  // Same rule as the UI (lib/runs.ts): a compensated run restarts from step 1,
+  // otherwise it resumes at the failed step and keeps earlier successes.
   let from = 1
-  if (retryOf && !proc.compensate_on_failure) {
+  if (retryOf && retryMode(retryOf) === 'from_failed') {
     const failed = retryOf.steps!.find((s) => s.status === 'failed')
     from = failed?.position ?? 1
     for (const s of retryOf.steps!) if (s.position < from) run.steps![s.position - 1] = { ...s }
@@ -329,7 +331,7 @@ export function cancelRun(run: Run) {
 // ---- History: 20 deterministic runs over the last 6 days ----
 
 const r = seeded(4242)
-const SCRIPT: { proc: number; kind: 'ok' | 'stock' | 'timeout' | 'canceled' }[] = [
+const SCRIPT: { proc: number; kind: 'ok' | 'stock' | 'timeout' | 'canceled' | 'comp_failed' }[] = [
   { proc: 1, kind: 'ok' },
   { proc: 2, kind: 'ok' },
   { proc: 1, kind: 'stock' },
@@ -344,7 +346,7 @@ const SCRIPT: { proc: number; kind: 'ok' | 'stock' | 'timeout' | 'canceled' }[] 
   { proc: 1, kind: 'ok' },
   { proc: 2, kind: 'ok' },
   { proc: 3, kind: 'timeout' },
-  { proc: 1, kind: 'stock' },
+  { proc: 2, kind: 'comp_failed' },
   { proc: 1, kind: 'ok' },
   { proc: 2, kind: 'ok' },
   { proc: 3, kind: 'ok' },
@@ -425,7 +427,11 @@ function seedHistory() {
       proc,
       input,
       1,
-      s.kind === 'stock' || s.kind === 'timeout' ? s.kind : undefined,
+      s.kind === 'stock'
+        ? 'stock'
+        : s.kind === 'timeout' || s.kind === 'comp_failed'
+          ? 'timeout'
+          : undefined,
       false,
     )
     for (const tr of p.transitions) {
@@ -438,6 +444,14 @@ function seedHistory() {
       t += d
     }
     for (const c of p.compensations) run.steps![c.pos - 1]!.status = c.status
+    // One historic case where undoing step 1 failed too (HR timed out during compensation).
+    if (s.kind === 'comp_failed') {
+      Object.assign(run.steps![0]!, {
+        status: 'compensation_failed',
+        error:
+          'Kompensasi gagal: Web HR tidak merespons dalam 10 detik (DELETE /v1/employees/E-021). Hapus karyawan secara manual di Web HR.',
+      })
+    }
     run.status = p.failedAt ? 'failed' : 'succeeded'
     run.finished_at = new Date(t + 200).toISOString()
     run.error_summary = p.failedAt && p.failure ? summary(proc, p.failedAt, p.failure) : null

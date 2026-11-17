@@ -44,5 +44,8 @@ export function setScenario(s: Scenario) {
   }
 }
 
-/** Test hook: no artificial latency, faster run simulation. */
-export const mockConfig = { instant: false, speed: 1 }
+/**
+ * Test hooks. `instant`: no artificial HTTP latency. `instantRuns`: runs finish
+ * synchronously-ish (0 ms steps). `speed`: divides step timings when runs are live.
+ */
+export const mockConfig = { instant: false, instantRuns: false, speed: 1 }

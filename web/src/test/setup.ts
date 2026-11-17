@@ -6,6 +6,7 @@ import { server } from '../mocks/node'
 import { mockConfig, setScenario } from '../mocks/scenarios'
 
 mockConfig.instant = true
+mockConfig.instantRuns = true
 
 // jsdom lacks these browser APIs used by sonner and Radix.
 window.matchMedia ??= ((query: string) => ({

@@ -17,7 +17,7 @@ export const overviewHandlers = [
           .length,
         recent_runs: visibleRuns()
           .slice(0, 10)
-          .map(({ steps: _steps, ...r }) => r),
+          .map(({ steps: _steps, ...r }) => structuredClone(r)),
       },
     })
   }),
