@@ -39,3 +39,7 @@ The run list and run detail are designed from the brief's text (§8.6) alone: a 
 9. **Error `CONTRACT_MISMATCH` and `NETWORK`** are client-side codes (not in the contract). They are used when a response fails zod validation or the connection drops.
 10. **Mock login:** `rina@pabrik-sejahtera.id` (admin) and `budi@pabrik-sejahtera.id` (operator), password `konsol123`. A mock token carries the user id, so it survives a page reload.
 11. **Build chunks:** the vendor code is split (react, ui, vendor, mocks) so no chunk goes over 500 kB. The `mocks` chunk only loads when `VITE_USE_MOCKS=true`.
+12. **Editing data: a side panel, not in-row editing.** The brief allows either. A side panel shows all writable fields at once, the per-field 422 errors, and the read-only fields as context. It also works the same with the keyboard.
+13. **`division_id` is shown as the `division` column.** The data carries both; the column shows the division name, and the edit form shows a dropdown of divisions. The division list in the mock is fixed; the real backend should send its options (an idea, see `docs/ideas.md`).
+14. **Client-side validation** only catches obvious mistakes (empty, not a number, below the minimum, multiples of Rp500). The console stays the final authority via 422.
+15. **Stale data:** when a request fails but an earlier page is still cached, the table is shown dimmed with the label "Data terakhir yang berhasil diambil" and the Ubah button is disabled. On a fresh load with no cache, only the ErrorState is shown.
