@@ -1,5 +1,8 @@
 import { Route, Routes } from 'react-router'
 import { LoginPage } from '../features/auth/LoginPage'
+import { ConsoleDetailPage } from '../features/consoles/ConsoleDetailPage'
+import { ConsolesPage } from '../features/consoles/ConsolesPage'
+import { LogsPage } from '../features/logs/LogsPage'
 import { OverviewPage } from '../features/overview/OverviewPage'
 import { AppLayout } from './AppLayout'
 import { RequireAdmin, RequireAuth } from './guards'
@@ -12,8 +15,9 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<OverviewPage />} />
-          <Route path="logs" element={<PendingPage title="Log" phase={2} />} />
-          <Route path="consoles/*" element={<PendingPage title="Console" phase={2} />} />
+          <Route path="logs" element={<LogsPage />} />
+          <Route path="consoles" element={<ConsolesPage />} />
+          <Route path="consoles/:id" element={<ConsoleDetailPage />} />
           <Route path="data" element={<PendingPage title="Data console" phase={3} />} />
           <Route path="processes/*" element={<PendingPage title="Proses" phase={4} />} />
           <Route path="runs/*" element={<PendingPage title="Eksekusi" phase={4} />} />

@@ -20,6 +20,10 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // `const { raw: _raw, ...rest } = x` drops a field on purpose.
+      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
+    },
   },
   {
     // Context providers export their hook next to the provider.

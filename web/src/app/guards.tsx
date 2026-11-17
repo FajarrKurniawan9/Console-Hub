@@ -6,7 +6,13 @@ import { ForbiddenPage } from './StatusPages'
 export function RequireAuth() {
   const { user, isLoading } = useAuth()
   const location = useLocation()
-  if (isLoading) return <RowsSkeleton rows={3} label="Memeriksa sesi" />
+  if (isLoading)
+    return (
+      <div className="mx-auto flex max-w-xl flex-col gap-3 px-4 py-16">
+        <p className="text-dense text-muted">Memeriksa sesi…</p>
+        <RowsSkeleton rows={3} label="Memeriksa sesi" />
+      </div>
+    )
   if (!user)
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
   return <Outlet />

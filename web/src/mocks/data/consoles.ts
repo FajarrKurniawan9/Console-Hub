@@ -54,7 +54,7 @@ export const consoleSeeds: ConsoleSeed[] = [
 ]
 
 // Fixed moment the console went down, so "sejak" stays stable across polls.
-const DOWN_SINCE = new Date(Date.now() - 23 * 60_000).toISOString()
+export const DOWN_SINCE = new Date(Date.now() - 23 * 60_000).toISOString()
 const lastCheck = new Map<string, string>()
 
 export function isDown(slug: string) {
