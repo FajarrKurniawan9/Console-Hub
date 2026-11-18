@@ -276,6 +276,12 @@ Semua endpoint diawali dengan prefix `/api/v1` dan mengembalikan respons terbung
 | `/runs/{id}/retry` | POST | User | Ulangi eksekusi mulai dari langkah gagal |
 | `/audit` | GET | Admin | Audit trail seluruh aksi tulis |
 
+### 📮 Koleksi Postman
+File koleksi Postman siap pakai tersedia di root repositori:
+- [Console_Hub.postman_collection.json](file:///Users/nabilkencana/Latihan%20Strategart/console-hub/Console_Hub.postman_collection.json)
+- Fitur otomatis: Menjalankan request `Login (Admin)` atau `Login (Operator)` otomatis memperbarui variabel `{{bearerToken}}` koleksi untuk semua request berikutnya tanpa perlu copy-paste manual.
+- Mengcover seluruh 8 modul: Authentication, Overview, Consoles, Resources (Atur Data), Logs, Processes, Runs, dan Audit.
+
 ---
 
 ## 🧪 Pengujian & Kualitas

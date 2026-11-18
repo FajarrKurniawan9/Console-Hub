@@ -1,0 +1,835 @@
+{
+  "info": {
+    "_postman_id": "c7a8e2b1-4f90-4826-a0de-98a0d0e6c514",
+    "name": "Console Hub Portal API",
+    "description": "Koleksi API Postman untuk Portal Pengatur Proses Multi-Console (Console Hub).\n\nPrefix default: `{{baseUrl}}` (`http://localhost:8000/api/v1`).\nSetiap request yang membutuhkan autentikasi menggunakan Bearer token (`{{bearerToken}}`).\nMenjalankan request `Login (Admin)` atau `Login (Operator)` secara otomatis menyimpan token ke variabel koleksi `bearerToken`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "bearerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "consoleId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "runId",
+      "value": "6f1c0e52-1234-5678-9abc-def012345678",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearerToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.token) {",
+                  "        pm.collectionVariables.set('bearerToken', json.data.token);",
+                  "        console.log('Bearer token saved successfully as Admin');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@consolehub.test\",\n  \"password\": \"adminpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login sebagai Admin. Token disimpan otomatis ke `{{bearerToken}}`."
+          },
+          "response": []
+        },
+        {
+          "name": "Login (Operator)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.token) {",
+                  "        pm.collectionVariables.set('bearerToken', json.data.token);",
+                  "        console.log('Bearer token saved successfully as Operator');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"operator@consolehub.test\",\n  \"password\": \"operatorpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login sebagai Operator pengguna biasa."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User (Me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Mendapatkan profil user yang sedang login."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Mencabut token autentikasi saat ini."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Overview",
+      "item": [
+        {
+          "name": "Get Overview Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["overview"]
+            },
+            "description": "Ringkasan metrik: status kesehatan tiap console, jumlah log error 24 jam, dan eksekusi run terbaru."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Consoles",
+      "item": [
+        {
+          "name": "List Consoles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consoles",
+              "host": ["{{baseUrl}}"],
+              "path": ["consoles"]
+            },
+            "description": "Mengambil daftar seluruh console terdaftar beserta status kesehatan terakhirnya."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Console Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consoles/{{consoleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["consoles", "{{consoleId}}"]
+            },
+            "description": "Detail console dengan kredensial disamarkan (bertopeng)."
+          },
+          "response": []
+        },
+        {
+          "name": "Test Console Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consoles/{{consoleId}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["consoles", "{{consoleId}}", "test"]
+            },
+            "description": "Menguji konektivitas HTTP ke console secara instan dan mengembalikan status serta latensi (ms)."
+          },
+          "response": []
+        },
+        {
+          "name": "Register New Console (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"gudang-cabang\",\n  \"name\": \"Web Gudang Cabang\",\n  \"base_url\": \"http://localhost:4002\",\n  \"auth_type\": \"bearer\",\n  \"credentials\": {\n    \"username\": \"admin\",\n    \"password\": \"rahasia123\"\n  },\n  \"timezone\": \"UTC\",\n  \"is_active\": true,\n  \"config\": {\n    \"login\": {\n      \"path\": \"/auth/login\",\n      \"method\": \"POST\",\n      \"token_path\": \"access_token\",\n      \"ttl_seconds\": 300\n    },\n    \"health\": {\n      \"path\": \"/health\",\n      \"requires_auth\": false\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/consoles",
+              "host": ["{{baseUrl}}"],
+              "path": ["consoles"]
+            },
+            "description": "Mendaftarkan konfigurasi console baru (Khusus Admin)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Console (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Web Gudang Utama Updated\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/consoles/{{consoleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["consoles", "{{consoleId}}"]
+            },
+            "description": "Mengubah data atau konfigurasi console (Khusus Admin)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Console (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consoles/{{consoleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["consoles", "{{consoleId}}"]
+            },
+            "description": "Menghapus console dari portal (Khusus Admin)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Atur Data (Resources)",
+      "item": [
+        {
+          "name": "List Available Resources",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consoles/{{consoleId}}/resources",
+              "host": ["{{baseUrl}}"],
+              "path": ["consoles", "{{consoleId}}", "resources"]
+            },
+            "description": "Daftar sumber data operasional yang dapat dilihat/diubah pada console ini."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Resource Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consoles/2/resources/items?page=1&per_page=10&q=",
+              "host": ["{{baseUrl}}"],
+              "path": ["consoles", "2", "resources", "items"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                },
+                {
+                  "key": "q",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Membaca data operasional dari console eksternal (contoh master barang di Gudang)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Resource Data (writable_fields)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fields\": {\n    \"price_idr\": 135000\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/consoles/3/resources/prices/SKU-BJ-002",
+              "host": ["{{baseUrl}}"],
+              "path": ["consoles", "3", "resources", "prices", "SKU-BJ-002"]
+            },
+            "description": "Mengubah satu data operasional di console target. Hanya field yang terdaftar di writable_fields yang diizinkan."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Logs",
+      "item": [
+        {
+          "name": "Get Combined Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/logs?limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25"
+                }
+              ]
+            },
+            "description": "Mengambil log gabungan yang telah diseragamkan ke UTC (terbaru duluan)."
+          },
+          "response": []
+        },
+        {
+          "name": "Filter Logs (Console, Level, Time)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/logs?console_id=1&level=warn&from=2026-11-17T00:00:00Z&to=2026-11-18T23:59:59Z&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "console_id",
+                  "value": "1"
+                },
+                {
+                  "key": "level",
+                  "value": "warn"
+                },
+                {
+                  "key": "from",
+                  "value": "2026-11-17T00:00:00Z"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-18T23:59:59Z"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Filter log berdasarkan console, level log, rentang waktu, atau kata kunci pencarian."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Log Detail (with Raw)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/logs/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs", "1"]
+            },
+            "description": "Mengambil satu entri log lengkap dengan payload data mentah (`raw` JSON)."
+          },
+          "response": []
+        },
+        {
+          "name": "Trigger Log Sync",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"console_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/logs/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs", "sync"]
+            },
+            "description": "Menarik log terbaru secara instan (opsional parameter `console_id`)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Processes",
+      "item": [
+        {
+          "name": "List Processes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/processes",
+              "host": ["{{baseUrl}}"],
+              "path": ["processes"]
+            },
+            "description": "Daftar definisi proses lintas console."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Process Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/processes/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["processes", "1"]
+            },
+            "description": "Detail alur proses beserta urutan langkah-langkahnya."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Process (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pesanan produksi baru\",\n  \"description\": \"Buat pesanan, reservasi stok, mulai pengerjaan\",\n  \"compensate_on_failure\": true,\n  \"input_schema\": {\n    \"customer\": {\n      \"type\": \"string\",\n      \"required\": true,\n      \"label\": \"Pelanggan\"\n    },\n    \"sku\": {\n      \"type\": \"string\",\n      \"required\": true,\n      \"label\": \"SKU barang jadi\"\n    },\n    \"qty\": {\n      \"type\": \"integer\",\n      \"required\": true,\n      \"min\": 1,\n      \"label\": \"Jumlah\"\n    }\n  },\n  \"steps\": [\n    {\n      \"position\": 1,\n      \"name\": \"Buat pesanan di Produksi\",\n      \"console\": \"produksi\",\n      \"method\": \"POST\",\n      \"path\": \"/orders\",\n      \"body\": {\n        \"customer\": \"{{input.customer}}\",\n        \"lines\": [\n          {\n            \"sku\": \"{{input.sku}}\",\n            \"qty\": \"{{input.qty}}\"\n          }\n        ]\n      },\n      \"expect_status\": [201],\n      \"timeout_seconds\": 10,\n      \"max_retries\": 0,\n      \"on_failure\": \"stop\",\n      \"compensation\": {\n        \"method\": \"PATCH\",\n        \"path\": \"/orders/{{steps.1.response.body.order_no}}/status\",\n        \"body\": {\n          \"status\": \"DIBATALKAN\"\n        }\n      }\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/processes",
+              "host": ["{{baseUrl}}"],
+              "path": ["processes"]
+            },
+            "description": "Mendaftarkan definisi proses baru beserta langkah dan kompensasinya (Khusus Admin)."
+          },
+          "response": []
+        },
+        {
+          "name": "Execute / Run Process",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 202) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.id) {",
+                  "        pm.collectionVariables.set('runId', json.data.id);",
+                  "        console.log('runId set to: ' + json.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"input\": {\n    \"customer\": \"PT Maju Jaya\",\n    \"sku\": \"SKU-BJ-001\",\n    \"qty\": 10\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/processes/1/runs",
+              "host": ["{{baseUrl}}"],
+              "path": ["processes", "1", "runs"]
+            },
+            "description": "Menjalankan proses dengan input. Mengembalikan HTTP 202 Accepted dan id eksekusi (otomatis disimpan ke `{{runId}}`)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Runs (Eksekusi)",
+      "item": [
+        {
+          "name": "List Process Runs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/runs?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["runs"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Mengambil riwayat eksekusi proses."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Run Detail & Step Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/runs/{{runId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["runs", "{{runId}}"]
+            },
+            "description": "Melihat detail eksekusi proses dan status tiap langkah secara berkala (dipolling tiap 2 detik di UI)."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Active Run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/runs/{{runId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["runs", "{{runId}}", "cancel"]
+            },
+            "description": "Membatalkan eksekusi proses yang berstatus queued atau running."
+          },
+          "response": []
+        },
+        {
+          "name": "Retry Run from Failed Step",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/runs/{{runId}}/retry",
+              "host": ["{{baseUrl}}"],
+              "path": ["runs", "{{runId}}", "retry"]
+            },
+            "description": "Mengulang eksekusi yang gagal mulai dari langkah yang mengalami kegagalan."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. Audit Trail",
+      "item": [
+        {
+          "name": "List Audit Events (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit?limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25"
+                }
+              ]
+            },
+            "description": "Melihat catatan audit seluruh aktivitas tulis dan eksekusi (Khusus Admin)."
+          },
+          "response": []
+        },
+        {
+          "name": "Filter Audit Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit?action=resource.updated&console_id=2",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "resource.updated"
+                },
+                {
+                  "key": "console_id",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": "Menyaring catatan audit berdasarkan pola objek.aksi (contoh: run.started, resource.updated, console.created)."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
