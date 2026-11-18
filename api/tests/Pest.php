@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -32,6 +33,16 @@ pest()->extend(TestCase::class)
 expect()->extend('toBeOne', function () {
     return $this->toBe(1);
 });
+
+/**
+ * Assert a response carries the API error envelope with the given code.
+ */
+function assertApiError(TestResponse $response, int $status, string $code): void
+{
+    $response->assertStatus($status)
+        ->assertJsonStructure(['error' => ['code', 'message', 'console', 'fields', 'details']])
+        ->assertJsonPath('error.code', $code);
+}
 
 /*
 |--------------------------------------------------------------------------
