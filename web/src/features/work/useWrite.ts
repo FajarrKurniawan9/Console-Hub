@@ -2,9 +2,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ApiError, newIdempotencyKey, toApiError } from '../../lib/api/client'
+import { CONSOLE_CODES } from '../../lib/errors'
 import type { Refusal, TxState } from '../../lib/api/schemas'
 import { isFinal, sendWrite, txState, type WriteCall } from '../../lib/api/work'
 import { useIsAdminView } from '../../lib/permissions'
+import { useTrailSlot } from '../../components/console-trail/useTransactionTrail'
 
 const POLL_MS = 2000
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -44,6 +46,7 @@ const REFUSALS = (e: ApiError): Refusal[] => {
 export function useWrite() {
   const qc = useQueryClient()
   const admin = useIsAdminView()
+  const trail = useTrailSlot()
   const [outcome, setOutcome] = useState<WriteOutcome>({ kind: 'idle' })
   // Same intent (same call body) keeps its key across retries.
   const intent = useRef<{ sig: string; key: string } | null>(null)
@@ -57,6 +60,12 @@ export function useWrite() {
     setOutcome({ kind: 'saving' })
     try {
       const res = await sendWrite(call, intent.current.key)
+      const version = (res.entity as { version?: unknown } | undefined)?.version
+      // "Jejak 3 console": shown above the list from now on; it polls a 202 by itself.
+      trail?.show({
+        txId: res.transaction.id,
+        version: typeof version === 'number' ? version : undefined,
+      })
       if (res.transaction.state !== 'committed') {
         setOutcome({ kind: 'finishing', txId: res.transaction.id })
         const end = await poll(res.transaction.id)
@@ -86,6 +95,11 @@ export function useWrite() {
       const e = toApiError(err)
       // Refused, conflict and validation are final answers: a new attempt is a new intent.
       if (e.status >= 400 && e.status < 500 && e.code !== 'RATE_LIMITED') intent.current = null
+      // Refused or console down: the trail shows which consoles answered what.
+      if (e.code === 'TRANSACTION_REFUSED' || CONSOLE_CODES.includes(e.code)) {
+        const txId = typeof e.details?.tx_id === 'string' ? e.details.tx_id : null
+        trail?.show({ txId, failure: e.message })
+      }
       if (e.code === 'TRANSACTION_REFUSED') {
         setOutcome({
           kind: 'refused',

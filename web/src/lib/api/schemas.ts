@@ -154,6 +154,8 @@ export const verifyResult = z.object({
     z.object({
       console: z.object({ slug: z.string(), name: z.string() }),
       version: z.number().nullable(),
+      // Assumed, optional (Update 1): the console's content checksum, null when missing/unreachable.
+      checksum: z.string().nullable().optional(),
       status: z.enum(['match', 'missing', 'version_mismatch', 'checksum_mismatch', 'unreachable']),
     }),
   ),

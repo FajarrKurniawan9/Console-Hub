@@ -15,6 +15,9 @@ import { duration } from '../../../lib/format'
 import { useCan } from '../../../lib/permissions'
 import { DECISION, decisionVerb, opLabel, PREPARE, txDuration } from './labels'
 import { ParticipantStrip } from './ParticipantStrip'
+import { TrailRows } from '../../../components/console-trail/ConsoleTrailAdmin'
+import { TrailFrame } from '../../../components/console-trail/TrailFrame'
+import { trailSummary } from '../../../components/console-trail/useTransactionTrail'
 import { useConsoles } from '../consoles/queries'
 import { useResolve, useTransaction } from './queries'
 
@@ -95,6 +98,10 @@ export function TransactionDetailPage() {
       <Section title="Fase per console">
         <ParticipantStrip tx={t} />
       </Section>
+
+      <TrailFrame title="Jejak 3 console" tone={trailSummary(t).tone}>
+        <TrailRows tx={t} />
+      </TrailFrame>
 
       <Section title="Detail per console">
         <Panel>

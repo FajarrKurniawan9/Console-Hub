@@ -17,6 +17,7 @@ import { PesananPage } from '../features/work/pesanan/PesananPage'
 import { UserHomePage } from '../features/work/UserHomePage'
 import type { Permission } from '../lib/api/schemas'
 import { isAdminView } from '../lib/permissions'
+import { TrailContext, useTrailState } from '../components/console-trail/useTransactionTrail'
 import { AdminLayout } from './AdminLayout'
 import { RequireAuth, RequirePermission } from './guards'
 import { NotFoundPage } from './StatusPages'
@@ -25,7 +26,12 @@ import { UserLayout } from './UserLayout'
 /** Shell is picked from `me`: `admin.dashboard.view` → Admin IT, otherwise User. */
 function Shell() {
   const { user } = useAuth()
-  return isAdminView(user) ? <AdminLayout /> : <UserLayout />
+  const trail = useTrailState()
+  return (
+    <TrailContext value={trail}>
+      {isAdminView(user) ? <AdminLayout /> : <UserLayout />}
+    </TrailContext>
+  )
 }
 
 function Home() {

@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Boxes, ClipboardList, UsersRound, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { ConsoleTrail } from '../../components/console-trail/ConsoleTrail'
+import { useTrailSlot } from '../../components/console-trail/useTransactionTrail'
 import { EmptyState } from '../../components/EmptyState'
 import { ErrorState } from '../../components/ErrorState'
 import { PageHeader, Panel, Section } from '../../components/PageHeader'
@@ -32,6 +34,7 @@ export function UserHomePage() {
   const can = useCan()
   const qc = useQueryClient()
   const [creating, setCreating] = useState(false)
+  const slot = useTrailSlot()
   const open = useQuery({
     queryKey: [...workKeys.all('orders'), 'home'],
     queryFn: () => listOf('orders', { status: 'ANTRE', limit: 10 }),
@@ -52,6 +55,10 @@ export function UserHomePage() {
           ) : null
         }
       />
+
+      {slot?.trail ? (
+        <ConsoleTrail key={slot.trail.key} trail={slot.trail} onClose={slot.close} />
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
         {can('pesanan.view') ? (

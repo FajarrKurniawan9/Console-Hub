@@ -33,7 +33,8 @@ describe('Transaksi', () => {
       expect.stringMatching(/^Gudang.*Prepare.*menolak/),
       expect.stringMatching(/^Produksi.*Prepare.*setuju/),
     ])
-    expect(screen.getByText('INSUFFICIENT_STOCK', { selector: 'span' })).toBeInTheDocument()
+    // Once in the per-console details, once in the read-only trail.
+    expect(screen.getAllByText('INSUFFICIENT_STOCK', { selector: 'span' })).toHaveLength(2)
     expect(screen.getByText('Garis waktu')).toBeInTheDocument()
   })
 

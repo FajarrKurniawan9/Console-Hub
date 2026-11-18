@@ -94,20 +94,35 @@ function rowsOf(type: EntityType): { id: string; version: number; label: string 
 export function verify(type: EntityType, id: string): VerifyResult | undefined {
   const row = rowsOf(type).find((r) => r.id === id)
   if (!row) return undefined
+  const sum = checksum(`${type}:${row.id}:${row.version}:${row.label}`)
   const consoles = SLUGS.map((slug) => {
     const c = { slug, name: consoleBySlug(slug)!.name }
-    if (isDown(slug)) return { console: c, version: null, status: 'unreachable' as const }
+    if (isDown(slug))
+      return { console: c, version: null, checksum: null, status: 'unreachable' as const }
     const d = liveDrifts().find(
       (x) => x.entity_type === type && x.entity_id === id && x.console === slug,
     )
-    if (!d) return { console: c, version: row.version, status: 'match' as const }
+    if (!d) return { console: c, version: row.version, checksum: sum, status: 'match' as const }
+    const version = d.lag === null ? null : row.version + d.lag
     return {
       console: c,
-      version: d.lag === null ? null : row.version + d.lag,
+      version,
+      checksum: version === null ? null : checksum(`${type}:${row.id}:${version}:${slug}:stale`),
       status: d.kind,
     }
   })
   return { in_sync: consoles.every((c) => c.status === 'match'), consoles }
+}
+
+/** Deterministic hex digest for the mock (two FNV-1a passes). */
+function checksum(text: string) {
+  let a = 0x811c9dc5
+  let b = 0x01000193
+  for (let i = 0; i < text.length; i++) {
+    a = Math.imul(a ^ text.charCodeAt(i), 0x01000193) >>> 0
+    b = Math.imul(b ^ text.charCodeAt(text.length - 1 - i), 0x811c9dc5) >>> 0
+  }
+  return a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0')
 }
 
 // ---- Checks and findings ----

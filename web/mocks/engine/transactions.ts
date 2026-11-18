@@ -28,6 +28,9 @@ const FINAL = ['committed', 'aborted'] as const
 const now = () => new Date().toISOString()
 const wait = (min = 300, max = 1500) =>
   delay(mockConfig.instantTx ? 0 : min + Math.random() * (max - min))
+/** `slow`: Gudang (already the slow console) answers 2–3.5 s later; the others stay normal. */
+const slowFor = (slug: ConsoleSlug) =>
+  getScenario() === 'slow' && slug === 'gudang' ? wait(2000, 3500) : wait()
 
 /** A row held by a transaction that has not finished (needs_attention still holds it). */
 export function isLocked(entityType: string, entityId: string) {
@@ -124,7 +127,7 @@ export async function runWrite<E>(spec: WriteSpec<E>): Promise<Response> {
   const refusals = spec.refusals()
   await Promise.all(
     tx.participants.map(async (p) => {
-      await wait()
+      await slowFor(p.console.slug)
       p.attempts = 1
       const slug = p.console.slug
       if (isDown(slug)) {
@@ -190,7 +193,7 @@ export async function runWrite<E>(spec: WriteSpec<E>): Promise<Response> {
   const commit = async () => {
     await Promise.all(
       tx.participants.map(async (p) => {
-        await wait(getScenario() === 'slow' ? 1500 : 300, getScenario() === 'slow' ? 4000 : 1500)
+        await slowFor(p.console.slug)
         // commit-stuck: Produksi keeps failing its commit until the portal gives up.
         if (stuck && p.console.slug === 'produksi') {
           for (let i = 0; i < 3; i++) {

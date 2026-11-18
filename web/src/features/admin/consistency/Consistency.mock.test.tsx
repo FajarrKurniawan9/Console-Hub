@@ -48,15 +48,17 @@ describe('?verify=all on admin work pages', () => {
     renderApp('/barang', 'admin')
     await userEvent.click(await screen.findByRole('row', { name: /Detail Gula pasir/ }))
     const panel = await screen.findByRole('dialog')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Cek di 3 console' }))
     expect(await within(panel).findByText('Berbeda di Produksi')).toBeInTheDocument()
     expect(panel).toHaveTextContent(/Gudang.*Sama.*v2/)
     expect(panel).toHaveTextContent(/Produksi.*Versi berbeda.*v1/)
   })
 
-  it('an in-sync row says "Sinkron di 3 console"', async () => {
+  it('an in-sync row says "Sama di 3 console"', async () => {
     renderApp('/divisi', 'admin')
     await userEvent.click(await screen.findByRole('row', { name: /Detail divisi HRD/ }))
-    expect(await screen.findByText('Sinkron di 3 console')).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Cek di 3 console' }))
+    expect(await screen.findByText('Sama di 3 console')).toBeInTheDocument()
   })
 
   it('User shell has no detail panel or verify', async () => {

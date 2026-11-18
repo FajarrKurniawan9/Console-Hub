@@ -9,6 +9,8 @@ import { Button } from '../../components/ui/Button'
 import { inputClass } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Spinner } from '../../components/ui/Spinner'
+import { ConsoleTrail } from '../../components/console-trail/ConsoleTrail'
+import { useTrailSlot } from '../../components/console-trail/useTransactionTrail'
 import type { Page } from '../../lib/api/schemas'
 import { number } from '../../lib/format'
 import type { useUrlState } from '../../lib/useUrlState'
@@ -45,6 +47,7 @@ export function ListFrame<T>({
     return () => clearTimeout(t)
   }, [term, q, url])
 
+  const slot = useTrailSlot()
   const rows = query.data?.pages.flatMap((p) => p.data) ?? []
   const total = query.data?.pages[0]?.meta.total
   const filtered = !!(q || url.get('status'))
@@ -56,6 +59,9 @@ export function ListFrame<T>({
         meta={total != null ? `${number(total)} ${noun}` : undefined}
         actions={primary}
       />
+      {slot?.trail ? (
+        <ConsoleTrail key={slot.trail.key} trail={slot.trail} onClose={slot.close} />
+      ) : null}
       <div role="search" aria-label={`Cari ${noun}`} className="flex flex-wrap items-center gap-2">
         <label className="relative flex min-w-56 flex-1 items-center sm:max-w-80">
           <span className="sr-only">Cari {noun}</span>
