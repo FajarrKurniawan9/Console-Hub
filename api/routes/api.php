@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\AuditController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConsoleController;
 use App\Http\Controllers\Api\LogController;
 use App\Http\Controllers\Api\OverviewController;
+use App\Http\Controllers\Api\ResourceController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -25,10 +27,16 @@ Route::prefix('v1')->group(function () {
         Route::post('logs/sync', [LogController::class, 'sync']);
         Route::get('logs/{log}', [LogController::class, 'show'])->whereNumber('log');
 
+        Route::get('consoles/{console}/resources', [ResourceController::class, 'index']);
+        Route::get('consoles/{console}/resources/{key}', [ResourceController::class, 'show']);
+        Route::patch('consoles/{console}/resources/{key}/{recordId}', [ResourceController::class, 'update']);
+
         Route::middleware('admin')->group(function () {
             Route::post('consoles', [ConsoleController::class, 'store']);
             Route::patch('consoles/{console}', [ConsoleController::class, 'update']);
             Route::delete('consoles/{console}', [ConsoleController::class, 'destroy']);
+
+            Route::get('audit', AuditController::class);
         });
     });
 });
