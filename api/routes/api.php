@@ -7,11 +7,13 @@ use App\Http\Controllers\Api\OverviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
-    Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::prefix('auth')->group(function () {
+        Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
+        Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+        Route::get('me', [AuthController::class, 'me'])->middleware('auth:sanctum');
+    });
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::post('auth/logout', [AuthController::class, 'logout']);
-        Route::get('auth/me', [AuthController::class, 'me']);
 
         Route::get('overview', OverviewController::class);
 
