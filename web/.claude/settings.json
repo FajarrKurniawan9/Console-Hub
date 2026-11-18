@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "pr-review-toolkit@anthropic-plugin-directory": true
+  }
+}
