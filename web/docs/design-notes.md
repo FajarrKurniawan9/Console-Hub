@@ -19,34 +19,32 @@ The original screenshots are in `../docs/refrences/` (`image*.png`, generic name
 
 **Missing** (no matching file in the folder, so nothing was invented from them):
 
-- `n8n-executions.png`: missing.
-- `n8n-execution-detail.png`: missing.
-- `airflow-grid.png`: missing.
+- `n8n-executions.png`, `n8n-execution-detail.png`: missing. The transaction list and detail are designed from the brief's text (§8.5).
+- `airflow-grid.png`: missing. The three-box console strip on a transaction is designed from the text.
 - `backstage-catalog.png`: missing.
+- `linear-or-notion-simple.png` (brief v3, the User view reference): missing. The User shell follows the brief's text (§4 and §8.2): roomy, top navigation, one primary button per page.
 
-The run list and run detail are designed from the brief's text (§8.6) alone: a row per run with status, start time, duration, and actions; a horizontal step strip; a vertical step list with request and response.
+## Brief v3 (replaces v2)
 
-## Deviations from the brief and why
+v3 replaces the v2 product (processes, runs, the resource editor) with: two roles, RBAC, the work screens Karyawan/Divisi/Barang/Pesanan, and writes as transactions across three consoles. The v2 features and their mock data were deleted. Notes from v2 that no longer apply were removed; git history has them.
 
-1. **React 19, not 18.** The scaffold already had React 19 + React Router 8. Every library in the stack supports it. Downgrading would add work with no benefit to the user.
-2. **shadcn/ui without the CLI.** The components in `components/ui/` are thin wrappers over `radix-ui` (already installed), written in the shadcn style (copy-paste code, styled with the tokens). The CLI would only add `cn`/`cva` files and dependencies we don't need.
-3. **axios kept** inside `lib/api.ts`, since it was already a dependency. All responses are validated with zod there.
-4. **Folder:** the brief says "from an empty folder", but `web/` already held an unfinished portal (GitHub/Weather/Crypto). The user chose: keep the tooling and replace the product.
-5. **Token storage:** memory + `sessionStorage`, as the brief says (the old code used `localStorage`).
-6. **Login page** at `/login` (the old code used `/masuk`). URLs stay in English, since the brief lists `/logs`, `/data`, and so on.
-7. **Register** is gone: it is not in the brief's API contract.
-8. **`Console.down_since` (assumed, optional).** The global bar has to say "tidak dapat dihubungi sejak 14:32", but the contract only has `last_checked_at`. The mock sends `down_since`; if the backend doesn't send it, the UI falls back to `last_checked_at`.
-9. **Error `CONTRACT_MISMATCH` and `NETWORK`** are client-side codes (not in the contract). They are used when a response fails zod validation or the connection drops.
-10. **Mock login:** `rina@pabrik-sejahtera.id` (admin) and `budi@pabrik-sejahtera.id` (operator), password `konsol123`. A mock token carries the user id, so it survives a page reload.
-11. **Build chunks:** the vendor code is split (react, ui, vendor, mocks) so no chunk goes over 500 kB. The `mocks` chunk only loads when `VITE_USE_MOCKS=true`.
-12. **Editing data: a side panel, not in-row editing.** The brief allows either. A side panel shows all writable fields at once, the per-field 422 errors, and the read-only fields as context. It also works the same with the keyboard.
-13. **`division_id` is shown as the `division` column.** The data carries both; the column shows the division name, and the edit form shows a dropdown of divisions. The division list in the mock is fixed; the real backend should send its options (an idea, see `docs/ideas.md`).
-14. **Client-side validation** only catches obvious mistakes (empty, not a number, below the minimum, multiples of Rp500). The console stays the final authority via 422.
-15. **Stale data:** when a request fails but an earlier page is still cached, the table is shown dimmed with the label "Data terakhir yang berhasil diambil" and the Ubah button is disabled. On a fresh load with no cache, only the ErrorState is shown.
-16. **Retry rule** (`lib/runs.ts`, shared by the UI and the mock): a retry is offered only for `failed` runs. If any step is `compensated`/`compensation_failed`, the earlier work has been undone, so the button is "Jalankan ulang dari awal" (starts from step 1). Otherwise it is "Ulangi dari langkah gagal" (resumes from the failed step; steps that succeeded are not repeated). The backend still decides, and returns 409 when the status doesn't match.
-17. **Failure details** are read from the failed step's `response.body` (`error.details` or `details`). `details.shortages` is shown as a small table (SKU, needed, available, short); other `details` are shown as JSON.
-18. **Polling a run:** `refetchInterval` is 2 s while it isn't final, and stops when the tab is hidden (`refetchIntervalInBackground: false`) and once the run is final. The run list polls every 4 s only while some row is queued/running.
-19. **Running animation:** the dot and the label in the step strip pulse with opacity, and `prefers-reduced-motion` turns it off (the global rule in `tokens.css`).
-20. **Audit:** the contract has no user list endpoint, so the "Pengguna" filter uses the two known mock users. When the backend is ready, replace it with an endpoint or a free-text field. Changes (`details.changes.{field}.{old,new}`) are shown as `old → new`; other actions get a one-line summary plus the raw `details` JSON.
-21. **The 403 for non-admins** is enforced in two places: the Audit menu is hidden and `/audit` shows a 403 page in the client, and the mock backend still returns `FORBIDDEN` if called directly.
-22. **Accessibility:** axe-core (WCAG 2 A/AA) is clean on every screen in both themes, and every token pair passes AA (the lowest is muted on surface in light mode, 4.63:1). Fixes from that pass: the step strip tint went down to 6% so text keeps its contrast, the scrollable JSON `<pre>` can receive focus, and side panels and the dialog return focus to the element that opened them.
+## Deviations and decisions
+
+1. **v3 over the project CLAUDE.md.** CLAUDE.md lists "complex role & permission management" as a non-goal and expects /processes and /runs. The user chose to follow brief v3 (RBAC matrix, transactions) and leave CLAUDE.md unchanged.
+2. **Folder `web/`, not `portal-web/`.** Reworked in place (user's choice). The tooling, tokens, `components/ui`, the API client, and the console/log/audit screens were kept and adapted.
+3. **React 19, not 18.** The scaffold already had React 19 + React Router 8; every library in the stack supports it.
+4. **shadcn/ui without the CLI.** `components/ui/` holds thin wrappers over `radix-ui`, styled with the tokens.
+5. **axios kept** inside `lib/api/client.ts`. All responses are validated with zod (`lib/api/schemas.ts`).
+6. **URLs in Indonesian** per brief v3 (`/console`, `/log`, `/transaksi`, `/konsistensi`, `/karyawan`...), except `/login`, `/rbac`, `/audit` which the brief also uses.
+7. **`AuthUser.role.code` is a `string`**, not `'admin_it' | 'user'`: the RBAC screen can hold more roles (the mock has a third, "User (tanpa buat pesanan)"). The shell is chosen by the `admin.dashboard.view` permission, as the brief says, never by the role code.
+8. **`?verify=all` response shape is assumed** (brief 8.5 names it but section 5 has no type): `consistency: { in_sync, consoles: [{ console, version, status }] }`. To be confirmed with the backend.
+9. **No `ConsoleInfo.down_since`.** The v3 contract does not have it, so "sejak" uses `last_checked_at` (when the portal last saw it down). Less precise; a backend field would fix it.
+10. **`Idempotency-Key`** is added by the client on every POST/PATCH/PUT/DELETE except login/logout. Callers pass the key per user intent, so a retry of the same intent reuses it.
+11. **Client-only error codes** `NETWORK` and `CONTRACT_MISMATCH` (no response; response does not match the schema).
+12. **Error copy per role** (`lib/errors.ts`): Admin IT gets technical copy plus the code and HTTP status; User gets plain sentences and, as the brief says, the API's `error.message` as is. Console names, codes and JSON never appear in the User shell.
+13. **Shell sizes via CSS variables.** `[data-shell='user']` changes the type scale (15/22 px) and control height (40 px); components use `text-dense`, `h-control` and so on, and need no role prop.
+14. **Mock isolation.** All mock code lives in `web/mocks/`. `src/` imports it only in the `// MOCK-ONLY` block of `src/main.tsx` and in tests named `*.mock.test.ts(x)`. The MSW server for Vitest is wired in `mocks/vitest.setup.ts`, not in `src/test/setup.ts`. The scenario panel is mounted by `mocks/browser.ts` and reloads the page on change.
+15. **Login hint removed.** The old login page printed the mock accounts; that would leak mock data into `src/`. The accounts are in the README instead.
+16. **Mock console names** are "HR", "Gudang", "Produksi" (the brief's names), not "Web HR".
+17. **Placeholders during the phases.** Screens of later phases render `app/NotBuiltYet.tsx` ("Layar ini dibangun pada fase N"). It is removed once phase 4 is done.
+18. **Build chunks:** vendor code is split (react, ui, vendor, mocks) so no chunk goes over 500 kB. The `mocks` chunk is only loaded when `VITE_USE_MOCKS=true`.

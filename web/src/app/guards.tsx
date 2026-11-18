@@ -1,6 +1,8 @@
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { RowsSkeleton } from '../components/Skeletons'
 import { useAuth } from '../features/auth/auth'
+import type { Permission } from '../lib/api/schemas'
+import { hasPermission } from '../lib/permissions'
 import { ForbiddenPage } from './StatusPages'
 
 export function RequireAuth() {
@@ -18,7 +20,8 @@ export function RequireAuth() {
   return <Outlet />
 }
 
-export function RequireAdmin() {
+/** Route-level permission check; a direct URL without the permission shows 403. */
+export function RequirePermission({ perm }: { perm: Permission }) {
   const { user } = useAuth()
-  return user?.is_admin ? <Outlet /> : <ForbiddenPage />
+  return hasPermission(user, perm) ? <Outlet /> : <ForbiddenPage />
 }

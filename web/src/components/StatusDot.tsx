@@ -1,11 +1,12 @@
 import clsx from 'clsx'
-import type { ConsoleStatus, LogLevel, RunStatus, StepStatus } from '../lib/schemas'
+import type { ConsoleStatus, LogLevel, OrderStatus, TxState } from '../lib/api/schemas'
 import {
+  ACTIVE_STATUS,
   CONSOLE_STATUS,
-  LOG_LEVEL,
-  RUN_STATUS,
-  STEP_STATUS,
   DOT_CLASS,
+  LOG_LEVEL,
+  ORDER_STATUS,
+  TX_STATE,
   type Tone,
 } from '../lib/status'
 
@@ -40,12 +41,23 @@ export function ConsoleStatusDot({ status }: { status: ConsoleStatus }) {
   return <Dot {...CONSOLE_STATUS[status]} />
 }
 
-export function RunStatusDot({ status }: { status: RunStatus }) {
-  return <Dot {...RUN_STATUS[status]} pulse={status === 'running'} />
+export function TxStateBadge({ state }: { state: TxState }) {
+  const busy = state === 'preparing' || state === 'committing' || state === 'aborting'
+  return (
+    <Dot
+      {...TX_STATE[state]}
+      pulse={busy}
+      className={clsx(state === 'needs_attention' && 'font-semibold')}
+    />
+  )
 }
 
-export function StepStatusDot({ status }: { status: StepStatus }) {
-  return <Dot {...STEP_STATUS[status]} pulse={status === 'running'} />
+export function OrderStatusDot({ status }: { status: OrderStatus }) {
+  return <Dot {...ORDER_STATUS[status]} />
+}
+
+export function ActiveStatusDot({ status }: { status: 'aktif' | 'nonaktif' }) {
+  return <Dot {...ACTIVE_STATUS[status]} />
 }
 
 export function LevelBadge({ level }: { level: LogLevel }) {

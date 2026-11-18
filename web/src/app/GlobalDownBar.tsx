@@ -1,6 +1,6 @@
 import { CircleAlert } from 'lucide-react'
 import { Link } from 'react-router'
-import { downSince, useConsoles } from '../features/consoles/queries'
+import { downSince, useConsoles } from '../features/admin/consoles/queries'
 import { shortTime } from '../lib/format'
 
 /** One thin line per dead console, under the top bar, on every page. */
@@ -20,7 +20,7 @@ export function GlobalDownBar() {
               {since ? ` sejak ${shortTime(since)}` : ''}.
             </span>
             <Link
-              to={`/consoles/${c.id}`}
+              to={`/console/${c.id}`}
               className="ml-auto shrink-0 text-accent underline-offset-4 hover:underline"
             >
               Lihat console

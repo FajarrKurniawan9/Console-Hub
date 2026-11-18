@@ -23,7 +23,8 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/test/setup.ts', './mocks/vitest.setup.ts'],
+    include: ['src/**/*.test.{ts,tsx}', 'mocks/**/*.test.{ts,tsx}'],
     env: { VITE_API_URL: '/api/v1', VITE_USE_MOCKS: 'true' },
   },
 })

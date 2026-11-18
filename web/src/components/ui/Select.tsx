@@ -5,7 +5,7 @@ import type { ComponentProps } from 'react'
 export function Select({ className, ...props }: ComponentProps<'select'>) {
   return (
     <select
-      className={clsx('h-8 rounded-md border bg-bg px-2 text-dense text-fg', className)}
+      className={clsx('h-control rounded-md border bg-bg px-2 text-dense text-fg', className)}
       {...props}
     />
   )

@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import { useId, type ComponentProps } from 'react'
 
 export const inputClass =
-  'h-8 rounded-md border bg-bg px-2.5 text-dense text-fg placeholder:text-muted aria-[invalid=true]:border-error'
+  'h-control rounded-md border bg-bg px-2.5 text-dense text-fg placeholder:text-muted aria-[invalid=true]:border-error'
 
 export function Field({
   label,
@@ -23,7 +23,7 @@ export function Field({
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={clsx(inputClass, 'h-9')}
+        className={inputClass}
         {...props}
       />
       {error ? (

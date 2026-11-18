@@ -1,37 +1,56 @@
 import { Route, Routes } from 'react-router'
-import { AuditPage } from '../features/audit/AuditPage'
+import { AuditPage } from '../features/admin/audit/AuditPage'
+import { ConsoleDetailPage } from '../features/admin/consoles/ConsoleDetailPage'
+import { ConsolesPage } from '../features/admin/consoles/ConsolesPage'
+import { LogsPage } from '../features/admin/logs/LogsPage'
+import { OverviewPage } from '../features/admin/overview/OverviewPage'
+import { useAuth } from '../features/auth/auth'
 import { LoginPage } from '../features/auth/LoginPage'
-import { ConsoleDetailPage } from '../features/consoles/ConsoleDetailPage'
-import { ConsolesPage } from '../features/consoles/ConsolesPage'
-import { LogsPage } from '../features/logs/LogsPage'
-import { ProcessDetailPage } from '../features/processes/ProcessDetailPage'
-import { ProcessesPage } from '../features/processes/ProcessesPage'
-import { DataPage } from '../features/resources/DataPage'
-import { RunDetailPage } from '../features/runs/RunDetailPage'
-import { RunsPage } from '../features/runs/RunsPage'
-import { OverviewPage } from '../features/overview/OverviewPage'
-import { AppLayout } from './AppLayout'
-import { RequireAdmin, RequireAuth } from './guards'
+import { UserHomePage } from '../features/work/UserHomePage'
+import type { Permission } from '../lib/api/schemas'
+import { isAdminView } from '../lib/permissions'
+import { AdminLayout } from './AdminLayout'
+import { RequireAuth, RequirePermission } from './guards'
+import { NotBuiltYet } from './NotBuiltYet'
 import { NotFoundPage } from './StatusPages'
+import { UserLayout } from './UserLayout'
+
+/** Shell is picked from `me`: `admin.dashboard.view` → Admin IT, otherwise User. */
+function Shell() {
+  const { user } = useAuth()
+  return isAdminView(user) ? <AdminLayout /> : <UserLayout />
+}
+
+function Home() {
+  const { user } = useAuth()
+  return isAdminView(user) ? <OverviewPage /> : <UserHomePage />
+}
+
+const guarded = (perm: Permission, path: string, element: React.ReactNode) => (
+  <Route key={path} element={<RequirePermission perm={perm} />}>
+    <Route path={path} element={element} />
+  </Route>
+)
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAuth />}>
-        <Route element={<AppLayout />}>
-          <Route index element={<OverviewPage />} />
-          <Route path="logs" element={<LogsPage />} />
-          <Route path="consoles" element={<ConsolesPage />} />
-          <Route path="consoles/:id" element={<ConsoleDetailPage />} />
-          <Route path="data" element={<DataPage />} />
-          <Route path="processes" element={<ProcessesPage />} />
-          <Route path="processes/:id" element={<ProcessDetailPage />} />
-          <Route path="runs" element={<RunsPage />} />
-          <Route path="runs/:id" element={<RunDetailPage />} />
-          <Route element={<RequireAdmin />}>
-            <Route path="audit" element={<AuditPage />} />
-          </Route>
+        <Route element={<Shell />}>
+          <Route index element={<Home />} />
+          {guarded('karyawan.view', 'karyawan', <NotBuiltYet phase={2} />)}
+          {guarded('divisi.view', 'divisi', <NotBuiltYet phase={2} />)}
+          {guarded('barang.view', 'barang', <NotBuiltYet phase={2} />)}
+          {guarded('pesanan.view', 'pesanan', <NotBuiltYet phase={2} />)}
+          {guarded('admin.consoles.view', 'console', <ConsolesPage />)}
+          {guarded('admin.consoles.view', 'console/:id', <ConsoleDetailPage />)}
+          {guarded('admin.logs.view', 'log', <LogsPage />)}
+          {guarded('admin.transactions.view', 'transaksi', <NotBuiltYet phase={3} />)}
+          {guarded('admin.transactions.view', 'transaksi/:id', <NotBuiltYet phase={3} />)}
+          {guarded('admin.consistency.view', 'konsistensi', <NotBuiltYet phase={4} />)}
+          {guarded('admin.rbac.manage', 'rbac', <NotBuiltYet phase={4} />)}
+          {guarded('admin.audit.view', 'audit', <AuditPage />)}
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

@@ -27,7 +27,13 @@ export default defineConfig([
   },
   {
     // Context providers export their hook next to the provider.
-    files: ['src/lib/**/*.tsx', 'src/test/**', 'src/features/auth/auth.tsx', 'src/app/providers.tsx'],
+    files: [
+      'src/lib/**/*.tsx',
+      'src/test/**',
+      'src/features/auth/auth.tsx',
+      'src/app/providers.tsx',
+      'mocks/**',
+    ],
     rules: { 'react-refresh/only-export-components': 'off' },
   },
 ])

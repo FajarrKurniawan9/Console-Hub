@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router'
 import { Button } from '../../components/ui/Button'
 import { Field } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
-import { ApiError, toApiError } from '../../lib/api'
+import { ApiError, toApiError } from '../../lib/api/client'
 import { describeError } from '../../lib/errors'
 import { useAuth } from './auth'
 
@@ -39,8 +39,9 @@ export function LoginPage() {
 
   let formError: string | null = null
   if (error?.code === 'UNAUTHENTICATED') formError = 'Email atau sandi salah.'
+  else if (error?.code === 'FORBIDDEN') formError = error.message
   else if (error && error.code !== 'VALIDATION_FAILED') {
-    const d = describeError(error)
+    const d = describeError(error, false)
     formError = `${d.title}. ${d.next}`
   }
 
@@ -80,13 +81,6 @@ export function LoginPage() {
             {pending ? 'Memeriksa…' : 'Masuk'}
           </Button>
         </form>
-        {import.meta.env.VITE_USE_MOCKS === 'true' ? (
-          <p className="text-xs text-muted">
-            Mode mock: <span className="font-mono">rina@pabrik-sejahtera.id</span> (admin) atau{' '}
-            <span className="font-mono">budi@pabrik-sejahtera.id</span>, sandi{' '}
-            <span className="font-mono">konsol123</span>.
-          </p>
-        ) : null}
       </div>
     </main>
   )

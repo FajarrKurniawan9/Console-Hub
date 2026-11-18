@@ -1,4 +1,4 @@
-import type { ConsoleStatus, LogLevel, RunStatus, StepStatus } from './schemas'
+import type { ConsoleStatus, LogLevel, OrderStatus, TxState } from './api/schemas'
 
 export type Tone = 'ok' | 'warn' | 'error' | 'muted' | 'accent'
 
@@ -17,22 +17,25 @@ export const CONSOLE_STATUS: Record<ConsoleStatus, { label: string; tone: Tone }
   unknown: { label: 'Belum dicek', tone: 'muted' },
 }
 
-export const RUN_STATUS: Record<RunStatus, { label: string; tone: Tone }> = {
-  queued: { label: 'Antre', tone: 'muted' },
-  running: { label: 'Berjalan', tone: 'accent' },
-  succeeded: { label: 'Berhasil', tone: 'ok' },
-  failed: { label: 'Gagal', tone: 'error' },
-  canceled: { label: 'Dibatalkan', tone: 'muted' },
+export const TX_STATE: Record<TxState, { label: string; tone: Tone }> = {
+  preparing: { label: 'Menyiapkan', tone: 'accent' },
+  prepared: { label: 'Siap', tone: 'accent' },
+  committing: { label: 'Menyelesaikan', tone: 'accent' },
+  committed: { label: 'Berhasil', tone: 'ok' },
+  aborting: { label: 'Membatalkan', tone: 'warn' },
+  aborted: { label: 'Dibatalkan', tone: 'muted' },
+  needs_attention: { label: 'Perlu tindakan', tone: 'error' },
 }
 
-export const STEP_STATUS: Record<StepStatus, { label: string; tone: Tone }> = {
-  pending: { label: 'Menunggu', tone: 'muted' },
-  running: { label: 'Berjalan', tone: 'accent' },
-  succeeded: { label: 'Berhasil', tone: 'ok' },
-  failed: { label: 'Gagal', tone: 'error' },
-  skipped: { label: 'Dilewati', tone: 'muted' },
-  compensated: { label: 'Dikompensasi', tone: 'warn' },
-  compensation_failed: { label: 'Kompensasi gagal', tone: 'error' },
+export const ORDER_STATUS: Record<OrderStatus, { label: string; tone: Tone }> = {
+  ANTRE: { label: 'Antre', tone: 'accent' },
+  SELESAI: { label: 'Selesai', tone: 'ok' },
+  DIBATALKAN: { label: 'Dibatalkan', tone: 'muted' },
+}
+
+export const ACTIVE_STATUS: Record<'aktif' | 'nonaktif', { label: string; tone: Tone }> = {
+  aktif: { label: 'Aktif', tone: 'ok' },
+  nonaktif: { label: 'Nonaktif', tone: 'muted' },
 }
 
 export const LOG_LEVEL: Record<LogLevel, { label: string; tone: Tone }> = {

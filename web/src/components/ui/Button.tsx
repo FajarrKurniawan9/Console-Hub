@@ -20,7 +20,7 @@ export function Button({
     <button
       type={type}
       className={clsx(
-        'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-sm px-3 text-dense font-semibold whitespace-nowrap transition-[color,background-color,opacity] duration-150 disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex h-control shrink-0 items-center justify-center gap-1.5 rounded-sm px-3 text-dense font-semibold whitespace-nowrap transition-[color,background-color,opacity] duration-150 disabled:pointer-events-none disabled:opacity-50',
         variants[variant],
         className,
       )}

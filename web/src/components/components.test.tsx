@@ -1,56 +1,49 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { ApiError } from '../lib/api'
-import { ErrorState } from './ErrorState'
+import { ApiError } from '../lib/api/client'
+import { describeError } from '../lib/errors'
 import { JsonView } from './JsonView'
-import { ConsoleStatusDot, LevelBadge, RunStatusDot } from './StatusDot'
-import { Providers } from '../app/providers'
+import { ConsoleStatusDot, LevelBadge, OrderStatusDot, TxStateBadge } from './StatusDot'
 
 describe('status markers', () => {
   it('always pair the dot with a word', () => {
     render(
       <>
         <ConsoleStatusDot status="down" />
-        <RunStatusDot status="running" />
+        <TxStateBadge state="needs_attention" />
+        <OrderStatusDot status="ANTRE" />
         <LevelBadge level="warn" />
       </>,
     )
-    expect(screen.getByText('Mati')).toBeInTheDocument()
-    expect(screen.getByText('Berjalan')).toBeInTheDocument()
-    expect(screen.getByText('Warn')).toBeInTheDocument()
+    for (const word of ['Mati', 'Perlu tindakan', 'Antre', 'Warn'])
+      expect(screen.getByText(word)).toBeInTheDocument()
   })
 })
 
-describe('ErrorState', () => {
+describe('describeError', () => {
   it.each([
-    ['CONSOLE_TIMEOUT', 504, 'tidak merespons dalam batas waktu'],
-    ['CONSOLE_UNREACHABLE', 503, 'tidak dapat dihubungi'],
-    ['CONSOLE_ERROR', 502, 'mengembalikan error'],
-    ['FORBIDDEN', 403, 'Tidak punya akses'],
-    ['NOT_FOUND', 404, 'Data tidak ditemukan'],
-    ['RATE_LIMITED', 429, 'Terlalu banyak permintaan'],
-    ['NETWORK', 0, 'Tidak dapat terhubung ke portal'],
-  ] as const)('%s says what failed and what to do', async (code, status, title) => {
-    const retry = vi.fn()
-    render(
-      <Providers>
-        <ErrorState
-          error={new ApiError(code, 'pesan asli', status, { console: 'gudang' })}
-          onRetry={retry}
-        />
-      </Providers>,
+    ['CONSOLE_UNREACHABLE', 502, 'Console tidak dapat dihubungi', 'Layanan sedang bermasalah'],
+    ['CONSOLE_TIMEOUT', 504, 'Console tidak merespons', 'Layanan sedang bermasalah'],
+    ['TRANSACTION_REFUSED', 409, 'Transaksi ditolak', 'Tidak dapat disimpan'],
+    ['VERSION_CONFLICT', 409, 'Data baru saja diubah', 'Data baru saja diubah'],
+    ['FORBIDDEN', 403, 'Tidak punya izin', 'Anda tidak punya akses'],
+    ['NETWORK', 0, 'Tidak dapat terhubung ke portal', 'Tidak dapat terhubung ke portal'],
+  ] as const)('%s: technical vs plain copy', (code, status, admin, user) => {
+    const e = new ApiError(code, 'pesan', status)
+    expect(describeError(e, true).title).toContain(admin)
+    expect(describeError(e, false).title).toContain(user)
+    // User copy never names a console or a code.
+    expect(describeError(e, false).title + describeError(e, false).next).not.toMatch(
+      /console|CONSOLE|HTTP|Gudang/,
     )
-    expect(await screen.findByText(new RegExp(title))).toBeInTheDocument()
-    expect(screen.getByText(new RegExp(code))).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Coba lagi' }))
-    expect(retry).toHaveBeenCalledOnce()
   })
 })
 
 describe('JsonView', () => {
   it('pretty-prints and copies', async () => {
     const user = userEvent.setup()
+    vi.spyOn(navigator.clipboard ?? {}, 'writeText')
     render(<JsonView value={{ sku: 'SKU-BB-001', qty: 3 }} label="Request" />)
     expect(screen.getByLabelText('Request', { selector: 'pre' })).toHaveTextContent(
       '"sku": "SKU-BB-001"',

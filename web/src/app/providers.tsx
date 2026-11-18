@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { Toaster } from 'sonner'
 import { TooltipProvider } from '../components/ui/Tooltip'
 import { AuthProvider } from '../features/auth/auth'
-import { ApiError } from '../lib/api'
+import { ApiError } from '../lib/api/client'
 import { ThemeProvider, useTheme } from '../lib/theme'
 
 export function createQueryClient() {

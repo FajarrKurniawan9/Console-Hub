@@ -1,18 +1,20 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { z } from 'zod'
-import { request, setUnauthenticatedHandler, tokenStore } from '../../lib/api'
-import { loginResult, one, user as userSchema, type User } from '../../lib/schemas'
+import { request, setUnauthenticatedHandler, tokenStore } from '../../lib/api/client'
+import { authUser, loginResult, one, type AuthUser } from '../../lib/api/schemas'
 
 interface AuthState {
-  user: User | null
+  user: AuthUser | null
   isLoading: boolean
   login: (input: { email: string; password: string }) => Promise<void>
   logout: () => Promise<void>
+  /** Reload `me` (e.g. after the role's permissions changed) so menus follow. */
+  reloadMe: () => Promise<unknown>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
-const ME = ['auth', 'me'] as const
+export const ME = ['auth', 'me'] as const
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient()
@@ -20,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const me = useQuery({
     queryKey: ME,
-    queryFn: () => request(one(userSchema), { url: '/auth/me' }).then((r) => r.data),
+    queryFn: () => request(one(authUser), { url: '/auth/me' }).then((r) => r.data),
     enabled: token !== null,
     retry: false,
     staleTime: Infinity,
@@ -46,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       qc.setQueryData(ME, data.user)
       setToken(data.token)
     },
+    reloadMe: () => qc.invalidateQueries({ queryKey: ME }),
     logout: async () => {
       try {
         await request(z.unknown(), { url: '/auth/logout', method: 'POST' })

@@ -5,16 +5,19 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 
-async function enableMocks() {
-  if (import.meta.env.VITE_USE_MOCKS !== 'true') return
-  const { worker } = await import('./mocks/browser')
-  await worker.start({ onUnhandledFrame: 'bypass', quiet: true })
-}
+async function boot() {
+  // MOCK-ONLY: the single entry point into /mocks. Delete this block at integration.
+  if (import.meta.env.VITE_USE_MOCKS === 'true') {
+    const { startMocks } = await import('../mocks/browser')
+    await startMocks()
+  }
+  // END MOCK-ONLY
 
-void enableMocks().then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />
     </StrictMode>,
   )
-})
+}
+
+void boot()

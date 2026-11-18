@@ -15,7 +15,7 @@ export function UserMenu() {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
         aria-label={`Menu pengguna: ${user.name}`}
-        className="inline-flex h-8 items-center gap-2 rounded-sm px-1.5 text-dense hover:bg-surface"
+        className="inline-flex h-control items-center gap-2 rounded-sm px-1.5 text-dense hover:bg-surface"
       >
         <span
           aria-hidden
@@ -30,7 +30,7 @@ export function UserMenu() {
           <div className="flex flex-col px-2 py-1.5">
             <span className="font-semibold">{user.name}</span>
             <span className="text-xs text-muted">{user.email}</span>
-            <span className="text-xs text-muted">{user.is_admin ? 'Admin' : 'Operator'}</span>
+            <span className="text-xs text-muted">{user.role.name}</span>
           </div>
           <DropdownMenu.Separator className="my-1 h-px bg-border" />
           <DropdownMenu.Item className={menuItem} onSelect={() => void logout()}>
