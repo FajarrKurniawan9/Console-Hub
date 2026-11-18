@@ -29,7 +29,8 @@ export const logHandlers = [
           (!levels.length || levels.includes(l.level)) &&
           (!text ||
             l.message.toLowerCase().includes(text) ||
-            l.actor?.toLowerCase().includes(text)) &&
+            l.actor?.toLowerCase().includes(text) ||
+            l.tx_id?.toLowerCase() === text) &&
           (!from || l.occurred_at >= from) &&
           (!to || l.occurred_at <= to),
       )

@@ -61,3 +61,12 @@ v3 replaces the v2 product (processes, runs, the resource editor) with: two role
 26. **Reads come from the owner console** in the mock (Divisi/Karyawan: HR, Barang: Gudang, Pesanan: Produksi), so `gudang-down` breaks only the Barang list, as the brief describes.
 27. **Mock 202:** the `slow` and `commit-stuck` scenarios return 202; `commit-stuck` makes Produksi fail its commit 3 times so the transaction ends in `needs_attention` (resolved from the Transaksi screen in phase 3).
 28. **Portal shell attribute.** `data-shell="user"` is also set on `<html>` while the User shell is mounted, so dialogs and toasts (rendered in portals) get the User scale.
+
+### Phase 3 (admin monitoring)
+
+29. **Overview "Perlu perhatian"** merges `needs_attention`/`aborted` transactions from `recent_transactions` with the newest error logs; `needs_attention` always comes first, then by time, max 5. Counts per transaction state are one line of small text in the page header, not cards.
+30. **Transaction detail polling:** `refetchInterval` is 2 s only while the state is not final (`committed`, `aborted`, `needs_attention`), and stops when the tab is hidden (`refetchIntervalInBackground: false`). The list polls every 4 s only while a visible row is still in flight.
+31. **Three-box strip:** each box shows "Prepare" and the decision as dot + word. The decision row reads "Commit" or "Batal" depending on the transaction's decision, so an aborted transaction never shows "Commit: dibatalkan".
+32. **Resolve** (`needs_attention`): both actions confirm first and say what happens. "Batalkan transaksi" also undoes consoles that had already committed. The endpoint answers 202; the page follows the result by polling. Not stated in the brief: a retry that still fails leaves the transaction in `needs_attention`.
+33. **Log search matches `tx_id`** exactly, so the detail page links to "Log <console> untuk transaksi ini" (`/log?console=<id>&q=<tx_id>&range=7d`). The contract's `q` is described only as "kata kunci"; to be confirmed with the backend.
+34. **Seeded mock history** (`mocks/engine/history.ts`): 40 transactions over 7 days, built on the current work data, with matching log lines carrying `tx_id`. Logs are re-numbered by time after inserting history so the cursor and "N log baru" stay correct.

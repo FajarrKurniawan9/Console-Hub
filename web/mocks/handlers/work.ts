@@ -708,15 +708,6 @@ const txHandlers = [
       return fail('NOT_FOUND', 'Status perubahan tidak ditemukan.')
     return ok({ data: txStatusView(tx) })
   }),
-  // Minimal admin view so the 202 poll works for Admin IT now; the full screen is phase 3.
-  http.get(url('/admin/transactions/:id'), async ({ request, params }) => {
-    await latency()
-    const g = guard(request, 'admin.transactions.view')
-    if (g.error) return g.error
-    const tx = findTx(String(params.id))
-    if (!tx) return fail('NOT_FOUND', `Transaksi ${params.id} tidak ada.`)
-    return ok({ data: structuredClone(tx) })
-  }),
 ]
 
 export const workHandlers = [

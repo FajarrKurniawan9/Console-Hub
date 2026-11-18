@@ -4,6 +4,7 @@ import { recordAudit } from '../data/audit'
 import { consoleBySlug, consoleSeeds, DOWN_ERROR, isDown } from '../data/consoles'
 import { logTx } from '../data/logs'
 import { pad } from '../data/random'
+import { seedHistory } from './history'
 import { can, type MockUser } from '../data/users'
 import { fail, ok } from '../http'
 import { getScenario, mockConfig } from '../scenarios'
@@ -11,9 +12,15 @@ import { getScenario, mockConfig } from '../scenarios'
 // Simulated two-phase commit over the three consoles (brief v3 §9, "Mesin transaksi mock").
 // Every write: preparing → each console prepares (0.3–1.5 s) → commit or abort → finished.
 
-export const transactions: Transaction[] = []
-let seq = 41 // tx_0001..0040 are the seeded history (phase 3).
+export const transactions: Transaction[] = seedHistory()
+let seq = 41 // tx_0001..0040 are the seeded history.
 export const nextTxId = () => `tx_${pad(seq++, 4)}`
+
+/** Tests: back to the seeded history. */
+export function resetTransactions() {
+  transactions.splice(0, transactions.length, ...seedHistory())
+  seq = 41
+}
 
 const SLUGS: ConsoleSlug[] = ['hr', 'gudang', 'produksi']
 const FINAL = ['committed', 'aborted'] as const

@@ -72,7 +72,7 @@ export function LogFilters({
           type="search"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Cari pesan atau aktor"
+          placeholder="Cari pesan, aktor, atau ID transaksi"
           className={`${inputClass} w-56 pl-8`}
         />
       </label>

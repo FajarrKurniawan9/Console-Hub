@@ -4,6 +4,8 @@ import { ConsoleDetailPage } from '../features/admin/consoles/ConsoleDetailPage'
 import { ConsolesPage } from '../features/admin/consoles/ConsolesPage'
 import { LogsPage } from '../features/admin/logs/LogsPage'
 import { OverviewPage } from '../features/admin/overview/OverviewPage'
+import { TransactionDetailPage } from '../features/admin/transactions/TransactionDetailPage'
+import { TransactionsPage } from '../features/admin/transactions/TransactionsPage'
 import { useAuth } from '../features/auth/auth'
 import { LoginPage } from '../features/auth/LoginPage'
 import { BarangPage } from '../features/work/barang/BarangPage'
@@ -50,8 +52,8 @@ export function AppRoutes() {
           {guarded('admin.consoles.view', 'console', <ConsolesPage />)}
           {guarded('admin.consoles.view', 'console/:id', <ConsoleDetailPage />)}
           {guarded('admin.logs.view', 'log', <LogsPage />)}
-          {guarded('admin.transactions.view', 'transaksi', <NotBuiltYet phase={3} />)}
-          {guarded('admin.transactions.view', 'transaksi/:id', <NotBuiltYet phase={3} />)}
+          {guarded('admin.transactions.view', 'transaksi', <TransactionsPage />)}
+          {guarded('admin.transactions.view', 'transaksi/:id', <TransactionDetailPage />)}
           {guarded('admin.consistency.view', 'konsistensi', <NotBuiltYet phase={4} />)}
           {guarded('admin.rbac.manage', 'rbac', <NotBuiltYet phase={4} />)}
           {guarded('admin.audit.view', 'audit', <AuditPage />)}

@@ -18,5 +18,24 @@ describe('OverviewPage', () => {
     setScenario('empty')
     renderApp('/', 'admin')
     expect(await screen.findByText(/Belum ada transaksi/)).toBeInTheDocument()
+    expect(await screen.findByText(/Belum ada pemeriksaan/)).toBeInTheDocument()
+  })
+})
+
+describe('OverviewPage (phase 3)', () => {
+  it('needs attention lists the stuck transaction first, max 5 lines', async () => {
+    renderApp('/', 'admin')
+    const section = (await screen.findByRole('heading', { name: /Perlu perhatian/ })).closest(
+      'section',
+    )!
+    const items = await within(section).findAllByRole('listitem')
+    expect(items.length).toBeLessThanOrEqual(5)
+    expect(items[0]).toHaveTextContent('Perlu tindakan')
+  })
+
+  it('shows transaction counts as small text and the last consistency check', async () => {
+    renderApp('/', 'admin')
+    expect(await screen.findByText(/Transaksi: .*berhasil/)).toBeInTheDocument()
+    expect(await screen.findByText(/Bersih \(12 data\)/)).toBeInTheDocument()
   })
 })

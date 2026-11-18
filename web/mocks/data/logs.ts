@@ -239,9 +239,21 @@ export function logTx(
   actor: string | null,
   txId: string,
 ) {
+  logTxAt(slug, level, message, actor, txId, Date.now())
+}
+
+/** Same, at a given time. Seeded history is inserted out of order, so ids are re-sorted. */
+export function logTxAt(
+  slug: Slug,
+  level: LogLevel,
+  message: string,
+  actor: string | null,
+  txId: string,
+  at: number,
+) {
   const c = consoleSeeds.find((x) => x.slug === slug)!
   const id = logs.length + 1
-  const iso = new Date().toISOString()
+  const iso = new Date(at).toISOString()
   logs.push({
     id,
     console: { id: c.id, slug: c.slug, name: c.name },
@@ -252,6 +264,13 @@ export function logTx(
     tx_id: txId,
     raw: rawFor(slug, level, iso, { message, actor, event: 'tx.participant' }, id),
   })
+  if (at < Date.now() - 1000) renumber()
+}
+
+/** Keep "ascending time = ascending id", which the cursor and the "log baru" marker rely on. */
+function renumber() {
+  logs.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at))
+  logs.forEach((l, i) => (l.id = i + 1))
 }
 
 /** Pull new logs from live consoles. Returns how many arrived per console. */
