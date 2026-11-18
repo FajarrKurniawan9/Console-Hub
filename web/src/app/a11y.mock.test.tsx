@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { axeViolations } from '../test/a11y'
@@ -76,5 +76,20 @@ describe('keyboard', () => {
     row!.focus()
     await user.keyboard('{Enter}')
     expect(await screen.findByRole('list', { name: 'Fase per console' })).toBeInTheDocument()
+  })
+})
+
+describe('axe: "Jejak 3 console"', () => {
+  it('Admin panel after a save', async () => {
+    renderApp('/karyawan', 'admin')
+    await userEvent.click(await screen.findByRole('button', { name: 'Ubah Ratna Kusuma' }))
+    const dialog = await screen.findByRole('dialog')
+    const field = within(dialog).getByLabelText('Jabatan')
+    await userEvent.clear(field)
+    await userEvent.type(field, 'Kepala shift malam')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Simpan' }))
+    await screen.findByText('Mengenai 3 dari 3 console')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(await axeViolations()).toEqual([])
   })
 })
