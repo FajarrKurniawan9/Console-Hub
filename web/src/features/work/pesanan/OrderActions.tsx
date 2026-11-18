@@ -71,7 +71,7 @@ export function OrderActions({ order, onReload }: { order: Order; onReload: () =
           title={c.title(order)}
           description={`${order.customer} · ${order.pic.name}`}
           confirmLabel={c.button}
-          busyLabel={write.outcome.kind === 'finishing' ? 'Sedang diselesaikan…' : c.busy}
+          busyLabel={c.busy}
           danger={action === 'cancel'}
           busy={write.busy}
           onConfirm={() =>

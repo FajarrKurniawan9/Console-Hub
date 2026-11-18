@@ -1,6 +1,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { PASSWORD } from '../../mocks/data/users'
 import { setScenario } from '../../mocks/scenarios'
 import { renderApp } from '../test/utils'
 
@@ -10,7 +11,7 @@ describe('scenario: unauthenticated', () => {
   it('after login every call is 401: back to login with a "sesi berakhir" note', async () => {
     renderApp('/login')
     await userEvent.type(await screen.findByLabelText(/Email/), 'user@example.com')
-    await userEvent.type(screen.getByLabelText(/Sandi/), 'demo12345')
+    await userEvent.type(screen.getByLabelText(/Sandi/), PASSWORD)
     setScenario('unauthenticated')
     await userEvent.click(screen.getByRole('button', { name: 'Masuk' }))
     expect(await screen.findByText(/Sesi Anda sudah berakhir/)).toBeInTheDocument()

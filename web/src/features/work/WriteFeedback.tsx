@@ -2,7 +2,6 @@ import { CircleAlert, Info, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
-import { Spinner } from '../../components/ui/Spinner'
 import { describeError } from '../../lib/errors'
 import { useIsAdminView } from '../../lib/permissions'
 import type { WriteOutcome } from './useWrite'
@@ -21,18 +20,6 @@ export function WriteFeedback({
   onDismiss: () => void
 }) {
   const admin = useIsAdminView()
-
-  if (outcome.kind === 'finishing')
-    return (
-      <p role="status" className="flex items-center gap-2 rounded-md border px-3 py-2 text-dense">
-        <Spinner />
-        <span>
-          Sedang diselesaikan… Perubahan sudah diterima dan sedang diterapkan. Hasil akhirnya muncul
-          di sini tanpa perlu memuat ulang.
-          {admin ? <TxLink id={outcome.txId} /> : null}
-        </span>
-      </p>
-    )
 
   if (outcome.kind === 'refused')
     return (
@@ -67,25 +54,6 @@ export function WriteFeedback({
           </details>
         ) : null}
       </div>
-    )
-
-  if (outcome.kind === 'unfinished')
-    return (
-      <p
-        role="alert"
-        className={`flex items-start gap-2 rounded-md border px-3 py-2 text-dense ${outcome.state === 'needs_attention' ? 'border-error' : 'border-warn'}`}
-      >
-        <CircleAlert
-          size={16}
-          strokeWidth={1.5}
-          className="mt-px shrink-0 text-error"
-          aria-hidden
-        />
-        <span>
-          {outcome.message}
-          {admin ? <TxLink id={outcome.txId} /> : null}
-        </span>
-      </p>
     )
 
   if (outcome.kind === 'error') {

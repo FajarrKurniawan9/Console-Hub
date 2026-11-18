@@ -22,7 +22,7 @@ export function useDeactivate(resource: Resource, noun: string, onReload: () => 
       title={`Nonaktifkan ${target.label}?`}
       description={`${noun[0]!.toUpperCase()}${noun.slice(1)} ini tidak dapat dipakai lagi di transaksi baru. Data lamanya tetap tersimpan.`}
       confirmLabel="Nonaktifkan"
-      busyLabel={write.outcome.kind === 'finishing' ? 'Sedang diselesaikan…' : 'Menonaktifkan…'}
+      busyLabel="Menonaktifkan…"
       danger
       busy={write.busy}
       onConfirm={() =>

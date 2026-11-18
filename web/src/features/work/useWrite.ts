@@ -3,24 +3,17 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ApiError, newIdempotencyKey, toApiError } from '../../lib/api/client'
 import { CONSOLE_CODES } from '../../lib/errors'
-import type { Refusal, TxState } from '../../lib/api/schemas'
-import { isFinal, sendWrite, txState, type WriteCall } from '../../lib/api/work'
+import type { Refusal } from '../../lib/api/schemas'
+import { sendWrite, type WriteCall } from '../../lib/api/work'
 import { useIsAdminView } from '../../lib/permissions'
 import { useTrailSlot } from '../../components/console-trail/useTransactionTrail'
-
-const POLL_MS = 2000
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** What the screen shows after a write. Exactly one of these at a time. */
 export type WriteOutcome =
   | { kind: 'idle' }
   | { kind: 'saving' }
-  /** 202: the commit decision is taken but not finished everywhere. */
-  | { kind: 'finishing'; txId: string }
   | { kind: 'refused'; message: string; refusals: Refusal[]; txId?: string }
   | { kind: 'conflict'; message: string }
-  /** 202 that ended badly: aborted after all, or stuck (needs_attention). */
-  | { kind: 'unfinished'; state: TxState; message: string; txId: string }
   | { kind: 'error'; error: ApiError }
 
 export interface WriteOptions {
@@ -39,7 +32,8 @@ const REFUSALS = (e: ApiError): Refusal[] => {
 /**
  * Brief 8.2 "Perilaku menyimpan", shared by every work screen:
  * - one Idempotency-Key per intent, reused when the user retries that intent;
- * - success → toast + refresh; 202 → "Sedang diselesaikan…" and poll every 2 s until final;
+ * - success or 202 → toast, refresh, close; the "Jejak 3 console" panel shows the result and,
+ *   on 202, polls every 2 s until final;
  * - VERSION_CONFLICT / LOCKED → reload dialog; TRANSACTION_REFUSED → reason (Admin: per console);
  * - nothing is marked as done before a success response.
  */
@@ -61,34 +55,18 @@ export function useWrite() {
     try {
       const res = await sendWrite(call, intent.current.key)
       const version = (res.entity as { version?: unknown } | undefined)?.version
-      // "Jejak 3 console": shown above the list from now on; it polls a 202 by itself.
+      // "Jejak 3 console" above the list. On 202 it also follows the transaction to its end,
+      // so the form can close now instead of holding the user until every console is done.
       trail?.show({
         txId: res.transaction.id,
         version: typeof version === 'number' ? version : undefined,
       })
-      if (res.transaction.state !== 'committed') {
-        setOutcome({ kind: 'finishing', txId: res.transaction.id })
-        const end = await poll(res.transaction.id)
-        if (end.state !== 'committed') {
-          intent.current = null
-          await refresh(o)
-          setOutcome({
-            kind: 'unfinished',
-            state: end.state,
-            txId: res.transaction.id,
-            message:
-              end.message ??
-              (end.state === 'aborted'
-                ? 'Perubahan dibatalkan. Tidak ada data yang berubah.'
-                : 'Perubahan belum selesai di semua bagian sistem. Admin IT perlu menyelesaikannya.'),
-          })
-          return false
-        }
-      }
       intent.current = null
       await refresh(o)
       setOutcome({ kind: 'idle' })
-      toast.success(o.success)
+      toast.success(
+        res.transaction.state === 'committed' ? o.success : `${o.success}: sedang diselesaikan`,
+      )
       o.onDone?.()
       return true
     } catch (err) {
@@ -120,22 +98,10 @@ export function useWrite() {
     }
   }
 
-  async function poll(id: string) {
-    for (;;) {
-      await sleep(POLL_MS)
-      try {
-        const s = await txState(id, admin)
-        if (isFinal(s.state)) return s
-      } catch {
-        // A failed poll is not an answer; keep asking.
-      }
-    }
-  }
-
   return {
     outcome,
     run,
-    busy: outcome.kind === 'saving' || outcome.kind === 'finishing',
+    busy: outcome.kind === 'saving',
     reset: () => setOutcome({ kind: 'idle' }),
   }
 }

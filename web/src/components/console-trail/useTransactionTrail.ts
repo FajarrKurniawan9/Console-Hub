@@ -177,7 +177,10 @@ export function trailSummary(tx: Transaction) {
 }
 
 /** User copy. No console names, no codes. */
-export function userTrailMessage(state: TxState | 'failed', reason?: string) {
+export function userTrailMessage(
+  state: TxState | 'failed',
+  reason?: string,
+): { tone: Tone; text: string; reason?: string } {
   if (state === 'committed') return { tone: 'ok' as Tone, text: 'Tersimpan di semua sistem.' }
   if (state === 'aborted' || state === 'failed')
     return {
@@ -185,11 +188,11 @@ export function userTrailMessage(state: TxState | 'failed', reason?: string) {
       text: 'Belum berhasil disimpan. Tidak ada data yang berubah.',
       reason,
     }
+  // The API's message for a stuck write says the same thing; one sentence is enough.
   if (state === 'needs_attention')
     return {
       tone: 'error' as Tone,
       text: 'Perubahan belum selesai di semua sistem. Admin IT sudah diberi tahu.',
-      reason,
     }
   return { tone: 'accent' as Tone, text: 'Sedang diselesaikan…' }
 }

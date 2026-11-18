@@ -78,9 +78,9 @@ describe('Transaksi', () => {
     await userEvent.clear(nama)
     await userEvent.type(nama, 'Keuangan & Pajak')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Simpan' }))
-    const alert = await within(dialog).findByRole('alert', {}, { timeout: 6000 })
-    const link = within(alert).getByRole('link', { name: /^tx_/ })
-    await userEvent.click(link)
+    const panel = await screen.findByRole('region', { name: 'Jejak 3 console' })
+    await within(panel).findByText(/Perlu tindakan/, {}, { timeout: 6000 })
+    await userEvent.click(within(panel).getByRole('link', { name: /Lihat transaksi/ }))
     expect(await screen.findByRole('button', { name: 'Coba commit ulang' })).toBeInTheDocument()
   }, 10_000)
 

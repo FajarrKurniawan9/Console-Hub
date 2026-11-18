@@ -28,12 +28,7 @@ export function FormSheet({
   children: ReactNode
 }) {
   const formId = `form-${title.replace(/\W+/g, '-').toLowerCase()}`
-  const label =
-    write.outcome.kind === 'saving'
-      ? 'Menyimpan…'
-      : write.outcome.kind === 'finishing'
-        ? 'Sedang diselesaikan…'
-        : submitLabel
+  const label = write.busy ? 'Menyimpan…' : submitLabel
   const close = () => {
     if (write.busy) return
     write.reset()

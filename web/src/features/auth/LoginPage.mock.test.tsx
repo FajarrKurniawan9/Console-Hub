@@ -1,9 +1,10 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { PASSWORD } from '../../../mocks/data/users'
 import { renderApp } from '../../test/utils'
 
-async function login(email: string, password = 'demo12345') {
+async function login(email: string, password = PASSWORD) {
   renderApp('/login')
   await userEvent.type(await screen.findByLabelText(/Email/), email)
   await userEvent.type(screen.getByLabelText(/Sandi/), password)

@@ -28,9 +28,14 @@ const FINAL = ['committed', 'aborted'] as const
 const now = () => new Date().toISOString()
 const wait = (min = 300, max = 1500) =>
   delay(mockConfig.instantTx ? 0 : min + Math.random() * (max - min))
-/** `slow`: Gudang (already the slow console) answers 2–3.5 s later; the others stay normal. */
+/**
+ * `slow`: Gudang (already the slow console) answers 2–3.5 s later; the others stay normal.
+ * The gap is the point of the scenario, so it stays (shortened) even when tests make the rest instant.
+ */
 const slowFor = (slug: ConsoleSlug) =>
-  getScenario() === 'slow' && slug === 'gudang' ? wait(2000, 3500) : wait()
+  getScenario() === 'slow' && slug === 'gudang'
+    ? delay(mockConfig.instantTx ? 600 : 2000 + Math.random() * 1500)
+    : wait()
 
 /** A row held by a transaction that has not finished (needs_attention still holds it). */
 export function isLocked(entityType: string, entityId: string) {

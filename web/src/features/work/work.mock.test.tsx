@@ -164,7 +164,7 @@ describe('Barang', () => {
 })
 
 describe('202 commit', () => {
-  it('shows "Sedang diselesaikan", then the final state without reloading', async () => {
+  it('closes the form and follows the 202 in the panel until the end', async () => {
     setScenario('commit-stuck')
     renderApp('/karyawan', 'user')
     await userEvent.click(await screen.findByRole('button', { name: 'Ubah Teguh Wibowo' }))
@@ -173,14 +173,12 @@ describe('202 commit', () => {
     await userEvent.clear(pos)
     await userEvent.type(pos, 'Kepala pengemasan')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Simpan' }))
-    expect(
-      await within(dialog).findByText(/Sedang diselesaikan… Perubahan sudah diterima/),
-    ).toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: /Sedang diselesaikan/ })).toBeDisabled()
+    expect(await screen.findByText(/sedang diselesaikan/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    const panel = await screen.findByRole('region', { name: 'Status penyimpanan' })
     // Polls every 2 s until the stuck commit becomes needs_attention.
-    const alert = await within(dialog).findByRole('alert', {}, { timeout: 6000 })
-    expect(alert).toHaveTextContent('Admin IT sudah diberi tahu')
-    expect(alert).not.toHaveTextContent(/tx_|Produksi/)
+    await within(panel).findByText(/Admin IT sudah diberi tahu/, {}, { timeout: 6000 })
+    expect(panel).not.toHaveTextContent(/tx_|Produksi/)
   }, 10_000)
 })
 

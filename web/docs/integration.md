@@ -80,6 +80,8 @@ ke riwayat setelah integrasi selesai, supaya grep di atas bersih.
 
 ## 6. Uji ujung ke ujung terhadap backend
 
+- [ ] "Jejak 3 console": polling pada status 202 berjalan sampai final, dan tiga partisipan selalu tampil berurutan HR, Gudang, Produksi.
+
 - [ ] Sukses: buat pesanan → daftar berubah, stok berkurang.
 - [ ] Penolakan: pesanan melebihi stok → User melihat kalimat bisnis saja; Admin IT melihat
       alasan per console.

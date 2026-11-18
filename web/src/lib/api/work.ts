@@ -4,17 +4,13 @@ import { params, request } from './client'
 import {
   division,
   employee,
-  FINAL_TX_STATES,
   item,
   many,
   one,
   order,
-  transaction,
-  txStatus,
   withConsistency,
   writeResult,
   type Page,
-  type TxState,
   type VerifyResult,
 } from './schemas'
 
@@ -54,15 +50,3 @@ export type WriteCall = { method: 'POST' | 'PATCH' | 'DELETE'; url: string; data
 export function sendWrite(call: WriteCall, key: string) {
   return request(writeResult(z.unknown()), { ...call, idempotencyKey: key }).then((r) => r.data)
 }
-
-/** 202 follow-up. User gets `{id, state, message?}`; Admin IT the full transaction. */
-export function txState(id: string, admin: boolean): Promise<{ state: TxState; message?: string }> {
-  return admin
-    ? request(one(transaction), { url: `/admin/transactions/${id}` }).then((r) => ({
-        state: r.data.state,
-        message: r.data.failure_message ?? undefined,
-      }))
-    : request(one(txStatus), { url: `/transactions/${id}` }).then((r) => r.data)
-}
-
-export const isFinal = (s: TxState) => FINAL_TX_STATES.includes(s)

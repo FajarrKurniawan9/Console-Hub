@@ -90,3 +90,18 @@ v3 replaces the v2 product (processes, runs, the resource editor) with: two role
 46. **Focus return also covers unmounted dialogs.** Forms are mounted only while open, which skips Radix's `onCloseAutoFocus`; `useReturnFocus` captures the opener on first render and restores it on unmount.
 47. **Accessibility checks.** `axe-core` (WCAG 2 A/AA rules) runs over 17 screens and the order form in tests. jsdom has no rendering, so colour contrast is checked separately on the tokens (`scripts/contrast.test.ts`, every text colour on `bg` and `surface`, both themes, ≥ 4.5:1). `axe-core` is pinned to 4.14.0 (4.14.1 was two days old).
 48. **`forbidden` scenario** refuses Log, Audit, the Barang list and order creation with 403 even though the role allows them, to show what a stale permission looks like.
+
+### Update 1 ("Jejak 3 console")
+
+49. **Paths.** The update names `src/api/types.ts`; this project keeps the contract in `src/lib/api/schemas.ts` (with the client in `src/lib/api/client.ts`). The panel uses those types (`Transaction`, `TxParticipant`); no parallel types were added.
+50. **Prerequisites already met in v3:** `GET /transactions/{id}` (owner only, `{ id, state, message? }`) and `DELETE /{sumber}/{id}?expected_version=N` as a query string (`useDeactivate`).
+51. **One place hooks every form.** `useWrite` is the only write path, so it hands the transaction to the panel; no form was rewritten. The panel sits above the list (page slot provided by the shell), is not a modal, and closes only by hand. It belongs to the page it was made on.
+52. **202 moved from the form to the panel.** Before, the form stayed locked on "Sedang diselesaikan…" while `useWrite` polled. Now the form closes with a toast ("… sedang diselesaikan") and the panel follows the transaction. Both polling the same transaction would have doubled the requests. The panel stops after 60 s without a final state and offers "Cek lagi".
+53. **Variant by permission, not shell.** Admin variant needs `admin.transactions.view`; anyone else gets the User sentence from `GET /transactions/{id}` and never calls `/admin/*` (tested by recording every request path).
+54. **Status words.** Rows use the update's words: Siap, Tersimpan, Ditolak, Tidak merespons, Dibatalkan; plus Menunggu (prepare not answered yet) and Menyelesaikan… (decided, commit pending). A commit that keeps failing (`needs_attention`) is shown as "Tidak merespons" on that console.
+55. **Response time** is measured from the transaction's `created_at` to the console's last answer (`finished_at`, else `prepared_at`). The contract has no per-console latency; this is what the participant timestamps allow. A console that never answered shows "—".
+56. **Version column** shows the saved row's version (from the write response) on consoles that saved it. The contract has no per-console version on a transaction, so it is the same number on each saved row; the per-console versions are what "Cek di 3 console" is for.
+57. **`checksum` in `?verify=all`** is an added optional field (user's choice), shown as its first 8 characters (full value on hover). Still an assumption: confirm with the backend.
+58. **"Cek di 3 console"** reuses the v3 detail side panel (no new `VerifyAllDialog`); the check now runs on demand from the button instead of on open. The badge reads "Sama di 3 console".
+59. **`slow` scenario** now delays only Gudang (2–3.5 s; 0.6 s in tests) so one console clearly answers later, as the update asks.
+60. **Demo accounts** moved from the login page to the mock dev panel (user's choice), so `src/` holds no dummy credentials.
