@@ -84,6 +84,12 @@ export function setUnauthenticatedHandler(fn: () => void) {
   onUnauthenticated = fn
 }
 
+let onForbidden = () => {}
+/** A 403 usually means our copy of the permissions is stale; the auth layer reloads `me`. */
+export function setForbiddenHandler(fn: () => void) {
+  onForbidden = fn
+}
+
 /** A new key per user intent. Pass the same key again when the user retries the same request. */
 export const newIdempotencyKey = () => crypto.randomUUID()
 
@@ -122,6 +128,7 @@ export async function request<S extends z.ZodType>(
       tokenStore.clear()
       onUnauthenticated()
     }
+    if (e.status === 403 && config.url !== '/auth/login' && config.url !== '/auth/me') onForbidden()
     throw e
   }
   const parsed = schema.safeParse(data)

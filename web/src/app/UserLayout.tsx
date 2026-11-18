@@ -4,6 +4,7 @@ import { NavLink, Outlet } from 'react-router'
 import { useCan } from '../lib/permissions'
 import { USER_HOME, WORK_NAV } from './nav'
 import { OfflineBar } from './OfflineBar'
+import { ServiceTroubleBar } from './ServiceTroubleBar'
 import { SkipLink } from './SkipLink'
 import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
@@ -54,6 +55,7 @@ export function UserLayout() {
           </ul>
         </nav>
         <OfflineBar />
+        <ServiceTroubleBar />
       </header>
       <main id="main" className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
         <Outlet />

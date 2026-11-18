@@ -80,3 +80,13 @@ v3 replaces the v2 product (processes, runs, the resource editor) with: two role
 39. **Self-protection in user management:** you cannot deactivate yourself or move yourself to a role without `admin.rbac.manage` (the mock answers 409 with the reason).
 40. **New users** get the shared mock password in the mock only (`initial_password` in the 201 body). The real backend should decide how first passwords are delivered; the UI does not show it.
 41. **Audit filter "Pengguna"** now uses `GET /admin/rbac/users`, so it needs `admin.rbac.manage`. A role with `admin.audit.view` but without `admin.rbac.manage` gets an empty user filter (the table still works). A lighter user list endpoint would fix this; noted in `docs/ideas.md`.
+
+### Phase 5 (finishing)
+
+42. **Session expired** (401 on any call): the token is cleared and the login page says "Sesi Anda sudah berakhir"; after logging in you return to the page you were on. A `me` call that fails for another reason (network, 5xx) shows an error with "Coba lagi" instead of logging you out.
+43. **403 reloads `me`.** A 403 from the API usually means our permissions are stale (changed server-side), so the client reloads `me` and menus follow. The screen shows the error in place.
+44. **429 is retried once automatically** after 3 s (other 4xx never are). If it still fails, the error says to wait and offers "Coba lagi".
+45. **User shell "layanan bermasalah" bar.** User cannot see console status, so the bar is derived from loaded data that failed with `CONSOLE_*`. It names no console.
+46. **Focus return also covers unmounted dialogs.** Forms are mounted only while open, which skips Radix's `onCloseAutoFocus`; `useReturnFocus` captures the opener on first render and restores it on unmount.
+47. **Accessibility checks.** `axe-core` (WCAG 2 A/AA rules) runs over 17 screens and the order form in tests. jsdom has no rendering, so colour contrast is checked separately on the tokens (`scripts/contrast.test.ts`, every text colour on `bg` and `surface`, both themes, ≥ 4.5:1). `axe-core` is pinned to 4.14.0 (4.14.1 was two days old).
+48. **`forbidden` scenario** refuses Log, Audit, the Barang list and order creation with 403 even though the role allows them, to show what a stale permission looks like.

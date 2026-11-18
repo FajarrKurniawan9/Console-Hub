@@ -11,9 +11,17 @@ export function createQueryClient() {
     defaultOptions: {
       queries: {
         staleTime: 15_000,
-        // Retry once on network/5xx; never on 4xx (the answer will not change).
+        // Retry once on network/5xx and on 429 (it is temporary); never on other 4xx.
         retry: (count, err) =>
-          count < 1 && !(err instanceof ApiError && err.status >= 400 && err.status < 500),
+          count < 1 &&
+          !(
+            err instanceof ApiError &&
+            err.status >= 400 &&
+            err.status < 500 &&
+            err.code !== 'RATE_LIMITED'
+          ),
+        retryDelay: (_, err) =>
+          err instanceof ApiError && err.code === 'RATE_LIMITED' ? 3000 : 1000,
       },
     },
   })

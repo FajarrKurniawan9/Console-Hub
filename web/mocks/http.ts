@@ -59,9 +59,17 @@ export function revokeToken(request: Request) {
 }
 const bearer = (request: Request) => request.headers.get('Authorization')?.replace(/^Bearer /, '')
 
+const FORBIDDEN_IN_SCENARIO: Permission[] = [
+  'admin.logs.view',
+  'admin.audit.view',
+  'barang.view',
+  'pesanan.create',
+]
+
 /** Resolves the user or returns an error response (401 / 403 / 429 per scenario and permission). */
 export function guard(request: Request, perm?: Permission) {
   const scenario = getScenario()
+  // Login itself still works (it is not guarded); every call after it is 401.
   if (scenario === 'unauthenticated') {
     return { error: fail('UNAUTHENTICATED', 'Sesi tidak valid atau sudah berakhir.') }
   }
@@ -72,6 +80,10 @@ export function guard(request: Request, perm?: Permission) {
   if (!user) return { error: fail('UNAUTHENTICATED', 'Token tidak ada atau tidak valid.') }
   if (perm && !can(user, perm))
     return { error: fail('FORBIDDEN', 'Anda tidak memiliki izin untuk tindakan ini.') }
+  // `forbidden`: the backend refuses some areas even though the role allows them
+  // (e.g. permissions changed server-side and `me` is stale).
+  if (scenario === 'forbidden' && perm && FORBIDDEN_IN_SCENARIO.includes(perm))
+    return { error: fail('FORBIDDEN', 'Izin Anda untuk bagian ini baru saja dicabut.') }
   if (scenario === 'rate-limited' && Math.random() < 0.3) {
     return {
       error: fail(

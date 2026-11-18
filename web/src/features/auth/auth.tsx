@@ -1,12 +1,22 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { z } from 'zod'
-import { request, setUnauthenticatedHandler, tokenStore } from '../../lib/api/client'
+import {
+  request,
+  setForbiddenHandler,
+  setUnauthenticatedHandler,
+  tokenStore,
+} from '../../lib/api/client'
 import { authUser, loginResult, one, type AuthUser } from '../../lib/api/schemas'
 
 interface AuthState {
   user: AuthUser | null
   isLoading: boolean
+  /** `me` failed for a reason other than 401 (network, 5xx); the session may still be valid. */
+  meError: unknown
+  retryMe: () => void
+  /** The last session ended on a 401 (expired or revoked), not by logging out. */
+  expired: boolean
   login: (input: { email: string; password: string }) => Promise<void>
   logout: () => Promise<void>
   /** Reload `me` (e.g. after the role's permissions changed) so menus follow. */
@@ -19,6 +29,7 @@ export const ME = ['auth', 'me'] as const
 export function AuthProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient()
   const [token, setToken] = useState(tokenStore.get)
+  const [expired, setExpired] = useState(false)
 
   const me = useQuery({
     queryKey: ME,
@@ -30,14 +41,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setUnauthenticatedHandler(() => {
+      setExpired(true)
       setToken(null)
       qc.clear()
     })
+    setForbiddenHandler(() => void qc.invalidateQueries({ queryKey: ME }))
   }, [qc])
 
   const value: AuthState = {
     user: token ? (me.data ?? null) : null,
     isLoading: token !== null && me.isPending,
+    meError: token !== null && !me.data ? me.error : null,
+    retryMe: () => void me.refetch(),
+    expired,
     login: async (input) => {
       const { data } = await request(one(loginResult), {
         url: '/auth/login',
@@ -46,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       tokenStore.set(data.token)
       qc.setQueryData(ME, data.user)
+      setExpired(false)
       setToken(data.token)
     },
     reloadMe: () => qc.invalidateQueries({ queryKey: ME }),

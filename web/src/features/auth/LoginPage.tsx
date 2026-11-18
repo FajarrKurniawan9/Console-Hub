@@ -8,7 +8,7 @@ import { describeError } from '../../lib/errors'
 import { useAuth } from './auth'
 
 export function LoginPage() {
-  const { user, login } = useAuth()
+  const { user, login, expired } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [pending, setPending] = useState(false)
@@ -53,6 +53,12 @@ export function LoginPage() {
           <h1 className="text-title font-semibold">Masuk</h1>
         </div>
 
+        {expired && !error ? (
+          <p role="status" className="rounded-md border border-warn px-3 py-2 text-dense">
+            Sesi Anda sudah berakhir. Masuk kembali untuk melanjutkan; Anda akan kembali ke halaman
+            terakhir.
+          </p>
+        ) : null}
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
           {formError ? (
             <p role="alert" className="rounded-md border border-error px-3 py-2 text-dense">
