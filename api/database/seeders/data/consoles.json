@@ -1,0 +1,73 @@
+[
+  {
+    "slug": "hr", "name": "Web HR", "auth_type": "api_key", "timezone": "UTC",
+    "base_url": "{{env CONSOLE_HR_URL}}",
+    "credentials": { "header": "X-API-Key", "key": "{{env CONSOLE_HR_API_KEY}}" },
+    "config": {
+      "health": { "path": "/health", "requires_auth": false },
+      "logs": {
+        "path": "/logs", "pagination": "page", "page_param": "page", "per_page_param": "per_page", "per_page": 50,
+        "list_path": "data",
+        "map": {
+          "occurred_at": { "field": "timestamp", "format": "iso8601" },
+          "level": { "field": "level", "values": { "DEBUG": "debug", "INFO": "info", "WARN": "warn", "ERROR": "error" } },
+          "message": { "field": "message" },
+          "actor": { "field": "actor" }
+        }
+      },
+      "resources": [
+        { "key": "employees", "label": "Karyawan", "list_path": "/employees", "item_path": "/employees/{id}",
+          "id_field": "id", "data_path": "data", "update_method": "PATCH",
+          "writable_fields": ["name", "division_id", "role", "status"] }
+      ]
+    }
+  },
+  {
+    "slug": "gudang", "name": "Web Gudang", "auth_type": "bearer", "timezone": "UTC",
+    "base_url": "{{env CONSOLE_GUDANG_URL}}",
+    "credentials": { "username": "{{env CONSOLE_GUDANG_USER}}", "password": "{{env CONSOLE_GUDANG_PASS}}" },
+    "config": {
+      "health": { "path": "/health", "requires_auth": false },
+      "auth": { "login": { "path": "/auth/login", "method": "POST",
+        "body": { "username": "{{secret.username}}", "password": "{{secret.password}}" },
+        "token_path": "access_token", "ttl_seconds": 300 } },
+      "logs": {
+        "path": "/audit", "pagination": "since", "list_path": "entries",
+        "since": { "param": "since", "format": "epoch_seconds" },
+        "map": {
+          "occurred_at": { "field": "time", "format": "epoch_seconds" },
+          "level": { "field": "severity", "values": { "0": "debug", "1": "info", "2": "warn", "3": "error" } },
+          "message": { "field": "msg" },
+          "actor": { "field": "user" }
+        }
+      },
+      "resources": [
+        { "key": "items", "label": "Master barang", "list_path": "/items", "item_path": "/items/{id}",
+          "id_field": "sku", "data_path": null, "update_method": "PATCH",
+          "writable_fields": ["name", "unit", "min_stock"] }
+      ]
+    }
+  },
+  {
+    "slug": "produksi", "name": "Web Produksi", "auth_type": "basic", "timezone": "Asia/Jakarta",
+    "base_url": "{{env CONSOLE_PRODUKSI_URL}}",
+    "credentials": { "username": "{{env CONSOLE_PRODUKSI_USER}}", "password": "{{env CONSOLE_PRODUKSI_PASS}}" },
+    "config": {
+      "health": { "path": "/health", "requires_auth": false },
+      "logs": {
+        "path": "/log", "pagination": "none", "list_path": null,
+        "map": {
+          "occurred_at": { "field": "waktu", "format": "d/m/Y H:i:s" },
+          "level": { "field": "tingkat", "values": { "INFO": "info", "PERINGATAN": "warn", "GALAT": "error" } },
+          "message": { "field": "pesan" },
+          "actor": { "field": "pengguna" }
+        }
+      },
+      "resources": [
+        { "key": "prices", "label": "Harga jual", "list_path": "/settings/prices", "item_path": "/settings/prices/{id}",
+          "id_field": "sku", "data_path": null, "update_method": "PUT",
+          "writable_fields": ["price_idr"] }
+      ]
+    }
+  }
+]

@@ -12,15 +12,17 @@ return new class extends Migration
             $table->id();
             $table->string('name', 100);
             $table->string('email', 150)->unique();
+            $table->timestampTz('email_verified_at')->nullable();
             $table->string('password', 255);
             $table->boolean('is_admin')->default(false);
+            $table->rememberToken();
             $table->timestampsTz();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
-            $table->timestamp('created_at')->nullable();
+            $table->timestampTz('created_at')->nullable();
         });
 
         Schema::create('sessions', function (Blueprint $table) {
