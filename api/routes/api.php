@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConsoleController;
+use App\Http\Controllers\Api\LogController;
+use App\Http\Controllers\Api\OverviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -11,9 +13,15 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
 
+        Route::get('overview', OverviewController::class);
+
         Route::get('consoles', [ConsoleController::class, 'index']);
         Route::get('consoles/{console}', [ConsoleController::class, 'show']);
         Route::post('consoles/{console}/test', [ConsoleController::class, 'test']);
+
+        Route::get('logs', [LogController::class, 'index']);
+        Route::post('logs/sync', [LogController::class, 'sync']);
+        Route::get('logs/{log}', [LogController::class, 'show'])->whereNumber('log');
 
         Route::middleware('admin')->group(function () {
             Route::post('consoles', [ConsoleController::class, 'store']);
