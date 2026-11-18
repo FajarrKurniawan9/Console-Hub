@@ -19,7 +19,7 @@ const WORK_DEFAULT: Permission[] = [
 ]
 
 // Mutable: the RBAC screen edits these, and `me` reads them on every call.
-export const roles: RbacRole[] = [
+const seedRoles = (): RbacRole[] => [
   { id: 1, code: 'admin_it', name: 'Admin IT', permissions: [...PERMISSIONS] },
   { id: 2, code: 'user', name: 'User', permissions: [...WORK_DEFAULT] },
   {
@@ -29,6 +29,7 @@ export const roles: RbacRole[] = [
     permissions: WORK_DEFAULT.filter((p) => p !== 'pesanan.create'),
   },
 ]
+export const roles = seedRoles()
 
 interface MockUser {
   id: number
@@ -38,12 +39,19 @@ interface MockUser {
   is_active: boolean
 }
 
-export const users: MockUser[] = [
+const seedUsers = (): MockUser[] => [
   { id: 1, name: 'Rina Wulandari', email: 'admin@example.com', roleId: 1, is_active: true },
   { id: 2, name: 'Budi Santoso', email: 'user@example.com', roleId: 2, is_active: true },
   { id: 3, name: 'Siti Rahmawati', email: 'siti@example.com', roleId: 3, is_active: true },
   { id: 4, name: 'Agus Prasetyo', email: 'agus@example.com', roleId: 2, is_active: false },
 ]
+export const users = seedUsers()
+
+/** Tests: undo RBAC edits. */
+export function resetRbac() {
+  roles.splice(0, roles.length, ...seedRoles())
+  users.splice(0, users.length, ...seedUsers())
+}
 
 const roleOf = (u: MockUser) => roles.find((r) => r.id === u.roleId)!
 

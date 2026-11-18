@@ -1,9 +1,11 @@
 import { Route, Routes } from 'react-router'
 import { AuditPage } from '../features/admin/audit/AuditPage'
+import { ConsistencyPage } from '../features/admin/consistency/ConsistencyPage'
 import { ConsoleDetailPage } from '../features/admin/consoles/ConsoleDetailPage'
 import { ConsolesPage } from '../features/admin/consoles/ConsolesPage'
 import { LogsPage } from '../features/admin/logs/LogsPage'
 import { OverviewPage } from '../features/admin/overview/OverviewPage'
+import { RbacPage } from '../features/admin/rbac/RbacPage'
 import { TransactionDetailPage } from '../features/admin/transactions/TransactionDetailPage'
 import { TransactionsPage } from '../features/admin/transactions/TransactionsPage'
 import { useAuth } from '../features/auth/auth'
@@ -17,7 +19,6 @@ import type { Permission } from '../lib/api/schemas'
 import { isAdminView } from '../lib/permissions'
 import { AdminLayout } from './AdminLayout'
 import { RequireAuth, RequirePermission } from './guards'
-import { NotBuiltYet } from './NotBuiltYet'
 import { NotFoundPage } from './StatusPages'
 import { UserLayout } from './UserLayout'
 
@@ -54,8 +55,8 @@ export function AppRoutes() {
           {guarded('admin.logs.view', 'log', <LogsPage />)}
           {guarded('admin.transactions.view', 'transaksi', <TransactionsPage />)}
           {guarded('admin.transactions.view', 'transaksi/:id', <TransactionDetailPage />)}
-          {guarded('admin.consistency.view', 'konsistensi', <NotBuiltYet phase={4} />)}
-          {guarded('admin.rbac.manage', 'rbac', <NotBuiltYet phase={4} />)}
+          {guarded('admin.consistency.view', 'konsistensi', <ConsistencyPage />)}
+          {guarded('admin.rbac.manage', 'rbac', <RbacPage />)}
           {guarded('admin.audit.view', 'audit', <AuditPage />)}
           <Route path="*" element={<NotFoundPage />} />
         </Route>

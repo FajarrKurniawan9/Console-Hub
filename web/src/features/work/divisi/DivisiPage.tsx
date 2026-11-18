@@ -16,6 +16,7 @@ import { RowActions } from '../RowActions'
 import { ACTIVE_FILTER } from '../labels'
 import { useDeactivate } from '../useDeactivate'
 import { useWrite } from '../useWrite'
+import { VerifyPanel } from '../VerifyPanel'
 
 export function DivisiPage() {
   const url = useUrlState()
@@ -24,6 +25,7 @@ export function DivisiPage() {
   const admin = useIsAdminView()
   const list = useWorkList('divisions', url.get('q'), url.get('status'))
   const [editing, setEditing] = useState<Division | 'new' | null>(null)
+  const [viewing, setViewing] = useState<Division | null>(null)
   const reload = () => void qc.invalidateQueries({ queryKey: workKeys.all('divisions') })
   const deactivate = useDeactivate('divisions', 'divisi', reload)
 
@@ -74,14 +76,23 @@ export function DivisiPage() {
               </thead>
               <tbody>
                 {rows.map((d) => (
-                  <Tr key={d.id} className={d.status === 'nonaktif' ? 'text-muted' : ''}>
+                  <Tr
+                    key={d.id}
+                    tabIndex={0}
+                    aria-label={`Detail divisi ${d.nama}`}
+                    onClick={() => setViewing(d)}
+                    onKeyDown={(k) =>
+                      k.key === 'Enter' && k.target === k.currentTarget && setViewing(d)
+                    }
+                    className={`cursor-pointer hover:bg-surface ${d.status === 'nonaktif' ? 'text-muted' : ''}`}
+                  >
                     <Td className="font-mono">{d.kode}</Td>
                     <Td className="font-semibold">{d.nama}</Td>
                     <Td>
                       <ActiveStatusDot status={d.status} />
                     </Td>
                     <Td className="text-right font-mono">{d.version}</Td>
-                    <Td>{actions(d)}</Td>
+                    <Td onClick={(x) => x.stopPropagation()}>{actions(d)}</Td>
                   </Tr>
                 ))}
               </tbody>
@@ -113,6 +124,22 @@ export function DivisiPage() {
         />
       ) : null}
       {deactivate.dialog}
+      {admin ? (
+        <VerifyPanel
+          resource="divisions"
+          id={viewing?.id ?? null}
+          title={viewing ? `Divisi ${viewing.nama}` : ''}
+          fields={
+            viewing
+              ? [
+                  ['Kode', <span className="font-mono">{viewing.kode}</span>],
+                  ['Versi pemilik (HR)', <span className="font-mono">v{viewing.version}</span>],
+                ]
+              : []
+          }
+          onClose={() => setViewing(null)}
+        />
+      ) : null}
     </>
   )
 }

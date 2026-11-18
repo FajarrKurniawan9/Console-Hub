@@ -18,6 +18,7 @@ import { RowActions } from '../RowActions'
 import { ACTIVE_FILTER } from '../labels'
 import { useDeactivate } from '../useDeactivate'
 import { useWrite } from '../useWrite'
+import { VerifyPanel } from '../VerifyPanel'
 import { JENIS } from '../labels'
 
 function Stock({ item }: { item: Item }) {
@@ -37,6 +38,7 @@ export function BarangPage() {
   const admin = useIsAdminView()
   const list = useWorkList('items', url.get('q'), url.get('status'))
   const [editing, setEditing] = useState<Item | 'new' | null>(null)
+  const [viewing, setViewing] = useState<Item | null>(null)
   const reload = () => void qc.invalidateQueries({ queryKey: workKeys.all('items') })
   const deactivate = useDeactivate('items', 'barang', reload)
 
@@ -90,7 +92,16 @@ export function BarangPage() {
               </thead>
               <tbody>
                 {rows.map((i) => (
-                  <Tr key={i.id} className={i.status === 'nonaktif' ? 'opacity-60' : ''}>
+                  <Tr
+                    key={i.id}
+                    tabIndex={0}
+                    aria-label={`Detail ${i.nama}`}
+                    onClick={() => setViewing(i)}
+                    onKeyDown={(k) =>
+                      k.key === 'Enter' && k.target === k.currentTarget && setViewing(i)
+                    }
+                    className={`cursor-pointer hover:bg-surface ${i.status === 'nonaktif' ? 'opacity-60' : ''}`}
+                  >
                     <Td className="font-mono">{i.sku}</Td>
                     <Td className="font-semibold">{i.nama}</Td>
                     <Td>{JENIS[i.jenis]}</Td>
@@ -106,7 +117,7 @@ export function BarangPage() {
                       <ActiveStatusDot status={i.status} />
                     </Td>
                     <Td className="text-right font-mono">{i.version}</Td>
-                    <Td>{actions(i)}</Td>
+                    <Td onClick={(x) => x.stopPropagation()}>{actions(i)}</Td>
                   </Tr>
                 ))}
               </tbody>
@@ -147,6 +158,24 @@ export function BarangPage() {
         />
       ) : null}
       {deactivate.dialog}
+      {admin ? (
+        <VerifyPanel
+          resource="items"
+          id={viewing?.id ?? null}
+          title={viewing ? `${viewing.sku} · ${viewing.nama}` : ''}
+          fields={
+            viewing
+              ? [
+                  ['Jenis', JENIS[viewing.jenis]],
+                  ['Stok tersedia', <Stock item={viewing} />],
+                  ['Penanggung jawab', viewing.pic?.name ?? '—'],
+                  ['Versi pemilik (Gudang)', <span className="font-mono">v{viewing.version}</span>],
+                ]
+              : []
+          }
+          onClose={() => setViewing(null)}
+        />
+      ) : null}
     </>
   )
 }

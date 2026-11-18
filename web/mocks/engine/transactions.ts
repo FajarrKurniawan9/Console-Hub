@@ -3,6 +3,7 @@ import type { ConsoleSlug, Refusal, Transaction, TxParticipant } from '../../src
 import { recordAudit } from '../data/audit'
 import { consoleBySlug, consoleSeeds, DOWN_ERROR, isDown } from '../data/consoles'
 import { logTx } from '../data/logs'
+import { clearDrift } from '../data/consistency'
 import { pad } from '../data/random'
 import { seedHistory } from './history'
 import { can, type MockUser } from '../data/users'
@@ -180,6 +181,7 @@ export async function runWrite<E>(spec: WriteSpec<E>): Promise<Response> {
   tx.state = 'prepared'
   tx.decided_at = now()
   const entity = spec.apply()
+  clearDrift(spec.entityType, spec.entityId)
   tx.state = 'committing'
   const info = spec.describe(entity)
   if (!tx.entity_id) tx.entity_id = (entity as { id?: string }).id ?? null

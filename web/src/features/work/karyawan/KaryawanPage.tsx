@@ -17,6 +17,7 @@ import { RowActions } from '../RowActions'
 import { ACTIVE_FILTER } from '../labels'
 import { useDeactivate } from '../useDeactivate'
 import { useWrite } from '../useWrite'
+import { VerifyPanel } from '../VerifyPanel'
 
 export function KaryawanPage() {
   const url = useUrlState()
@@ -25,6 +26,7 @@ export function KaryawanPage() {
   const admin = useIsAdminView()
   const list = useWorkList('employees', url.get('q'), url.get('status'))
   const [editing, setEditing] = useState<Employee | 'new' | null>(null)
+  const [viewing, setViewing] = useState<Employee | null>(null)
   const reload = () => void qc.invalidateQueries({ queryKey: workKeys.all('employees') })
   const deactivate = useDeactivate('employees', 'karyawan', reload)
 
@@ -76,7 +78,16 @@ export function KaryawanPage() {
               </thead>
               <tbody>
                 {rows.map((e) => (
-                  <Tr key={e.id} className={e.status === 'nonaktif' ? 'text-muted' : ''}>
+                  <Tr
+                    key={e.id}
+                    tabIndex={0}
+                    aria-label={`Detail ${e.name}`}
+                    onClick={() => setViewing(e)}
+                    onKeyDown={(k) =>
+                      k.key === 'Enter' && k.target === k.currentTarget && setViewing(e)
+                    }
+                    className={`cursor-pointer hover:bg-surface ${e.status === 'nonaktif' ? 'text-muted' : ''}`}
+                  >
                     <Td className="font-mono">{e.nik}</Td>
                     <Td className="font-semibold">{e.name}</Td>
                     <Td>{e.division.nama}</Td>
@@ -86,7 +97,7 @@ export function KaryawanPage() {
                       <ActiveStatusDot status={e.status} />
                     </Td>
                     <Td className="text-right font-mono">{e.version}</Td>
-                    <Td>{actions(e)}</Td>
+                    <Td onClick={(x) => x.stopPropagation()}>{actions(e)}</Td>
                   </Tr>
                 ))}
               </tbody>
@@ -123,6 +134,24 @@ export function KaryawanPage() {
         />
       ) : null}
       {deactivate.dialog}
+      {admin ? (
+        <VerifyPanel
+          resource="employees"
+          id={viewing?.id ?? null}
+          title={viewing ? `${viewing.nik} · ${viewing.name}` : ''}
+          fields={
+            viewing
+              ? [
+                  ['Divisi', viewing.division.nama],
+                  ['Jabatan', viewing.position ?? '—'],
+                  ['Area / tim', [...viewing.areas, ...viewing.teams].join(', ') || '—'],
+                  ['Versi pemilik (HR)', <span className="font-mono">v{viewing.version}</span>],
+                ]
+              : []
+          }
+          onClose={() => setViewing(null)}
+        />
+      ) : null}
     </>
   )
 }

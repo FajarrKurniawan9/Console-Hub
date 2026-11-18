@@ -1,5 +1,7 @@
 // MSW node server for Vitest. Removed at integration together with the rest of /mocks.
 import { afterAll, afterEach, beforeAll } from 'vitest'
+import { resetConsistency } from './data/consistency'
+import { resetRbac } from './data/users'
 import { resetWork } from './data/work'
 import { resetTransactions } from './engine/transactions'
 import { server } from './node'
@@ -14,5 +16,7 @@ afterEach(() => {
   setScenario('ok')
   resetWork()
   resetTransactions()
+  resetConsistency()
+  resetRbac()
 })
 afterAll(() => server.close())

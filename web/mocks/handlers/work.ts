@@ -10,6 +10,7 @@ import type {
 import { consoleBySlug, DOWN_ERROR, isDown } from '../data/consoles'
 import { can, type MockUser } from '../data/users'
 import { openOrdersOf, pad, work } from '../data/work'
+import { verify, type EntityType } from '../data/consistency'
 import { findTx, runWrite, txStatusView, type ConsoleRefusal } from '../engine/transactions'
 import { fail, guard, latency, ok, page, url } from '../http'
 import { getScenario } from '../scenarios'
@@ -69,6 +70,7 @@ function readHandlers<T extends { id: string; status: string }>(
   rows: () => T[],
   text: (row: T) => string,
   notFound: string,
+  verifyType?: EntityType,
 ) {
   const one: HttpResponseResolver = async ({ request, params }) => {
     await latency()
@@ -78,7 +80,12 @@ function readHandlers<T extends { id: string; status: string }>(
     if (down) return down
     const row = rows().find((r) => r.id === params.id)
     if (!row || getScenario() === 'empty') return fail('NOT_FOUND', notFound)
-    return ok({ data: structuredClone(row) })
+    const wantVerify = new URL(request.url).searchParams.get('verify') === 'all'
+    const consistency =
+      wantVerify && verifyType && can(g.user, 'admin.consistency.view')
+        ? verify(verifyType, row.id)
+        : undefined
+    return ok({ data: { ...structuredClone(row), ...(consistency ? { consistency } : {}) } })
   }
   return [
     http.get(url(path), async ({ request }) => {
@@ -121,6 +128,7 @@ const divisionHandlers = [
     () => work.divisions,
     (d) => `${d.kode} ${d.nama}`,
     'Divisi tidak ditemukan.',
+    'divisi',
   ),
 
   http.post(url('/divisions'), async ({ request }) => {
@@ -253,6 +261,7 @@ const employeeHandlers = [
     () => work.employees,
     (e) => `${e.nik} ${e.name} ${e.position ?? ''} ${e.division.nama}`,
     'Karyawan tidak ditemukan.',
+    'karyawan',
   ),
 
   http.post(url('/employees'), async ({ request }) => {
@@ -413,6 +422,7 @@ const itemHandlers = [
     () => work.items,
     (i) => `${i.sku} ${i.nama}`,
     'Barang tidak ditemukan.',
+    'barang',
   ),
 
   http.post(url('/items'), async ({ request }) => {

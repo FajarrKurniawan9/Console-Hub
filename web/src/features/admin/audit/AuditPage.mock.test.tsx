@@ -22,3 +22,22 @@ describe('AuditPage', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })
 })
+
+describe('AuditPage (phase 4)', () => {
+  it('records a role permission change with what was added and removed', async () => {
+    const { recordAudit } = await import('../../../../mocks/data/audit')
+    recordAudit(
+      { id: 1, name: 'Rina Wulandari' },
+      'rbac.role_updated',
+      { type: 'role', id: 'user' },
+      null,
+      {
+        changes: { dicabut: { old: ['divisi.view'], new: null } },
+      },
+    )
+    renderApp('/audit?action=rbac.role_updated', 'admin')
+    const row = (await screen.findAllByRole('row'))[1]!
+    expect(row).toHaveTextContent('rbac.role_updated')
+    expect(row).toHaveTextContent('divisi.view')
+  })
+})

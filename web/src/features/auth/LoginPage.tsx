@@ -81,10 +81,15 @@ export function LoginPage() {
             {pending ? 'Memeriksa…' : 'Masuk'}
           </Button>
         </form>
-        <div className="align-center text-xs">
-          <span>Akun Demo : <br /></span>
-          <span>Email : user@example.com , Password : demo12345 <br /></span>
-          <span>Email : email@example.com , Password : demo12345</span>
+        <div className="text-center text-xs">
+          <span className="font-semibold">
+            Akun Demo
+            <br />
+          </span>
+          <span>
+            Email : user@example.com , Password : demo12345 <br />
+          </span>
+          <span>Email : admin@example.com , Password : demo12345</span>
         </div>
       </div>
     </main>

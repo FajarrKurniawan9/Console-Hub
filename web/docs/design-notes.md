@@ -46,7 +46,7 @@ v3 replaces the v2 product (processes, runs, the resource editor) with: two role
 14. **Mock isolation.** All mock code lives in `web/mocks/`. `src/` imports it only in the `// MOCK-ONLY` block of `src/main.tsx` and in tests named `*.mock.test.ts(x)`. The MSW server for Vitest is wired in `mocks/vitest.setup.ts`, not in `src/test/setup.ts`. The scenario panel is mounted by `mocks/browser.ts` and reloads the page on change.
 15. **Login hint removed.** The old login page printed the mock accounts; that would leak mock data into `src/`. The accounts are in the README instead.
 16. **Mock console names** are "HR", "Gudang", "Produksi" (the brief's names), not "Web HR".
-17. **Placeholders during the phases.** Screens of later phases render `app/NotBuiltYet.tsx` ("Layar ini dibangun pada fase N"). It is removed once phase 4 is done.
+17. **Placeholders during the phases** (`app/NotBuiltYet.tsx`) were removed in phase 4; every screen of the brief now exists.
 18. **Build chunks:** vendor code is split (react, ui, vendor, mocks) so no chunk goes over 500 kB. The `mocks` chunk is only loaded when `VITE_USE_MOCKS=true`.
 
 ### Phase 2 (work screens)
@@ -70,3 +70,13 @@ v3 replaces the v2 product (processes, runs, the resource editor) with: two role
 32. **Resolve** (`needs_attention`): both actions confirm first and say what happens. "Batalkan transaksi" also undoes consoles that had already committed. The endpoint answers 202; the page follows the result by polling. Not stated in the brief: a retry that still fails leaves the transaction in `needs_attention`.
 33. **Log search matches `tx_id`** exactly, so the detail page links to "Log <console> untuk transaksi ini" (`/log?console=<id>&q=<tx_id>&range=7d`). The contract's `q` is described only as "kata kunci"; to be confirmed with the backend.
 34. **Seeded mock history** (`mocks/engine/history.ts`): 40 transactions over 7 days, built on the current work data, with matching log lines carrying `tx_id`. Logs are re-numbered by time after inserting history so the cursor and "N log baru" stay correct.
+
+### Phase 4 (consistency, RBAC, audit)
+
+35. **Running a check and repairing a finding both answer 202.** The page polls the check every 2 s while it runs, and keeps polling the detail while a sent repair has not been reported back as repaired. A row being repaired shows "Memperbaiki…".
+36. **A check fails** (status `failed`) when the owner or a replica console is down, rather than reporting partial findings.
+37. **`?verify=all` panel:** in the Admin shell, a row in Divisi, Karyawan or Barang opens a side panel with the badge ("Sinkron di 3 console" / "Berbeda di Gudang") and the version per console. A console that is down shows "Tidak terjangkau" and the badge says "Tidak dapat dicek di …" instead of claiming a difference. Pesanan has no badge: orders are not replicated master data, and the consistency check only covers Divisi, Karyawan and Barang.
+38. **RBAC matrix:** rows are resources, columns are actions, grouped Kerja / Admin. Cells exist only where the permission exists. The `admin.rbac.manage` box on Admin IT is checked and disabled, and the mock refuses the change too (409). Saving the role you are using reloads `me`, so your own menu follows at once; other users get it on their next `me`.
+39. **Self-protection in user management:** you cannot deactivate yourself or move yourself to a role without `admin.rbac.manage` (the mock answers 409 with the reason).
+40. **New users** get the shared mock password in the mock only (`initial_password` in the 201 body). The real backend should decide how first passwords are delivered; the UI does not show it.
+41. **Audit filter "Pengguna"** now uses `GET /admin/rbac/users`, so it needs `admin.rbac.manage`. A role with `admin.audit.view` but without `admin.rbac.manage` gets an empty user filter (the table still works). A lighter user list endpoint would fix this; noted in `docs/ideas.md`.
