@@ -6,6 +6,10 @@ import { LogsPage } from '../features/admin/logs/LogsPage'
 import { OverviewPage } from '../features/admin/overview/OverviewPage'
 import { useAuth } from '../features/auth/auth'
 import { LoginPage } from '../features/auth/LoginPage'
+import { BarangPage } from '../features/work/barang/BarangPage'
+import { DivisiPage } from '../features/work/divisi/DivisiPage'
+import { KaryawanPage } from '../features/work/karyawan/KaryawanPage'
+import { PesananPage } from '../features/work/pesanan/PesananPage'
 import { UserHomePage } from '../features/work/UserHomePage'
 import type { Permission } from '../lib/api/schemas'
 import { isAdminView } from '../lib/permissions'
@@ -39,10 +43,10 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<Shell />}>
           <Route index element={<Home />} />
-          {guarded('karyawan.view', 'karyawan', <NotBuiltYet phase={2} />)}
-          {guarded('divisi.view', 'divisi', <NotBuiltYet phase={2} />)}
-          {guarded('barang.view', 'barang', <NotBuiltYet phase={2} />)}
-          {guarded('pesanan.view', 'pesanan', <NotBuiltYet phase={2} />)}
+          {guarded('karyawan.view', 'karyawan', <KaryawanPage />)}
+          {guarded('divisi.view', 'divisi', <DivisiPage />)}
+          {guarded('barang.view', 'barang', <BarangPage />)}
+          {guarded('pesanan.view', 'pesanan', <PesananPage />)}
           {guarded('admin.consoles.view', 'console', <ConsolesPage />)}
           {guarded('admin.consoles.view', 'console/:id', <ConsoleDetailPage />)}
           {guarded('admin.logs.view', 'log', <LogsPage />)}

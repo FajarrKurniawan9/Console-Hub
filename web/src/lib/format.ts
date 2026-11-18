@@ -45,3 +45,8 @@ export function cell(value: unknown): string {
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
+
+/** 18500 → "Rp18.500". */
+export function rupiah(n: number) {
+  return `Rp${number(n)}`
+}

@@ -48,3 +48,16 @@ v3 replaces the v2 product (processes, runs, the resource editor) with: two role
 16. **Mock console names** are "HR", "Gudang", "Produksi" (the brief's names), not "Web HR".
 17. **Placeholders during the phases.** Screens of later phases render `app/NotBuiltYet.tsx` ("Layar ini dibangun pada fase N"). It is removed once phase 4 is done.
 18. **Build chunks:** vendor code is split (react, ui, vendor, mocks) so no chunk goes over 500 kB. The `mocks` chunk is only loaded when `VITE_USE_MOCKS=true`.
+
+### Phase 2 (work screens)
+
+19. **One write hook (`features/work/useWrite.ts`)** holds the brief's "perilaku menyimpan" for every screen: key per intent, 202 → poll every 2 s, refused / conflict / console / validation outcomes. Screens only pick the call and the success text. A refused, conflicting or invalid answer is final, so the next click is a new intent (new key); network errors and 429 keep the key so the retry is the same intent.
+20. **202 polling** asks `GET /transactions/{id}` in the User shell and `GET /admin/transactions/{id}` in the Admin shell, as the brief says. Polling continues through failed polls (a failed poll is not an answer).
+21. **202 ending in `needs_attention` or `aborted`** is shown in place with a business sentence (User) or the same sentence plus the transaction link (Admin). The brief only described the `committed` end.
+22. **`VERSION_CONFLICT`, `LOCKED` and `CONFLICT` share one dialog** ("Muat ulang"). `CONFLICT` covers completing or cancelling an order that is no longer `ANTRE`.
+23. **Deactivate = DELETE with `?expected_version=`**, behind a confirmation that explains the effect. The result (refusal etc.) is shown inside the same dialog.
+24. **Item `jenis` cannot change after creation**: the SKU prefix (BB/BJ) depends on it. Not stated in the brief.
+25. **Order form** sends `qty` as a number; an empty quantity is sent as `NaN` → JSON `null`, so the server reports it rather than the client silently sending 0. Lines show the available stock under the select.
+26. **Reads come from the owner console** in the mock (Divisi/Karyawan: HR, Barang: Gudang, Pesanan: Produksi), so `gudang-down` breaks only the Barang list, as the brief describes.
+27. **Mock 202:** the `slow` and `commit-stuck` scenarios return 202; `commit-stuck` makes Produksi fail its commit 3 times so the transaction ends in `needs_attention` (resolved from the Transaksi screen in phase 3).
+28. **Portal shell attribute.** `data-shell="user"` is also set on `<html>` while the User shell is mounted, so dialogs and toasts (rendered in portals) get the User scale.

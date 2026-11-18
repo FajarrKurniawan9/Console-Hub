@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { useCan } from '../lib/permissions'
 import { USER_HOME, WORK_NAV } from './nav'
@@ -11,8 +12,15 @@ import { UserMenu } from './UserMenu'
 export function UserLayout() {
   const can = useCan()
   const items = [USER_HOME, ...WORK_NAV.filter((n) => can(n.perm))]
+  // On <html> too, so dialogs and toasts rendered in portals get the User scale.
+  useEffect(() => {
+    document.documentElement.dataset.shell = 'user'
+    return () => {
+      delete document.documentElement.dataset.shell
+    }
+  }, [])
   return (
-    <div data-shell="user" className="flex min-h-dvh flex-col text-sm">
+    <div className="flex min-h-dvh flex-col text-sm">
       <SkipLink />
       <header className="sticky top-0 z-30 border-b bg-bg">
         <div className="mx-auto flex h-14 w-full max-w-4xl items-center gap-3 px-4">

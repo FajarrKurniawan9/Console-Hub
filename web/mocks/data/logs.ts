@@ -231,6 +231,29 @@ export function visibleLogs(): LogEntry[] {
   return logs.filter((l) => !(isDown(l.console.slug) && new Date(l.occurred_at).getTime() > cut))
 }
 
+/** A log line written by a console while it takes part in a transaction. */
+export function logTx(
+  slug: Slug,
+  level: LogLevel,
+  message: string,
+  actor: string | null,
+  txId: string,
+) {
+  const c = consoleSeeds.find((x) => x.slug === slug)!
+  const id = logs.length + 1
+  const iso = new Date().toISOString()
+  logs.push({
+    id,
+    console: { id: c.id, slug: c.slug, name: c.name },
+    occurred_at: iso,
+    level,
+    message,
+    actor,
+    tx_id: txId,
+    raw: rawFor(slug, level, iso, { message, actor, event: 'tx.participant' }, id),
+  })
+}
+
 /** Pull new logs from live consoles. Returns how many arrived per console. */
 export function addLogs(slug: Slug, count: number) {
   const live = seeded(Date.now() % 100000)
