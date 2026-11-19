@@ -47,7 +47,7 @@ export function LoginPage() {
 
   return (
     <main className="min-h-dvh px-4 py-16 md:py-24">
-      <div className="mx-auto flex w-full max-w-[360px] flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-90 flex-col gap-6">
         <div className="flex flex-col gap-1">
           <span className="text-xs text-muted">Console Hub</span>
           <h1 className="text-title font-semibold">Masuk</h1>
