@@ -7,7 +7,7 @@ import prettier from 'eslint-config-prettier'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'public/mockServiceWorker.js']),
+  globalIgnores(['dist']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -32,7 +32,6 @@ export default defineConfig([
       'src/test/**',
       'src/features/auth/auth.tsx',
       'src/app/providers.tsx',
-      'mocks/**',
     ],
     rules: { 'react-refresh/only-export-components': 'off' },
   },

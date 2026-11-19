@@ -19,7 +19,8 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_ORIGIN', 'http://localhost:5173')],
+    // Comma separated, e.g. "https://console-hub-smoky.vercel.app,http://localhost:5173".
+    'allowed_origins' => array_values(array_filter(array_map('trim', explode(',', (string) env('FRONTEND_ORIGIN', 'http://localhost:5173,https://console-hub-smoky.vercel.app'))))),
 
     'allowed_origins_patterns' => [],
 

@@ -103,7 +103,8 @@ export function setForbiddenHandler(fn: () => void) {
   onForbidden = fn
 }
 
-const http = axios.create({
+/** Exported for tests only: they swap `http.defaults.adapter` for a fake backend (src/test/api.ts). */
+export const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: { Accept: 'application/json' },
 })
