@@ -1,88 +1,55 @@
-# Contract diff: frontend `web/src/lib/api/schemas.ts` vs backend brief v3
+# Contract diff: frontend `web/src/lib/api/schemas.ts` vs backend hub (update 1)
 
-Rule: the JSON shape follows the **frontend** (zod schemas are parsed at runtime). DB column names
-are mapped to JSON field names in `app/Http/Resources/*`. Differences that touch business rules or
-the protocol are listed under "Open" and need a decision.
+Rule: the JSON shape follows the **frontend** (zod schemas are parsed at runtime). Source API fields
+(`kontrak-3-api-console-hub-v1.md`) already use the same names, so Resources mostly pass them through
+and add the merged parts.
 
-Status: phase 1 (desk comparison). Rewritten with real results in phase 7 (§17.3).
+Status: phase A (desk comparison, after removing the transaction code). "To do" rows are fixed in the
+phase named.
 
 ## Envelope and errors
 
-| Item | Brief | Frontend | Resolution |
+| Item | Backend today | Frontend | Resolution |
 |---|---|---|---|
-| List meta | `{next_cursor}` | `{next_cursor: string\|null, total: number\|null}`, required on **every** list (consoles, roles, permissions, checks too) | Follow frontend (`ApiResponse::list` already does) |
-| Error body | `{code, message, details}` | `{code, message, fields?, details?}`; extra keys allowed | Keep existing `{code,message,console,fields,details}` |
-| Validation | `422 VALIDATION_ERROR`, `details.fields` | `422 VALIDATION_FAILED`, `error.fields` keyed by request field (`lines.0.qty`) | Follow frontend |
-| Error codes | adds `IDEMPOTENCY_KEY_REUSED`, `INVALID_ACTION` | Fixed enum: `UNAUTHENTICATED FORBIDDEN NOT_FOUND VALIDATION_FAILED RATE_LIMITED TRANSACTION_REFUSED VERSION_CONFLICT LOCKED CONFLICT CONSOLE_ERROR CONSOLE_UNREACHABLE CONSOLE_TIMEOUT INTERNAL_ERROR`; unknown code ⇒ `CONTRACT_MISMATCH` | **Open #1** |
-| Refusal details | `details.refusals` (Admin) | `details.refusals: [{console (name), code, message}]` + `details.tx_id` (Admin only) | Follow frontend; User gets empty `details` |
-| `VERSION_CONFLICT` | 409 | 409, mock adds `details.current_version` | Add `current_version` |
-| HTTP map | 502/504 console | 502 `CONSOLE_ERROR`/`CONSOLE_UNREACHABLE`, 504 `CONSOLE_TIMEOUT` | Same |
-| Header | `X-Request-Id` on all responses | not read | Done (`RequestId` middleware, exposed by CORS) |
+| List meta | `{next_cursor, total}` | `{next_cursor, unavailable?, total?}` | Add `unavailable` on merged lists (phase D) |
+| Error body | `{code, message, console, fields, details}` | `{code, message, details?}`; zod strips extra keys | To do (phase C): validation fields move to `details.fields`; drop `console`/`fields` keys |
+| Validation | `422 VALIDATION_FAILED`, `error.fields` | `VALIDATION_ERROR`, `details.fields` | To do (phase C): follow frontend and brief §6.1 |
+| Server error | `500 INTERNAL_ERROR` | `SERVER_ERROR` | To do (phase C) |
+| Source errors | `CONSOLE_ERROR`/`CONSOLE_UNREACHABLE` 502, `CONSOLE_TIMEOUT` 504 | `SOURCE_UNREACHABLE` 502, `SOURCE_TIMEOUT` 504 (no `SOURCE_ERROR`) | To do (phase C): any non-2xx a source should not send maps to `SOURCE_UNREACHABLE` |
+| New codes | — | `REFERENCE_NOT_FOUND` 422, `REFERENCED` 409 (`details.used_by: [{source, type, id, name}]`) | Phase D |
+| `VERSION_CONFLICT` | — | 409, passed through from the source API | Phase D |
+| User vs Admin messages | — | User: everyday sentence, no source name/URL/id; Admin: `details.source`, `details.used_by` | Phase C/D |
 
 ## Auth
 
-| Type/endpoint | Frontend | Backend mapping |
+Unchanged: `AuthUser {id, name, email, role:{code,name}, permissions}`, login/logout/me.
+Permission codes now match `PERMISSIONS` in `schemas.ts` exactly (`Permission::ALL`).
+
+## Work data (merged from three sources)
+
+| Frontend | Source API | Notes |
 |---|---|---|
-| `POST /auth/login` | `{data:{token, user: AuthUser}}`; 401 wrong creds, 403 inactive, 422 fields | Same |
-| `AuthUser` | `{id:number, name, email, role:{code,name}, permissions:string[]}` | `users` + `roles` + `role_permissions` |
-| `POST /auth/logout` | any 2xx | 204 |
-
-## Work data (owner console read, mapped by Resources)
-
-Console payloads keep the brief §8.2 field names; Resources rename for the frontend.
-
-| Frontend field | Console/brief field | Notes |
-|---|---|---|
-| `Division {id, kode, nama, status:'aktif'\|'nonaktif', version}` | `{id, code, name, status}` | status values: console uses `aktif`/`nonaktif` too |
-| `Employee {id, nik, name, division:{id,nama}, position\|null, status, version, areas[], teams[]}` | `{id, nik, name, division_id, position, status}` + Gudang areas + Produksi teams | `division.nama` resolved from HR; `areas` from Gudang, `teams` from Produksi (or HR copy, see stub) |
-| `Item {id, sku, nama, jenis:'bahan_baku'\|'barang_jadi', satuan, harga_jual_idr\|null, min_stock, status, version, stok_tersedia, pic:{id,name}\|null}` | `{sku, name, kind:'BB'\|'BJ', unit, price, min_stock, pic_id}` | `jenis`↔`kind`, `satuan`↔`unit`, `harga_jual_idr`↔`price`; `stok_tersedia` = Gudang local stock − reservations |
-| `Order {id, order_no, customer, pic:{id,name}, status:'ANTRE'\|'SELESAI'\|'DIBATALKAN', lines:[{item_id, sku, nama, qty, unit_price_idr}], created_at, version}` | `{id, code, customer, pic_id, lines:[{item_id,sku,qty}]}` | `order_no`↔`code`; line `nama`/`unit_price_idr` filled by Produksi from its item copy |
-| Write: `POST /employees {name, division_id, position, area, team}` | `{entity:{…}, area?, team?}` | NIK generated by portal (`E-0001`) |
-| Write: `POST /items {nama, jenis, satuan, min_stock, harga_jual_idr?, pic_employee_id}` | `pic_id` | SKU generated (`SKU-BB-001`) |
-| Write: `POST /orders {customer, pic_employee_id, lines:[{item_id, qty}]}` | `{order:{id, code, customer, pic_id, lines:[{item_id, sku, qty}]}}` | code `PO-2026-0001`; sku looked up from Gudang |
-| `POST /orders/{id}/complete\|cancel {expected_version}` | `{order_id}` | `expected_version` accepted and checked against Produksi |
-| `PATCH` | `expected_version` in body | Same |
-| `DELETE ?expected_version=N` | query string | Same |
-| Write result | `{data:{transaction:{id,state}, entity?}}` 200/201/202 | Same |
-| `GET /transactions/{id}` | `{data:{id, state, message?}}` | Same (owner only) |
-| `?verify=all` | `consistency: {in_sync, consoles:[{console:{slug,name}, version\|null, checksum?, status:'match'\|'missing'\|'version_mismatch'\|'checksum_mismatch'\|'unreachable'}]}` | Brief said `verification:[{console,found,version,checksum,matches_owner}]` → **follow frontend** |
-| IDs | entity ids are strings | UUIDs (fixture ids like `kar-001` are not reused) |
-
-## Transactions
-
-| Frontend | Backend | Notes |
-|---|---|---|
-| `Transaction {id, operation, entity_type, entity_id, state, requested_by:{id,name}, created_at, decided_at, finished_at, failure_code, failure_message, participants[], payload?}` | `transactions` | `requested_by` must be non-null in the schema; system transactions (seed/repair from CLI) fall back to `{id:0, name:'Sistem'}` |
-| `TxParticipant {console:{slug,name}, prepare_state, decision_state, refusal_code?, refusal_message?, attempts, last_error?, prepared_at?, finished_at?}` | `transaction_participants` | `latency_ms`, `version` are sent as **extra** fields (zod strips them today) |
-| `operation` values | `divisi.*`, `karyawan.*`, `barang.*`, `pesanan.*` | `entity_type` = `divisi`/`karyawan`/`barang`/`pesanan` (Indonesian, as the labels file expects) |
-| `GET /admin/transactions?state=a,b&operation=&cursor&limit` | csv state filter | Same |
-| `POST /admin/transactions/{id}/resolve` | answers **202** `{data:{id,state}}`; 409 `CONFLICT` when not `needs_attention` | Brief said 422 `INVALID_ACTION` → **Open #1** |
+| `Person {id, name, role, status, version, created_at, updated_at}` | HR `/people` | Pass-through |
+| `Production {…, courier_id, courier: PersonRef\|null}` | Produksi `/productions` + HR `?ids=` | `courier` null when unset, not found, or HR down |
+| `Item {…, production_id, production: ProductionRef\|null, responsible_id, responsible: PersonRef\|null, quantity, unit}` | Gudang `/items` + Produksi/HR `?ids=` | `quantity`/`unit` are USULAN in the API contract; frontend requires them (`quantity` number, `unit` string) |
+| `TrackingResult {item, production, responsible, courier, warnings, sources?}` | three sources | `sources` only with `admin.consoles.view`; `SourceStatus.latency_ms` nullable |
+| `PersonRef {id, name, role}`, `ProductionRef {id, area, production_type}` | — | Built by the hub |
 
 ## Admin
 
-| Frontend | Brief | Resolution |
+| Frontend | Backend today | Resolution |
 |---|---|---|
-| `ConsoleInfo {id, slug:'hr'\|'gudang'\|'produksi', name, base_url, status:'ok'\|'slow'\|'down'\|'unknown', last_latency_ms, last_checked_at, last_error}` | status `up/slow/down` | Follow frontend (`ok`). `slug` enum means only the 3 slugs are valid today |
-| `ConsoleTest {status, latency_ms, message}` | — | Same |
-| `LogEntry {id, console:{id,slug,name}, occurred_at, level, message, actor, tx_id, raw?}` | — | Same; `?console_id=1,2&level=warn,error&q=&from=&to=` (q also matches `tx_id`) |
-| `POST /admin/logs/sync {console_id?}` → `[{console:{slug,name}, status:'ok'\|'failed', inserted, error}]` | sync | Runs inline (fast); returns 200 |
-| `ConsistencyCheck {id, entity_type:'divisi'\|'karyawan'\|'barang', status, checked_count, drift_count, started_at, finished_at}` | `{entity}` with `divisions…` | Follow frontend: body `{entity_type}`; DB stores `divisi`… |
-| `ConsistencyFinding {…, label, console:{slug,name}, …}` | no `label` | `label` = human name (e.g. `E-0004 Agus Prasetyo`) |
-| Start check / repair | sync | **202**, job; 409 `CONFLICT` when a check is running / finding already repaired |
-| `Overview {consoles, error_logs_24h, tx_counts, recent_transactions, last_consistency}` | same | Same |
-| `RbacUser {id, name, email, role:{code,name}, is_active}`; `POST {name,email,role_code}` | `role_id` | Accept `role_code`. Initial password: random, returned once as `initial_password` (UI ignores it) |
-| `RbacRole {id, code, name, permissions[]}`; `GET /admin/rbac/permissions` → `string[]` | — | Same |
-| Self-protection | 422? | 409 `CONFLICT` (frontend expects 409) |
-| `AuditEvent {id, user\|null, action, target_type, target_id, console:{slug}\|null, details, created_at}` | `subject_type, subject_id, old_value, new_value` | Map in Resource: `target_*` ← `subject_*`, `details` = `{old, new}`; `console` from `new_value.console` when present |
-| Audit filters | — | `user_id, console_id, action, from, to, cursor, limit` |
+| `ConsoleInfo {id, slug, name, base_url, is_active, status, latency_ms, last_checked_at}` | sends `last_latency_ms`, `last_error`, `auth_type`, `has_service_key`, `is_owner_of` | To do (phase C): rename `last_latency_ms` → `latency_ms`; replace `is_owner_of` with `resource`; extras are stripped by zod |
+| `Overview {sources, log_errors_24h, recent_audit}` | Same (done in phase A) | — |
+| `LogEntry {id, console, occurred_at, level, message, actor, raw?}` | also sends `tx_id` | Harmless extra (stripped). Column kept: log tables are not touched by update 1 |
+| `ConsoleTest`, `LogSyncResult`, `RbacUser`, `RbacRole`, `AuditEvent` | Same | — |
+| Self-protection RBAC | 409 `CONFLICT` | Same |
 
-## Roles in fixtures
+## Database name
 
-The mock had a third role `user_lihat`. The brief seeds only `admin_it` and `user`; extra roles are
-created from the RBAC screen. No action.
+Brief update 1 says `console-test`; `DatabaseGuard`, CLAUDE.md and Neon use `consolehub_test`.
+Kept `consolehub_test` (renaming a database is the Cloud role's job).
 
-## Open (needs decision)
+## Open
 
-1. **Error codes outside the frontend enum.** `IDEMPOTENCY_KEY_REUSED` (brief: 422) and
-   `INVALID_ACTION` (brief: 422) would surface as `CONTRACT_MISMATCH`. Proposal: add both to
-   `ERROR_CODES` in `schemas.ts` (frontend omission). Until then the backend sends them as specified.
+1. `GET /items/kinds` is USULAN in the API contract and not in `schemas.ts`; the hub does not expose it.

@@ -8,14 +8,13 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * A console reached only through its internal HTTP API. `service_key` is encrypted and never serialised.
+ * A source API (Gudang, Produksi, HR) reached only over HTTP; it owns one `resource`. `service_key` is encrypted and never serialised.
  *
  * @property int $id
  * @property string $slug
@@ -24,9 +23,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string $auth_type
  * @property string|null $service_key
  * @property bool $is_active
- * @property list<string> $is_owner_of
+ * @property 'items'|'productions'|'people' $resource
  */
-#[Fillable(['slug', 'name', 'base_url', 'auth_type', 'service_key', 'is_active', 'is_owner_of'])]
+#[Fillable(['slug', 'name', 'base_url', 'auth_type', 'service_key', 'is_active', 'resource'])]
 #[Hidden(['service_key'])]
 class Console extends Model
 {
@@ -42,19 +41,6 @@ class Console extends Model
             'service_key' => 'encrypted',
             'is_active' => 'boolean',
         ];
-    }
-
-    /**
-     * Postgres TEXT[] <-> PHP list.
-     *
-     * @return Attribute<list<string>, list<string>>
-     */
-    protected function isOwnerOf(): Attribute
-    {
-        return Attribute::make(
-            get: fn (?string $value) => $value === null || $value === '{}' ? [] : array_values(array_filter(explode(',', trim($value, '{}')))),
-            set: fn (array $value) => '{'.implode(',', array_map(fn (string $v) => preg_replace('/[^a-z_]/', '', $v), $value)).'}',
-        );
     }
 
     /**

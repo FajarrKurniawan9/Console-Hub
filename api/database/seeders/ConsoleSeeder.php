@@ -12,7 +12,7 @@ class ConsoleSeeder extends Seeder
 {
     public function run(): void
     {
-        /** @var array<string, array{name: string, base_url: string, service_key: string|null, is_owner_of: list<string>}> $consoles */
+        /** @var array<string, array{name: string, base_url: string, service_key: string|null, resource: string}> $consoles */
         $consoles = config('consolehub.consoles');
 
         foreach ($consoles as $slug => $console) {
@@ -28,7 +28,7 @@ class ConsoleSeeder extends Seeder
                 'auth_type' => 'api_key',
                 'service_key' => $hasKey ? $console['service_key'] : null,
                 'is_active' => $hasKey,
-                'is_owner_of' => $console['is_owner_of'],
+                'resource' => $console['resource'],
             ]);
         }
     }

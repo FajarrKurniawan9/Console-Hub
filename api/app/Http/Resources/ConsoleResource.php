@@ -27,15 +27,15 @@ class ConsoleResource extends JsonResource
             'slug' => $this->slug,
             'name' => $this->name,
             'base_url' => $this->base_url,
-            'status' => $health['status'],
-            'last_latency_ms' => $health['last_latency_ms'],
-            'last_checked_at' => Iso::utc($health['last_checked_at']),
-            'last_error' => $health['last_error'],
-            // Extra fields for the admin screen; the frontend schema ignores them.
-            'auth_type' => $this->auth_type,
             'is_active' => $this->is_active,
+            'status' => $health['status'],
+            'latency_ms' => $health['last_latency_ms'],
+            'last_checked_at' => Iso::utc($health['last_checked_at']),
+            // Extra fields for the admin screen; the frontend schema ignores them.
+            'last_error' => $health['last_error'],
+            'resource' => $this->resource,
+            'auth_type' => $this->auth_type,
             'has_service_key' => $this->service_key !== null && $this->service_key !== '',
-            'is_owner_of' => $this->is_owner_of,
         ];
     }
 }
