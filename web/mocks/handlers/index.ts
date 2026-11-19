@@ -4,6 +4,7 @@ import { consoleHandlers } from './consoles'
 import { logHandlers } from './logs'
 import { overviewHandlers } from './overview'
 import { rbacHandlers } from './rbac'
+import { workHandlers } from './work'
 
 export const handlers = [
   ...authHandlers,
@@ -11,5 +12,6 @@ export const handlers = [
   ...logHandlers,
   ...overviewHandlers,
   ...rbacHandlers,
+  ...workHandlers,
   ...auditHandlers,
 ]

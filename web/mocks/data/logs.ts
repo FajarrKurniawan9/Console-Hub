@@ -24,25 +24,49 @@ const TEMPLATES: Record<Slug, Record<'info' | 'warn' | 'error', Template[]>> = {
         actor: person(r),
         event: 'person.updated',
       }),
-      (r) => ({ message: `Daftar personel dibaca (${r.int(2, 25)} ID)`, actor: 'hub', event: 'person.listed' }),
+      (r) => ({
+        message: `Daftar personel dibaca (${r.int(2, 25)} ID)`,
+        actor: 'hub',
+        event: 'person.listed',
+      }),
     ],
     warn: [
-      () => ({ message: 'Kunci layanan salah pada permintaan dari 10.0.4.12', actor: null, event: 'auth.failed' }),
-      (r) => ({ message: `Batas permintaan hampir tercapai (${r.int(50, 59)}/60 per menit)`, actor: 'hub', event: 'rate.near' }),
+      () => ({
+        message: 'Kunci layanan salah pada permintaan dari 10.0.4.12',
+        actor: null,
+        event: 'auth.failed',
+      }),
+      (r) => ({
+        message: `Batas permintaan hampir tercapai (${r.int(50, 59)}/60 per menit)`,
+        actor: 'hub',
+        event: 'rate.near',
+      }),
     ],
     error: [
-      () => ({ message: 'Koneksi database terputus (SSL SYSCALL error: EOF detected)', actor: null, event: 'db.lost' }),
+      () => ({
+        message: 'Koneksi database terputus (SSL SYSCALL error: EOF detected)',
+        actor: null,
+        event: 'db.lost',
+      }),
     ],
   },
   gudang: {
     info: [
-      (r) => ({ message: `Barang "${r.pick(ITEM_NAMES)}" ditambahkan`, actor: person(r), event: 'item.created' }),
+      (r) => ({
+        message: `Barang "${r.pick(ITEM_NAMES)}" ditambahkan`,
+        actor: person(r),
+        event: 'item.created',
+      }),
       (r) => ({
         message: `Jumlah "${r.pick(ITEM_NAMES)}" diubah menjadi ${r.int(5, 400)}`,
         actor: person(r),
         event: 'item.updated',
       }),
-      (r) => ({ message: `Daftar barang dibaca (${r.int(5, 25)} baris)`, actor: 'hub', event: 'item.listed' }),
+      (r) => ({
+        message: `Daftar barang dibaca (${r.int(5, 25)} baris)`,
+        actor: 'hub',
+        event: 'item.listed',
+      }),
     ],
     warn: [
       (r) => ({
@@ -52,14 +76,30 @@ const TEMPLATES: Record<Slug, Record<'info' | 'warn' | 'error', Template[]>> = {
       }),
     ],
     error: [
-      () => ({ message: 'Query daftar barang melebihi batas waktu 5 dtk', actor: null, event: 'db.timeout' }),
+      () => ({
+        message: 'Query daftar barang melebihi batas waktu 5 dtk',
+        actor: null,
+        event: 'db.timeout',
+      }),
     ],
   },
   produksi: {
     info: [
-      (r) => ({ message: `Produksi ${r.pick(AREAS)} diperbarui`, actor: person(r), event: 'production.updated' }),
-      (r) => ({ message: `Pengantar produksi ${r.pick(AREAS)} diganti`, actor: person(r), event: 'production.courier' }),
-      (r) => ({ message: `Daftar produksi dibaca (${r.int(2, 6)} ID)`, actor: 'hub', event: 'production.listed' }),
+      (r) => ({
+        message: `Produksi ${r.pick(AREAS)} diperbarui`,
+        actor: person(r),
+        event: 'production.updated',
+      }),
+      (r) => ({
+        message: `Pengantar produksi ${r.pick(AREAS)} diganti`,
+        actor: person(r),
+        event: 'production.courier',
+      }),
+      (r) => ({
+        message: `Daftar produksi dibaca (${r.int(2, 6)} ID)`,
+        actor: 'hub',
+        event: 'production.listed',
+      }),
     ],
     warn: [
       (r) => ({
@@ -131,7 +171,9 @@ export function visibleLogs(): LogEntry[] {
   const s = getScenario()
   if (s === 'empty') return []
   const cut = new Date(DOWN_SINCE).getTime()
-  return logs.filter((l) => !(isDown(l.console.slug as Slug) && new Date(l.occurred_at).getTime() > cut))
+  return logs.filter(
+    (l) => !(isDown(l.console.slug as Slug) && new Date(l.occurred_at).getTime() > cut),
+  )
 }
 
 /** Pull new logs from live consoles. Returns how many arrived per console. */

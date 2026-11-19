@@ -32,7 +32,9 @@ export const rbacHandlers = [
       fields.email = ['Email ini sudah dipakai pengguna lain.']
     if (!role) fields.role_code = ['Pilih peran.']
     if (Object.keys(fields).length)
-      return fail('VALIDATION_ERROR', 'Periksa kembali isian yang ditandai.', { details: { fields } })
+      return fail('VALIDATION_ERROR', 'Periksa kembali isian yang ditandai.', {
+        details: { fields },
+      })
     const u = {
       id: Math.max(...users.map((x) => x.id)) + 1,
       name,

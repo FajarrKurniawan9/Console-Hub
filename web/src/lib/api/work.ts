@@ -1,7 +1,16 @@
 // Work data endpoints (update 2 §3.2). Used by both shells.
 import type { z } from 'zod'
 import { params, request } from './client'
-import { item, many, one, person, production, trackingResult, type Page, type Source } from './schemas'
+import {
+  item,
+  many,
+  one,
+  person,
+  production,
+  trackingResult,
+  type Page,
+  type Source,
+} from './schemas'
 
 export type ListQuery = {
   q?: string

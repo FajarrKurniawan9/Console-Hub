@@ -56,7 +56,8 @@ export function WriteFeedback({
     const d = describeError(outcome.error, admin)
     // Field errors are shown under their fields; this line only says what to do.
     const fieldOnly = d.code === 'VALIDATION_ERROR' || d.code === 'REFERENCE_NOT_FOUND'
-    const showMessage = admin || (!fieldOnly && d.code !== 'NETWORK' && d.code !== 'CONTRACT_MISMATCH')
+    const showMessage =
+      admin || (!fieldOnly && d.code !== 'NETWORK' && d.code !== 'CONTRACT_MISMATCH')
     return (
       <div
         role="alert"

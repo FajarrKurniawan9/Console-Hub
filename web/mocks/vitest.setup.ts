@@ -1,5 +1,6 @@
 // MSW node server for Vitest. Removed at integration together with the rest of /mocks.
 import { afterAll, afterEach, beforeAll } from 'vitest'
+import { resetLogistics } from './data/logistics'
 import { resetRbac } from './data/users'
 import { server } from './node'
 import { mockConfig, setScenario } from './scenarios'
@@ -11,5 +12,6 @@ afterEach(() => {
   server.resetHandlers()
   setScenario('ok')
   resetRbac()
+  resetLogistics()
 })
 afterAll(() => server.close())

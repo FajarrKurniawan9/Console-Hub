@@ -29,7 +29,8 @@ export function UnavailableBar({ sources, owner }: { sources: Source[]; owner: S
       <CircleAlert size={16} strokeWidth={1.5} className="mt-px shrink-0 text-warn" aria-hidden />
       {admin ? (
         <span>
-          API sumber <span className="font-semibold">{sources.map((s) => SOURCE_LABEL[s]).join(', ')}</span>{' '}
+          API sumber{' '}
+          <span className="font-semibold">{sources.map((s) => SOURCE_LABEL[s]).join(', ')}</span>{' '}
           tidak tersedia.{' '}
           {ownerDown
             ? `Data ${SOURCE_LABEL[owner]} tidak dapat dibaca atau diubah sampai sumbernya pulih.`
