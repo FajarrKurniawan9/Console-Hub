@@ -7,44 +7,48 @@
 
 # Integrasi dengan backend
 
-Ditulis sekarang, **dikerjakan nanti** setelah backend Laravel siap (brief v3 §12). Jangan
-jalankan langkah-langkah ini sebelum diminta. Di akhir integrasi **semua mock dihapus**.
+Langkah 1-3 (fase G) **sudah dikerjakan** pada 2026-11-19 terhadap hub Laravel + `tools/console-stub`.
+Langkah 4-5 (fase H, hapus mock) belum.
 
-## 1. Sepakati kontrak
+## 1. Kontrak (selesai)
 
-Bandingkan kontrak di `src/lib/api/schemas.ts` (brief v3 §5) dengan kontrak backend yang
-sebenarnya. Perbarui tipe dan skema zod di `src/lib/api/` bila ada perbedaan, lalu catat di
-`docs/design-notes.md`. Hal yang masih asumsi dan perlu dikonfirmasi:
-
-| Hal                      | Asumsi frontend                                                      | Catatan                                                     |
-| ------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `?verify=all`            | `consistency: { in_sync, consoles: [{ console, version, status }] }` | Brief menyebut, tidak memberi tipe (design-notes #8)        |
-| `AuthUser.role.code`     | `string` (bukan hanya `admin_it`/`user`)                             | design-notes #7                                             |
-| `GET /admin/logs?q=`     | Juga mencocokkan `tx_id`                                             | design-notes #33                                            |
-| Kapan console mati       | Memakai `last_checked_at`                                            | Tidak ada `down_since` di kontrak (#9)                      |
-| `POST /admin/rbac/users` | Backend yang menentukan sandi awal                                   | Mock mengirim `initial_password`; UI tidak memakainya (#40) |
-| Filter pengguna di Audit | `GET /admin/rbac/users`                                              | Butuh `admin.rbac.manage` (#41)                             |
-
-Respons yang tidak cocok dengan skema tampil sebagai error `CONTRACT_MISMATCH` (tidak pernah
-diam-diam salah), dan di mode dev rinciannya dicetak di konsol browser.
-
-## 2. Arahkan ke backend
+Kontrak hub mengikuti `src/lib/api/schemas.ts` tanpa perubahan skema; selisih yang tersisa dicatat di
+`api/docs/contract-diff.md`. Diperiksa otomatis terhadap hub yang berjalan:
 
 ```bash
-# .env
-VITE_API_URL=https://<alamat-backend>/api/v1
-VITE_USE_MOCKS=false
+HUB_URL=http://127.0.0.1:8000/api/v1 HUB_ADMIN_EMAIL=… HUB_ADMIN_PASSWORD=… \
+  HUB_USER_EMAIL=… HUB_USER_PASSWORD=… npm run test:hub
 ```
 
-Di sisi backend: CORS mengizinkan origin frontend dengan header `Authorization`,
-`Idempotency-Key`, dan `Content-Type` (atau taruh API di origin yang sama lewat reverse proxy).
-Jalankan `npm run dev`, lalu uji login dengan akun Admin IT dan User yang sungguhan.
+`src/lib/api/contract.hub.test.ts` mem-parse setiap respons yang dibaca layar (kedua peran), bentuk
+error `VERSION_CONFLICT` / `REFERENCE_NOT_FOUND` / `VALIDATION_ERROR` / `REFERENCED`, dan memastikan
+User mendapat 403 di `/admin/*` serta Lacak Barang tanpa `sources`. Tanpa `HUB_URL` tes dilewati;
+`npm test` tidak menjalankannya.
 
-## 3. Uji per layar terhadap backend sungguhan
+## 2. Arahkan ke backend (selesai)
 
-Urutan: Login → Beranda User → Karyawan, Divisi, Barang, Pesanan (kedua peran) → Ringkasan →
-Console → Log → Transaksi → Konsistensi → RBAC → Audit. Perbaiki ketidakcocokan di
-`src/lib/api/` (skema dan fungsi endpoint), **bukan** di komponen.
+`VITE_API_URL=/api/v1` tetap; `npm run dev` meneruskan `/api` ke hub lewat proxy Vite (satu origin,
+tanpa CORS). Target proxy: `VITE_PROXY_TARGET` (bawaan `http://127.0.0.1:8000`).
+
+```bash
+# 1. stub (lihat tools/console-stub/README.md)   2. hub
+cd api && php artisan db:seed --database=pgsql_direct && php artisan hub:seed-demo && php artisan serve
+# 3. web, mock mati: buat web/.env.hub.local berisi VITE_USE_MOCKS=false, lalu
+cd web && npx vite --mode hub
+```
+
+## 3. Uji per layar (selesai)
+
+Dijalankan di browser (Playwright) dengan mock mati, Admin IT dan User. Semua lulus:
+
+| Skenario                                          | Hasil                                                                                                                                                 |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Normal                                            | Ringkasan, Barang, Produksi, Personel, Sumber data, Log, RBAC, Audit tampil tanpa `CONTRACT_MISMATCH`; Lacak Barang lengkap dengan tiga status sumber |
+| HR mati                                           | Barang tampil, penanggung jawab "Tidak tersedia" + banner; Lacak Barang dengan peringatan                                                             |
+| Gudang mati                                       | Barang: kartu error 502, tombol tambah nonaktif; Produksi dan Personel normal                                                                         |
+| Hak akses                                         | User tanpa menu admin, `/rbac` manual 403, tab Network tanpa `/admin/*`                                                                               |
+| Sesi habis                                        | Token dihapus → diarahkan ke login                                                                                                                    |
+| Referensi tidak ada, masih dipakai, konflik versi | Lewat `npm run test:hub` dan `api/tests/Stub`                                                                                                         |
 
 ## 4. Hapus seluruh mock
 
@@ -61,7 +65,7 @@ Console → Log → Transaksi → Konsistensi → RBAC → Audit. Perbaiki ketid
       mana pun (README bagian Mock).
 - [ ] Uji berakhiran `.mock.test.ts(x)` bergantung pada MSW. Hapus, atau tulis ulang memakai fungsi
       API yang di-stub per uji (`vi.mock('../lib/api/work')` dsb.). Pertahankan setidaknya: perilaku
-      `useWrite` (sukses, 202, ditolak per peran, konflik, console mati, 422), penjaga rute 403,
+      `useWrite` (sukses, konflik, `REFERENCED`, sumber mati, 422), penjaga rute 403,
       dua kerangka per peran, dan matriks RBAC.
       Uji tanpa MSW yang tetap jalan: `src/components/components.test.tsx`,
       `scripts/contrast.test.ts`.
