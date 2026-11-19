@@ -1,81 +1,39 @@
 # Console Hub — web
 
-Frontend portal yang mengendalikan tiga web console (HR, Gudang, Produksi). Setiap perubahan
-data dari portal ditulis ke ketiganya sebagai satu transaksi: berhasil di semuanya atau
-dibatalkan di semuanya. Protokolnya dijalankan backend; frontend mengirim permintaan dan
-menampilkan hasilnya.
+Frontend portal Console Hub (logistik dan inventaris). Satu aplikasi memakai tiga API sumber
+(Gudang → Barang, Produksi → Produksi, HR → Personel) **lewat hub Laravel** (`api/`); browser
+hanya memanggil hub di `/api/v1`, tidak pernah API sumber langsung.
 
 Dua peran dalam satu aplikasi:
 
-- **Admin IT**: tampilan lengkap dan teknis (ringkasan, console, log gabungan, transaksi,
-  konsistensi data, pengguna & izin, audit, data kerja).
-- **User**: tampilan kerja sederhana (Beranda, Pesanan, Barang, Karyawan, Divisi). Menu dan
-  tombol mengikuti izin RBAC.
-
-Frontend hanya memanggil API portal (`/api/v1`). Sampai backend Laravel siap, semua respons
-datang dari mock MSW di `mocks/` yang mengikuti kontrak (brief v3 + update 2 §3).
+- **Admin IT**: ringkasan, sumber data, log gabungan, pengguna & izin, audit, dan data kerja.
+- **User**: Beranda, Barang, Produksi, Personel, Lacak barang. Menu dan tombol mengikuti izin RBAC.
 
 ## Menjalankan
 
-Butuh Node 20.19+ atau 22.12+ (Vite 8).
+Butuh Node 20.19+ atau 22.12+ (Vite 8). Jalankan hub dulu (lihat `api/` dan
+`tools/console-stub/README.md` untuk sumber pengganti di lokal).
 
 ```bash
 npm install
-cp .env.example .env     # VITE_API_URL=/api/v1, VITE_USE_MOCKS=true
-npm run dev              # http://localhost:5173
+cp .env.example .env     # VITE_API_URL=/api/v1
+npm run dev              # http://localhost:5173, /api diteruskan ke VITE_PROXY_TARGET (bawaan 127.0.0.1:8000)
 ```
+
+Produksi (Vercel): `vercel.json` meneruskan `/api/*` ke hub Railway dan semua rute lain ke
+`index.html`, jadi `VITE_API_URL=/api/v1` tetap dan tidak perlu CORS.
 
 ## Skrip
 
-| Perintah            | Fungsi                                                                   |
-| ------------------- | ------------------------------------------------------------------------ |
-| `npm run dev`       | Server dev (dengan mock bila `VITE_USE_MOCKS=true`)                      |
-| `npm run build`     | Typecheck + build produksi ke `dist/`                                    |
-| `npm run typecheck` | `tsc -b` (strict)                                                        |
-| `npm run lint`      | ESLint                                                                   |
-| `npm test`          | Vitest + Testing Library + axe, terhadap server MSW Node, tanpa jaringan |
-| `npm run format`    | Prettier                                                                 |
-
-## Mock (dihapus saat integrasi)
-
-Mock meniru **hub**: tiga sumber di memori (HR → Personel, Produksi → Produksi, Gudang → Barang),
-data digabung lintas sumber, referensi diperiksa sebelum menulis. Akun mock, data dummy saja:
-
-| Email               | Sandi       | Peran                              |
-| ------------------- | ----------- | ---------------------------------- |
-| `admin@example.com` | `demo12345` | Admin IT                           |
-| `user@example.com`  | `demo12345` | User                               |
-| `siti@example.com`  | `demo12345` | User (hanya lihat)                 |
-| `agus@example.com`  | `demo12345` | User dinonaktifkan (login ditolak) |
-
-Pilih skenario dengan `?scenario=<nama>` di URL (diingat untuk tab itu) atau lewat panel
-**skenario mock** di kiri bawah:
-
-| Skenario           | Yang terjadi                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| `ok`               | Normal (bawaan).                                                                            |
-| `slow`             | Latensi 1–4 dtk di semua permintaan.                                                        |
-| `empty`            | Tanpa data kerja, log, atau audit.                                                          |
-| `unauthenticated`  | Semua panggilan setelah login menjawab 401 → kembali ke login dengan catatan sesi berakhir. |
-| `forbidden`        | Log, Audit, daftar Barang, dan tambah personel menjawab 403 walau peran mengizinkan.        |
-| `validation-error` | Setiap tulis menjawab 422 dengan `details.fields`.                                          |
-| `rate-limited`     | ±30% permintaan menjawab 429.                                                               |
-| `hr-down`          | HR mati: penanggung jawab/pengantar `null`, `meta.unavailable=['hr']`, tulis Personel 502.  |
-| `produksi-down`    | Produksi mati: asal produksi `null`, daftar dan tulis Produksi 502.                         |
-| `gudang-down`      | Gudang mati: daftar Barang 502 (Gudang pemilik data); Produksi dan Personel tetap jalan.    |
-| `all-down`         | Ketiga sumber mati.                                                                         |
-| `slow-source`      | HR menjawab setelah 3 dtk; Lacak Barang menampilkan status memuat per bagian.               |
-| `conflict`         | Setiap PATCH menjawab 409 `VERSION_CONFLICT`.                                               |
-| `referenced`       | Setiap DELETE menjawab 409 `REFERENCED`.                                                    |
-
-Yang layak dicoba:
-
-- **Lacak barang:** Beranda → Lacak barang → ketik "kain" → _Kain katun_. Admin IT melihat
-  tiga baris "Sumber data" dengan status dan waktu respons. Ulangi dengan `?scenario=hr-down`.
-- **Referensi:** sebagai Admin, Produksi → Nonaktifkan _Area Logam B · Pengecoran_ → muncul
-  "masih dipakai" beserta daftar barang yang memakainya.
-- **RBAC mengubah menu:** Pengguna & izin → Peran dan izin → User → hapus "Personel: Lihat" →
-  Simpan, lalu masuk sebagai `user@example.com`.
+| Perintah            | Fungsi                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `npm run dev`       | Server dev, `/api` diteruskan ke hub                                                  |
+| `npm run build`     | Typecheck + build produksi ke `dist/`                                                 |
+| `npm run typecheck` | `tsc -b` (strict)                                                                     |
+| `npm run lint`      | ESLint                                                                                |
+| `npm test`          | Vitest + Testing Library + axe; hub palsu per uji (`src/test/api.ts`), tanpa jaringan |
+| `npm run test:hub`  | Cek kontrak terhadap hub yang berjalan (`HUB_URL=…`, lihat `docs/integration.md`)     |
+| `npm run format`    | Prettier                                                                              |
 
 ## Struktur
 
@@ -88,9 +46,9 @@ src/
   features/work/  Barang, Produksi, Personel, Lacak Barang, Beranda User, useWrite (perilaku menyimpan)
   features/admin/ overview, consoles (Sumber data), logs, rbac, audit
   lib/api/        client.ts (klien tunggal), schemas.ts (kontrak + zod), work.ts
+  test/           api.ts (hub palsu: adapter axios + fixture), admin.ts, utils.tsx (renderApp)
   lib/            permissions.tsx (hasPermission, useCan, <Can>), errors.ts, format.ts, status.ts
   styles/         tokens.css (token terang/gelap, skala Admin/User)
-mocks/            SELURUH kode mock: handlers/, data/, engine/, scenarios.ts, DevPanel, browser.ts, node.ts
 scripts/          contrast.test.ts (kontras AA token, kedua tema)
 docs/             design-notes.md, integration.md, ideas.md, references/
 ```
@@ -99,5 +57,4 @@ docs/             design-notes.md, integration.md, ideas.md, references/
 
 - `docs/design-notes.md`: apa yang diambil dari tiap gambar referensi, dan setiap keputusan
   yang menyimpang dari brief beserta alasannya.
-- `docs/integration.md`: langkah integrasi dengan backend dan penghapusan seluruh mock
-  (dikerjakan nanti).
+- `docs/integration.md`: integrasi dengan backend (selesai) dan cara memeriksa kontrak.

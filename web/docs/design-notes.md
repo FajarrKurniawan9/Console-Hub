@@ -43,11 +43,11 @@ v3 replaces the v2 product (processes, runs, the resource editor) with: two role
 11. **Client-only error codes** `NETWORK` and `CONTRACT_MISMATCH` (no response; response does not match the schema).
 12. **Error copy per role** (`lib/errors.ts`): Admin IT gets technical copy plus the code and HTTP status; User gets plain sentences and, as the brief says, the API's `error.message` as is. Console names, codes and JSON never appear in the User shell.
 13. **Shell sizes via CSS variables.** `[data-shell='user']` changes the type scale (15/22 px) and control height (40 px); components use `text-dense`, `h-control` and so on, and need no role prop.
-14. **Mock isolation.** All mock code lives in `web/mocks/`. `src/` imports it only in the `// MOCK-ONLY` block of `src/main.tsx` and in tests named `*.mock.test.ts(x)`. The MSW server for Vitest is wired in `mocks/vitest.setup.ts`, not in `src/test/setup.ts`. The scenario panel is mounted by `mocks/browser.ts` and reloads the page on change.
+14. **No mocks (update 1 phase H).** The mock layer is gone. Component tests swap the axios adapter for a per-test fake hub (`src/test/api.ts`): `request()` still runs for real (auth header, zod, error mapping), and each test lists the responses it needs; an unlisted call answers 500 so it shows up.
 15. **Login hint removed.** The old login page printed the mock accounts; that would leak mock data into `src/`. The accounts are in the README instead.
 16. **Mock console names** are "HR", "Gudang", "Produksi" (the brief's names), not "Web HR".
 17. **Placeholders during the phases** (`app/NotBuiltYet.tsx`) were removed in phase 4; every screen of the brief now exists.
-18. **Build chunks:** vendor code is split (react, ui, vendor, mocks) so no chunk goes over 500 kB. The `mocks` chunk is only loaded when `VITE_USE_MOCKS=true`.
+18. **Build chunks:** vendor code is split (react, ui, vendor) so no chunk goes over 500 kB.
 
 ### Phase 2 (work screens)
 

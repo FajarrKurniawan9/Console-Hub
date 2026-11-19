@@ -33,8 +33,8 @@ tanpa CORS). Target proxy: `VITE_PROXY_TARGET` (bawaan `http://127.0.0.1:8000`).
 ```bash
 # 1. stub (lihat tools/console-stub/README.md)   2. hub
 cd api && php artisan db:seed --database=pgsql_direct && php artisan hub:seed-demo && php artisan serve
-# 3. web, mock mati: buat web/.env.hub.local berisi VITE_USE_MOCKS=false, lalu
-cd web && npx vite --mode hub
+# 3. web
+cd web && npm run dev
 ```
 
 ## 3. Uji per layar (selesai)
@@ -50,57 +50,22 @@ Dijalankan di browser (Playwright) dengan mock mati, Admin IT dan User. Semua lu
 | Sesi habis                                        | Token dihapus → diarahkan ke login                                                                                                                    |
 | Referensi tidak ada, masih dipakai, konflik versi | Lewat `npm run test:hub` dan `api/tests/Stub`                                                                                                         |
 
-## 4. Hapus seluruh mock
+## 4. Hapus seluruh mock (selesai)
 
-- [ ] Hapus folder `mocks/` dan `public/mockServiceWorker.js`.
-- [ ] Hapus blok `// MOCK-ONLY` beserta impor dinamisnya di `src/main.tsx` (sisakan hanya
-      `createRoot(...).render(...)`).
-- [ ] `package.json`: hapus dependensi `msw` dan bagian `"msw": { "workerDirectory": ... }`.
-- [ ] `vite.config.ts`: hapus grup chunk `mocks`, `./mocks/vitest.setup.ts` dari `setupFiles`, dan
-      pola `mocks/**` dari `test.include`; hapus `VITE_USE_MOCKS` dari `test.env`.
-- [ ] `tsconfig.app.json`: hapus `"mocks"` dari `include`.
-- [ ] `eslint.config.js`: hapus `'mocks/**'` dari daftar file pengecualian.
-- [ ] Hapus `VITE_USE_MOCKS` dari `.env.example`, `.env`, `src/vite-env.d.ts` (bila ada), dan README.
-- [ ] Hapus panel dev skenario (ada di `mocks/`, ikut terhapus), akun dummy, dan data dummy di
-      mana pun (README bagian Mock).
-- [ ] Uji berakhiran `.mock.test.ts(x)` bergantung pada MSW. Hapus, atau tulis ulang memakai fungsi
-      API yang di-stub per uji (`vi.mock('../lib/api/work')` dsb.). Pertahankan setidaknya: perilaku
-      `useWrite` (sukses, konflik, `REFERENCED`, sumber mati, 422), penjaga rute 403,
-      dua kerangka per peran, dan matriks RBAC.
-      Uji tanpa MSW yang tetap jalan: `src/components/components.test.tsx`,
-      `scripts/contrast.test.ts`.
-- [ ] `src/test/utils.tsx`: `renderApp(path, as)` memakai token `mock-<id>-test`; ganti dengan
-      cara login yang sesuai stub baru.
-- [ ] Perbarui `README.md` dan `docs/`.
+`mocks/`, `public/mockServiceWorker.js`, blok `MOCK-ONLY` di `src/main.tsx`, dependensi `msw`, dan
+`VITE_USE_MOCKS` sudah dihapus. Uji `*.mock.test.tsx` ditulis ulang memakai hub palsu per uji
+(`src/test/api.ts`, adapter axios); perilaku yang dipertahankan: `useWrite` (sukses, 422,
+`REFERENCE_NOT_FOUND`, `VERSION_CONFLICT`, `REFERENCED`, sumber mati), penjaga rute 403, dua
+kerangka per peran, RBAC, Lacak Barang, dan axe.
 
 ## 5. Verifikasi bersih
 
-Semua perintah ini harus **tanpa temuan**:
-
 ```bash
 grep -rniE "msw|mockServiceWorker|VITE_USE_MOCKS|MOCK-ONLY|demo12345" . \
-  --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist
+  --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude=package-lock.json \
+  --exclude=integration.md
 grep -rn "from '.*mocks" src
 ```
 
-Kemudian `npm run typecheck`, `npm run lint`, `npm test`, `npm run build` harus lulus, dan
-`package.json` tidak lagi memuat `msw`.
-
-Catatan: file ini sendiri berisi kata-kata di atas. Hapus atau pindahkan `docs/integration.md`
-ke riwayat setelah integrasi selesai, supaya grep di atas bersih.
-
-## 6. Uji ujung ke ujung terhadap backend
-
-- [ ] "Jejak 3 console": polling pada status 202 berjalan sampai final, dan tiga partisipan selalu tampil berurutan HR, Gudang, Produksi.
-
-- [ ] Sukses: buat pesanan → daftar berubah, stok berkurang.
-- [ ] Penolakan: pesanan melebihi stok → User melihat kalimat bisnis saja; Admin IT melihat
-      alasan per console.
-- [ ] Konflik versi: ubah data yang sama di dua tab → tab kedua mendapat dialog "Muat ulang".
-- [ ] Console dimatikan: matikan Gudang → daftar Barang gagal dengan pesan yang benar, tulis
-      ditolak, banner di kerangka Admin.
-- [ ] Transaksi 202: "Sedang diselesaikan…" lalu hasil akhir tanpa muat ulang.
-- [ ] `needs_attention`: diselesaikan dari detail Transaksi.
-- [ ] Dua peran: User tidak pernah melihat log, nama console, ID transaksi, kode error, atau
-      JSON, dan URL admin langsung memberi 403.
-- [ ] RBAC: cabut izin dari peran User → menu User berubah pada pemuatan `me` berikutnya.
+Keduanya tanpa temuan. `package-lock.json` dikecualikan karena `msw` hanya tercatat di sana sebagai
+_optional peer dependency_ milik vitest, bukan dependensi proyek.

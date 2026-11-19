@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 import { tokenStore } from '../lib/api/client'
+import './api'
 
 // jsdom lacks these browser APIs used by sonner and Radix.
 window.matchMedia ??= ((query: string) => ({
