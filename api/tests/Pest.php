@@ -48,7 +48,7 @@ expect()->extend('toBeOne', function () {
 function assertApiError(TestResponse $response, int $status, string $code): void
 {
     $response->assertStatus($status)
-        ->assertJsonStructure(['error' => ['code', 'message', 'console', 'fields', 'details']])
+        ->assertJsonStructure(['error' => ['code', 'message', 'details']])
         ->assertJsonPath('error.code', $code);
 }
 

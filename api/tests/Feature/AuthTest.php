@@ -48,8 +48,8 @@ it('refuses an inactive account at login', function () {
 it('rejects a malformed login body with 422 and field errors', function () {
     $response = $this->postJson('/api/v1/auth/login', ['email' => 'bukan-email']);
 
-    assertApiError($response, 422, 'VALIDATION_FAILED');
-    $response->assertJsonStructure(['error' => ['fields' => ['email', 'password']]]);
+    assertApiError($response, 422, 'VALIDATION_ERROR');
+    $response->assertJsonStructure(['error' => ['details' => ['fields' => ['email', 'password']]]]);
 });
 
 it('returns the current user with role and permissions from me', function () {

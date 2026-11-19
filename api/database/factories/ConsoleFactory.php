@@ -21,7 +21,7 @@ class ConsoleFactory extends Factory
 
         return [
             'slug' => $slug,
-            'name' => ucfirst($slug),
+            'name' => fn (array $attributes) => ucfirst($attributes['slug']),
             'base_url' => "http://{$slug}.test",
             'auth_type' => 'api_key',
             'service_key' => 'test-key-'.$slug,

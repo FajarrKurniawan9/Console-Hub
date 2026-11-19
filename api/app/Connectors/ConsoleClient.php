@@ -4,7 +4,6 @@ namespace App\Connectors;
 
 use App\Connectors\Exceptions\ConsoleException;
 use App\Models\Console;
-use Closure;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Pool;
@@ -18,20 +17,18 @@ use InvalidArgumentException;
 use Throwable;
 
 /**
- * The single gateway for every HTTP call the portal makes to a console.
+ * The single gateway for every HTTP call the hub makes to a source API.
  */
 class ConsoleClient
 {
-    /** Status codes worth retrying for idempotent reads. */
-    public const RETRYABLE_STATUSES = [429, 502, 503, 504];
-
-    /** Delays (seconds) between automatic GET retries. */
-    private const READ_RETRY_DELAYS = [1, 2];
+    /** Delays (seconds) between automatic GET retries: one retry, only when the connection failed. */
+    private const READ_RETRY_DELAYS = [1];
 
     public function __construct(private HostGuard $guard) {}
 
     /**
-     * Send an authenticated request to the console and map transport failures to ConsoleException.
+     * Send an authenticated request to the source and map transport failures to ConsoleException.
+     * A GET is retried once when the connection failed; a timeout is not retried (8 s is already long).
      *
      * Non-2xx responses are returned (not thrown) unless $opts['throw'] is true, so callers can
      * decide what counts as success.
@@ -50,25 +47,17 @@ class ConsoleClient
         while (true) {
             try {
                 $response = $this->send($console, $method, $path, $body, $opts, $useAuth);
-                $retryable = in_array($response->status, self::RETRYABLE_STATUSES, true);
+
+                break;
             } catch (ConsoleException $e) {
-                if (! in_array($e->errorCode, ['CONSOLE_TIMEOUT', 'CONSOLE_UNREACHABLE'], true) || ! isset($delays[$attempt])) {
+                if (! ($e->details['connection'] ?? false) || ! isset($delays[$attempt])) {
                     throw $e;
                 }
-                $response = null;
-                $retryable = true;
-            }
 
-            if ($retryable && isset($delays[$attempt])) {
                 Sleep::for($delays[$attempt++])->seconds();
-
-                continue;
             }
-
-            break;
         }
 
-        /** @var ConsoleResponse $response */
         if (($opts['throw'] ?? false) && ! $response->successful()) {
             throw $this->errorFor($console, $response);
         }
@@ -92,33 +81,47 @@ class ConsoleClient
      */
     public function errorFor(Console $console, ConsoleResponse $response): ConsoleException
     {
-        if ($response->status === 503) {
-            return new ConsoleException('CONSOLE_UNREACHABLE', "{$console->name} sedang tidak tersedia (HTTP 503).", $console->slug, ['status' => 503, 'body' => $response->body]);
-        }
-
-        return new ConsoleException('CONSOLE_ERROR', "{$console->name} menjawab HTTP {$response->status}.", $console->slug, ['status' => $response->status, 'body' => $response->body]);
+        return new ConsoleException('SOURCE_UNREACHABLE', "{$console->name} menjawab HTTP {$response->status}.", $console->slug, ['status' => $response->status, 'body' => $response->body]);
     }
 
     /**
-     * Send one authenticated request per console in parallel. Failures come back as ConsoleException
-     * values (never thrown), so one dead console never hides the answers of the others.
+     * Send authenticated GETs in parallel. A connection error is retried once (like `request`);
+     * failures come back as ConsoleException values (never thrown), so one dead source never hides
+     * the answers of the others.
      *
-     * @param  iterable<Console>  $consoles
-     * @param  Closure(Console): array{0: string, 1: string, 2: array<string, mixed>|null}  $request  method, path, body
-     * @return array<string, ConsoleResponse|ConsoleException> keyed by console slug
+     * @param  array<string, array{0: Console, 1: string}>  $gets  key => [console, path with query]
+     * @return array<string, ConsoleResponse|ConsoleException>
      */
-    public function pool(iterable $consoles, Closure $request, int $timeout): array
+    public function pool(array $gets): array
+    {
+        $results = $this->poolOnce($gets);
+        $retry = array_filter($gets, fn ($get, $key) => $results[$key] instanceof ConsoleException && ($results[$key]->details['connection'] ?? false), ARRAY_FILTER_USE_BOTH);
+
+        if ($retry !== []) {
+            Sleep::for(self::READ_RETRY_DELAYS[0])->seconds();
+            $results = [...$results, ...$this->poolOnce($retry)];
+        }
+
+        return $results;
+    }
+
+    /**
+     * @param  array<string, array{0: Console, 1: string}>  $gets
+     * @return array<string, ConsoleResponse|ConsoleException>
+     */
+    private function poolOnce(array $gets): array
     {
         $results = [];
         $sendable = [];
+        $timeout = (int) config('consolehub.default_timeout_seconds', 8);
 
-        foreach ($consoles as $console) {
+        foreach ($gets as $key => [$console, $path]) {
             if (! $console->is_active) {
-                $results[$console->slug] = new ConsoleException('CONSOLE_UNREACHABLE', "{$console->name} dinonaktifkan di portal.", $console->slug);
+                $results[$key] = new ConsoleException('SOURCE_UNREACHABLE', "{$console->name} dinonaktifkan di hub.", $console->slug);
             } elseif ($reason = $this->guard->violation($console->base_url)) {
-                $results[$console->slug] = new ConsoleException('CONSOLE_UNREACHABLE', "{$console->name} diblokir: {$reason}", $console->slug);
+                $results[$key] = new ConsoleException('SOURCE_UNREACHABLE', "{$console->name} diblokir: {$reason}", $console->slug);
             } else {
-                $sendable[$console->slug] = $console;
+                $sendable[$key] = [$console, $this->url($console, $path)];
             }
         }
 
@@ -126,21 +129,17 @@ class ConsoleClient
             return $results;
         }
 
-        $urls = [];
-        $responses = Http::pool(function (Pool $pool) use ($sendable, $request, $timeout, &$urls) {
-            foreach ($sendable as $slug => $console) {
-                [$method, $path, $body] = $request($console);
-                $urls[$slug] = $this->url($console, $path);
-                $this->authenticate($this->configure($pool->as($slug), $timeout), $console)
-                    ->send(strtoupper($method), $urls[$slug], $body === null ? [] : ['json' => $body]);
+        $responses = Http::pool(function (Pool $pool) use ($sendable, $timeout) {
+            foreach ($sendable as $key => [$console, $url]) {
+                $this->authenticate($this->configure($pool->as((string) $key), $timeout), $console)->get($url);
             }
         });
 
-        foreach ($sendable as $slug => $console) {
-            $response = $responses[$slug] ?? null;
+        foreach ($sendable as $key => [$console, $url]) {
+            $response = $responses[$key] ?? null;
 
-            $results[$slug] = match (true) {
-                $response instanceof Response => ConsoleResponse::from($response, (int) round(($response->transferStats?->getTransferTime() ?? 0) * 1000), $urls[$slug]),
+            $results[$key] = match (true) {
+                $response instanceof Response => ConsoleResponse::from($response, (int) round(($response->transferStats?->getTransferTime() ?? 0) * 1000), $url),
                 $response instanceof ConnectionException => $this->connectionError($console, $response, $timeout),
                 default => $this->unexpected($console, $response),
             };
@@ -218,7 +217,7 @@ class ConsoleClient
     private function dispatch(Console $console, PendingRequest $pending, string $method, string $path, ?array $body, array $opts): ConsoleResponse
     {
         if ($reason = $this->guard->violation($console->base_url)) {
-            throw new ConsoleException('CONSOLE_UNREACHABLE', "{$console->name} diblokir: {$reason}", $console->slug);
+            throw new ConsoleException('SOURCE_UNREACHABLE', "{$console->name} diblokir: {$reason}", $console->slug);
         }
 
         $url = $this->url($console, $path);
@@ -249,7 +248,7 @@ class ConsoleClient
             Log::error('Console call failed unexpectedly', ['console' => $console->slug, 'exception' => $failure::class, 'message' => $failure->getMessage()]);
         }
 
-        return new ConsoleException('CONSOLE_ERROR', "{$console->name} gagal dipanggil.", $console->slug);
+        return new ConsoleException('SOURCE_UNREACHABLE', "{$console->name} gagal dipanggil.", $console->slug);
     }
 
     private function connectionError(Console $console, ConnectionException $e, int $timeout): ConsoleException
@@ -257,7 +256,7 @@ class ConsoleClient
         $isTimeout = str_contains($e->getMessage(), 'cURL error 28') || stripos($e->getMessage(), 'timed out') !== false;
 
         return $isTimeout
-            ? new ConsoleException('CONSOLE_TIMEOUT', "{$console->name} tidak merespons dalam {$timeout} detik", $console->slug)
-            : new ConsoleException('CONSOLE_UNREACHABLE', "{$console->name} tidak dapat dihubungi.", $console->slug);
+            ? new ConsoleException('SOURCE_TIMEOUT', "{$console->name} tidak merespons dalam {$timeout} detik", $console->slug)
+            : new ConsoleException('SOURCE_UNREACHABLE', "{$console->name} tidak dapat dihubungi.", $console->slug, ['connection' => true]);
     }
 }

@@ -42,16 +42,19 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return match (true) {
-                $e instanceof ApiException => ApiResponse::error($e->status, $e->errorCode, $e->getMessage(), $e->console, $e->fields, $e->details),
-                $e instanceof ConsoleException => ApiResponse::error($e->httpStatus(), $e->errorCode, $e->getMessage(), $e->console, details: $e->details),
-                $e instanceof ValidationException => ApiResponse::error(422, 'VALIDATION_FAILED', 'Input tidak valid.', fields: $e->errors()),
+                $e instanceof ApiException => ApiResponse::error($e->status, $e->errorCode, $e->getMessage(), $e->details),
+                // Source names and URLs only for Admin IT; User gets an everyday sentence.
+                $e instanceof ConsoleException => $request->user()?->hasPermission('admin.consoles.view')
+                    ? ApiResponse::error($e->httpStatus(), $e->errorCode, $e->getMessage(), ['source' => $e->console, ...$e->details])
+                    : ApiResponse::error($e->httpStatus(), $e->errorCode, $e->userMessage()),
+                $e instanceof ValidationException => ApiResponse::error(422, 'VALIDATION_ERROR', 'Input tidak valid.', ['fields' => $e->errors()]),
                 $e instanceof AuthenticationException => ApiResponse::error(401, 'UNAUTHENTICATED', 'Sesi tidak valid. Silakan masuk lagi.'),
                 $e instanceof ModelNotFoundException, $e instanceof NotFoundHttpException => ApiResponse::error(404, 'NOT_FOUND', 'Data tidak ditemukan.'),
                 $e instanceof ThrottleRequestsException => ApiResponse::error(429, 'RATE_LIMITED', 'Terlalu banyak permintaan. Coba lagi sebentar lagi.'),
                 $e instanceof HttpExceptionInterface && $e->getStatusCode() === 403 => ApiResponse::error(403, 'FORBIDDEN', 'Akses ditolak.'),
                 $e instanceof HttpExceptionInterface && $e->getStatusCode() === 409 => ApiResponse::error(409, 'CONFLICT', $e->getMessage() ?: 'Konflik.'),
                 $e instanceof HttpExceptionInterface && $e->getStatusCode() === 405 => ApiResponse::error(404, 'NOT_FOUND', 'Endpoint tidak ditemukan.'),
-                default => ApiResponse::error(500, 'INTERNAL_ERROR', 'Terjadi kesalahan pada server.'),
+                default => ApiResponse::error(500, 'SERVER_ERROR', 'Terjadi kesalahan pada server.'),
             };
         });
     })->create();

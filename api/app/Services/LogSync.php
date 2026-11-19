@@ -13,7 +13,7 @@ use InvalidArgumentException;
 use Throwable;
 
 /**
- * Pulls `GET /internal/v1/logs?since=&cursor=&limit=` from a console and stores entries idempotently.
+ * Pulls `GET /api/v1/logs?since=&cursor=&limit=` from a console and stores entries idempotently.
  * Console log entries are uniform: {occurred_at, level, message, actor, tx_id}.
  */
 class LogSync
@@ -39,7 +39,7 @@ class LogSync
             $inserted = 0;
 
             for ($page = 0; $page < self::MAX_PAGES; $page++) {
-                $response = $this->client->request($console, 'GET', '/internal/v1/logs', null, [
+                $response = $this->client->request($console, 'GET', '/api/v1/logs', null, [
                     'throw' => true,
                     'query' => array_filter(['since' => $since->utc()->toIso8601ZuluString(), 'cursor' => $cursor, 'limit' => self::PAGE_SIZE]),
                 ]);

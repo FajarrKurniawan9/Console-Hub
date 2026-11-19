@@ -19,10 +19,10 @@ it('sends the service key, request id and acting user', function () {
     Context::add('request_id', 'req-abcdef12');
     $user = actingAsRole();
 
-    $response = client()->request($console, 'GET', '/internal/v1/employees');
+    $response = client()->request($console, 'GET', '/api/v1/people');
 
     expect($response->status)->toBe(200)->and($response->body)->toBe(['ok' => true]);
-    Http::assertSent(fn (Request $r) => $r->url() === 'http://hr.test/internal/v1/employees'
+    Http::assertSent(fn (Request $r) => $r->url() === 'http://hr.test/api/v1/people'
         && $r->header('X-Service-Key') === ['k-123']
         && $r->header('X-Request-Id') === ['req-abcdef12']
         && $r->header('X-Acting-User') === [(string) $user->id]);
@@ -40,62 +40,61 @@ it('supports bearer and basic service keys for later consoles', function () {
     Http::assertSent(fn (Request $r) => $r->header('Authorization') === ['Basic '.base64_encode('hub:rahasia')]);
 });
 
-it('maps a timeout to CONSOLE_TIMEOUT after read retries', function () {
+it('maps a timeout to SOURCE_TIMEOUT without retrying', function () {
     $console = Console::factory()->create(['name' => 'Web Produksi', 'slug' => 'produksi', 'base_url' => 'http://produksi.test']);
     Http::fake(['produksi.test/*' => Http::failedConnection('cURL error 28: Operation timed out after 8000 milliseconds')]);
 
     expect(fn () => client()->request($console, 'GET', '/log'))
-        ->toThrow(fn (ConsoleException $e) => expect($e->errorCode)->toBe('CONSOLE_TIMEOUT')
+        ->toThrow(fn (ConsoleException $e) => expect($e->errorCode)->toBe('SOURCE_TIMEOUT')
             ->and($e->getMessage())->toBe('Web Produksi tidak merespons dalam 8 detik')
             ->and($e->httpStatus())->toBe(504)
             ->and($e->console)->toBe('produksi'));
 
-    Http::assertSentCount(3);
-    Sleep::assertSequence([Sleep::for(1)->second(), Sleep::for(2)->seconds()]);
+    Http::assertSentCount(1);
 });
 
-it('maps connection failures to CONSOLE_UNREACHABLE', function () {
+it('retries a GET once on a connection error, then maps it to SOURCE_UNREACHABLE', function () {
     $console = Console::factory()->create(['base_url' => 'http://hr.test']);
     Http::fake(['hr.test/*' => Http::failedConnection()]);
 
     expect(fn () => client()->request($console, 'GET', '/x'))
-        ->toThrow(fn (ConsoleException $e) => expect($e->errorCode)->toBe('CONSOLE_UNREACHABLE')->and($e->httpStatus())->toBe(502));
+        ->toThrow(fn (ConsoleException $e) => expect($e->errorCode)->toBe('SOURCE_UNREACHABLE')->and($e->httpStatus())->toBe(502));
+
+    Http::assertSentCount(2);
+    Sleep::assertSequence([Sleep::for(1)->second()]);
 });
 
-it('retries GET on 503 and then maps it to CONSOLE_UNREACHABLE', function () {
+it('recovers when the retried GET succeeds', function () {
+    $console = Console::factory()->create(['base_url' => 'http://hr.test']);
+    Http::fake(['hr.test/*' => Http::sequence()->pushFailedConnection()->push(['ok' => true])]);
+
+    expect(client()->request($console, 'GET', '/x')->status)->toBe(200);
+});
+
+it('does not retry on an HTTP error status', function () {
     $console = Console::factory()->create(['base_url' => 'http://hr.test']);
     Http::fake(['hr.test/*' => Http::response('down', 503)]);
 
-    expect(fn () => client()->request($console, 'GET', '/x', null, ['throw' => true]))
-        ->toThrow(fn (ConsoleException $e) => expect($e->errorCode)->toBe('CONSOLE_UNREACHABLE'));
-
-    Http::assertSentCount(3);
-});
-
-it('recovers when a retried GET succeeds', function () {
-    $console = Console::factory()->create(['base_url' => 'http://hr.test']);
-    Http::fake(['hr.test/*' => Http::sequence()->push('busy', 502)->push(['ok' => true])]);
-
-    expect(client()->request($console, 'GET', '/x')->status)->toBe(200);
-    Http::assertSentCount(2);
+    expect(client()->request($console, 'GET', '/x')->status)->toBe(503);
+    Http::assertSentCount(1);
 });
 
 it('never retries writes', function () {
     $console = Console::factory()->create(['base_url' => 'http://hr.test']);
-    Http::fake(['hr.test/*' => Http::response('busy', 503)]);
+    Http::fake(['hr.test/*' => Http::failedConnection()]);
 
-    client()->request($console, 'POST', '/employees', ['name' => 'x']);
+    expect(fn () => client()->request($console, 'POST', '/people', ['name' => 'x']))->toThrow(ConsoleException::class);
 
     Http::assertSentCount(1);
 });
 
-it('maps other non 2xx to CONSOLE_ERROR with the original status and body', function () {
+it('maps other non 2xx to SOURCE_UNREACHABLE with the original status and body', function () {
     $console = Console::factory()->create(['base_url' => 'http://hr.test']);
-    Http::fake(['hr.test/*' => Http::response(['error' => 'nope'], 409)]);
+    Http::fake(['hr.test/*' => Http::response(['error' => 'nope'], 500)]);
 
     expect(fn () => client()->request($console, 'POST', '/x', [], ['throw' => true]))
-        ->toThrow(fn (ConsoleException $e) => expect($e->errorCode)->toBe('CONSOLE_ERROR')
-            ->and($e->details)->toBe(['status' => 409, 'body' => ['error' => 'nope']]));
+        ->toThrow(fn (ConsoleException $e) => expect($e->errorCode)->toBe('SOURCE_UNREACHABLE')
+            ->and($e->details)->toBe(['status' => 500, 'body' => ['error' => 'nope']]));
 });
 
 it('rejects absolute and traversal paths', function (string $path) {
@@ -110,7 +109,7 @@ it('blocks private base urls when private hosts are not allowed', function () {
     $console = Console::factory()->create(['base_url' => 'http://127.0.0.1:4001']);
 
     expect(fn () => client()->request($console, 'GET', '/health'))
-        ->toThrow(fn (ConsoleException $e) => expect($e->errorCode)->toBe('CONSOLE_UNREACHABLE'));
+        ->toThrow(fn (ConsoleException $e) => expect($e->errorCode)->toBe('SOURCE_UNREACHABLE'));
     Http::assertNothingSent();
 });
 

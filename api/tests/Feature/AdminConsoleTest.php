@@ -95,8 +95,8 @@ it('rejects base urls blocked by the host guard', function () {
 
     $response = $this->postJson('/api/v1/admin/consoles', ['slug' => 'x', 'name' => 'X', 'base_url' => 'https://169.254.169.254', 'service_key' => 'abcdefgh']);
 
-    assertApiError($response, 422, 'VALIDATION_FAILED');
-    $response->assertJsonStructure(['error' => ['fields' => ['base_url']]]);
+    assertApiError($response, 422, 'VALIDATION_ERROR');
+    $response->assertJsonStructure(['error' => ['details' => ['fields' => ['base_url']]]]);
 });
 
 it('requires one console per resource', function () {
@@ -105,9 +105,9 @@ it('requires one console per resource', function () {
     $missing = $this->postJson('/api/v1/admin/consoles', ['slug' => 'hr2', 'name' => 'HR 2', 'base_url' => 'http://hr2.test', 'service_key' => 'abcdefgh']);
     $taken = $this->postJson('/api/v1/admin/consoles', ['slug' => 'hr2', 'name' => 'HR 2', 'base_url' => 'http://hr2.test', 'service_key' => 'abcdefgh', 'resource' => 'people']);
 
-    assertApiError($missing, 422, 'VALIDATION_FAILED');
-    assertApiError($taken, 422, 'VALIDATION_FAILED');
-    $taken->assertJsonStructure(['error' => ['fields' => ['resource']]]);
+    assertApiError($missing, 422, 'VALIDATION_ERROR');
+    assertApiError($taken, 422, 'VALIDATION_ERROR');
+    $taken->assertJsonStructure(['error' => ['details' => ['fields' => ['resource']]]]);
 });
 
 it('needs admin.consoles.manage to change consoles', function () {

@@ -61,7 +61,7 @@ it('filters by consoles, levels, text (also tx_id) and time, and paginates', fun
     $this->getJson('/api/v1/admin/logs?q=33-4444')->assertJsonCount(1, 'data');
     $this->getJson('/api/v1/admin/logs?from=2026-11-19T08:00:00Z')->assertJsonCount(2, 'data');
     $this->getJson('/api/v1/admin/logs?limit=2')->assertJsonCount(2, 'data')->assertJsonPath('meta.next_cursor', fn ($c) => is_string($c));
-    assertApiError($this->getJson('/api/v1/admin/logs?cursor=rusak'), 422, 'VALIDATION_FAILED');
+    assertApiError($this->getJson('/api/v1/admin/logs?cursor=rusak'), 422, 'VALIDATION_ERROR');
 });
 
 it('shows one log with raw', function () {
@@ -74,7 +74,7 @@ it('pulls logs from the internal api idempotently and pages through the cursor',
     $console = Console::factory()->create(['slug' => 'hr', 'base_url' => 'http://hr.test', 'service_key' => 'k-hr']);
     $entry = ['occurred_at' => '2026-11-19T09:58:00Z', 'level' => 'ERROR', 'message' => 'Gagal', 'actor' => 'budi', 'tx_id' => null];
     Http::fake([
-        'hr.test/internal/v1/logs*' => Http::sequence()
+        'hr.test/api/v1/logs*' => Http::sequence()
             ->push(['data' => [$entry], 'meta' => ['next_cursor' => 'c2']])
             ->push(['data' => [['occurred_at' => '2026-11-19T09:59:00Z', 'level' => 'warning', 'message' => 'Lambat', 'actor' => null]], 'meta' => ['next_cursor' => null]])
             ->push(['data' => [$entry], 'meta' => ['next_cursor' => null]]),

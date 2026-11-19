@@ -98,9 +98,9 @@ it('validates new users', function () {
 
     $response = $this->postJson('/api/v1/admin/rbac/users', ['name' => 'Al', 'email' => 'ada@example.com', 'role_code' => 'tidak-ada']);
 
-    assertApiError($response, 422, 'VALIDATION_FAILED');
-    $response->assertJsonPath('error.fields.email.0', 'Email ini sudah dipakai pengguna lain.')
-        ->assertJsonStructure(['error' => ['fields' => ['name', 'role_code']]]);
+    assertApiError($response, 422, 'VALIDATION_ERROR');
+    $response->assertJsonPath('error.details.fields.email.0', 'Email ini sudah dipakai pengguna lain.')
+        ->assertJsonStructure(['error' => ['details' => ['fields' => ['name', 'role_code']]]]);
 });
 
 it('changes role and active flag with old and new values in the audit', function () {
@@ -147,6 +147,6 @@ it('keeps admin.rbac.manage on admin_it and rejects unknown permissions', functi
     $admin = actingAsRole('admin_it');
 
     assertApiError($this->putJson("/api/v1/admin/rbac/roles/{$admin->role_id}/permissions", ['permissions' => ['admin.audit.view']]), 409, 'CONFLICT');
-    assertApiError($this->putJson("/api/v1/admin/rbac/roles/{$admin->role_id}/permissions", ['permissions' => ['admin.rbac.manage', 'tidak.ada']]), 422, 'VALIDATION_FAILED');
+    assertApiError($this->putJson("/api/v1/admin/rbac/roles/{$admin->role_id}/permissions", ['permissions' => ['admin.rbac.manage', 'tidak.ada']]), 422, 'VALIDATION_ERROR');
     expect($admin->role->permissions()->count())->toBe(count(Permission::ALL));
 });

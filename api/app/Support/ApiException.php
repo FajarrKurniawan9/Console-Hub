@@ -10,15 +10,12 @@ use RuntimeException;
 class ApiException extends RuntimeException
 {
     /**
-     * @param  array<string, list<string>>  $fields
      * @param  array<string, mixed>  $details
      */
     public function __construct(
         public readonly int $status,
         public readonly string $errorCode,
         string $message,
-        public readonly array $fields = [],
-        public readonly ?string $console = null,
         public readonly array $details = [],
     ) {
         parent::__construct($message);
@@ -32,8 +29,8 @@ class ApiException extends RuntimeException
     /**
      * @param  array<string, list<string>>  $fields
      */
-    public static function validation(array $fields, string $message = 'Input tidak valid.', ?string $console = null): self
+    public static function validation(array $fields, string $message = 'Input tidak valid.'): self
     {
-        return new self(422, 'VALIDATION_FAILED', $message, $fields, $console);
+        return new self(422, 'VALIDATION_ERROR', $message, ['fields' => $fields]);
     }
 }
