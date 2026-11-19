@@ -1,9 +1,13 @@
 <?php
 
+use App\Models\Console;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -25,7 +29,7 @@ pest()->extend(TestCase::class)
         Http::preventStrayRequests();
         Sleep::fake();
     })
-    ->in('Feature', 'Unit');
+    ->in('Feature', 'Unit', 'Stub');
 
 /*
 |--------------------------------------------------------------------------
@@ -73,4 +77,111 @@ function actingAsRole(string $role = 'user'): User
     Sanctum::actingAs($user);
 
     return $user;
+}
+
+/**
+ * The three source APIs behind Http::fake, backed by FakeSources::$rows (contract §1-4: `?ids=`,
+ * filters, `status`, `version`/`expected_version`, soft delete). FakeSources::$down lists dead sources.
+ */
+final class FakeSources
+{
+    public const HOSTS = ['gudang' => 'items', 'produksi' => 'productions', 'hr' => 'people'];
+
+    /** @var array<string, array<string, array<string, mixed>>> resource => id => row */
+    public static array $rows = [];
+
+    /** @var list<string> */
+    public static array $down = [];
+
+    /** @var list<string> "METHOD source path?query" */
+    public static array $calls = [];
+
+    /**
+     * @param  array<string, mixed>  $fields
+     * @return array<string, mixed>
+     */
+    public static function add(string $resource, array $fields): array
+    {
+        $row = ['id' => (string) Str::uuid(), 'status' => 'aktif', 'version' => 1, 'created_at' => '2026-11-19T00:00:00Z', 'updated_at' => '2026-11-19T00:00:00Z', ...$fields];
+
+        return self::$rows[$resource][$row['id']] = $row;
+    }
+
+    /**
+     * Calls made to one source, e.g. calls('hr', 'GET').
+     *
+     * @return list<string>
+     */
+    public static function calls(string $source, ?string $method = null): array
+    {
+        return array_values(array_filter(self::$calls, fn ($c) => str_contains($c, " {$source} ") && ($method === null || str_starts_with($c, "{$method} "))));
+    }
+}
+
+function fakeSources(): void
+{
+    FakeSources::$rows = ['items' => [], 'productions' => [], 'people' => []];
+    FakeSources::$down = [];
+    FakeSources::$calls = [];
+
+    foreach (FakeSources::HOSTS as $slug => $resource) {
+        Console::query()->where('slug', $slug)->exists() || Console::factory()->create(['slug' => $slug, 'base_url' => "http://{$slug}.test"]);
+    }
+
+    Http::fake(function (Request $request) {
+        $source = explode('.', parse_url($request->url(), PHP_URL_HOST))[0];
+        $path = parse_url($request->url(), PHP_URL_PATH);
+        parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+        FakeSources::$calls[] = "{$request->method()} {$source} ".$path.(isset($query['ids']) ? '?ids' : '');
+
+        if (in_array($source, FakeSources::$down, true)) {
+            return Http::failedConnection()($request);
+        }
+
+        $resource = FakeSources::HOSTS[$source];
+        $id = preg_match("#^/api/v1/{$resource}/([^/]+)$#", $path, $m) ? $m[1] : null;
+        $rows = &FakeSources::$rows[$resource];
+        $error = fn (int $status, string $code, array $details = []) => Http::response(['error' => ['code' => $code, 'message' => $code, 'details' => (object) $details]], $status);
+
+        if ($id === null && $request->method() === 'GET') {
+            $ids = isset($query['ids']) ? explode(',', $query['ids']) : null;
+            $status = $query['status'] ?? ($ids ? 'all' : 'aktif');
+            $found = array_values(array_filter($rows, function ($row) use ($ids, $status, $query) {
+                foreach (['kind', 'production_type', 'role', 'production_id', 'responsible_id', 'courier_id'] as $f) {
+                    if (isset($query[$f]) && ($row[$f] ?? null) !== $query[$f]) {
+                        return false;
+                    }
+                }
+
+                return ($ids === null || in_array($row['id'], $ids, true)) && ($status === 'all' || $row['status'] === $status);
+            }));
+
+            return Http::response(['data' => array_slice($found, 0, (int) ($query['limit'] ?? 25)), 'meta' => ['next_cursor' => null]]);
+        }
+
+        if ($id === null) {
+            $row = FakeSources::add($resource, $request->data());
+
+            return Http::response(['data' => $row], 201);
+        }
+
+        if (! isset($rows[$id])) {
+            return $error(404, 'NOT_FOUND');
+        }
+
+        if ($request->method() === 'GET') {
+            return Http::response(['data' => $rows[$id]]);
+        }
+
+        $expected = (int) ($request->method() === 'DELETE' ? ($query['expected_version'] ?? 0) : ($request->data()['expected_version'] ?? 0));
+
+        if ($expected !== $rows[$id]['version']) {
+            return $error(409, 'VERSION_CONFLICT', ['current_version' => $rows[$id]['version']]);
+        }
+
+        $changes = $request->method() === 'DELETE' ? ['status' => 'nonaktif'] : Arr::except($request->data(), ['expected_version']);
+        $rows[$id] = [...$rows[$id], ...$changes, 'version' => $rows[$id]['version'] + 1];
+
+        return Http::response(['data' => $rows[$id]]);
+    });
 }
