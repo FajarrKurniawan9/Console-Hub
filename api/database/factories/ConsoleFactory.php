@@ -24,10 +24,12 @@ class ConsoleFactory extends Factory
             'auth_type' => 'api_key',
             'service_key' => 'test-key-'.$slug,
             'is_active' => true,
-            'is_owner_of' => match ($slug) {
+            // Follows the final slug, also when a test overrides it.
+            'is_owner_of' => fn (array $attributes) => match ($attributes['slug']) {
                 'hr' => ['divisions', 'employees'],
                 'gudang' => ['items'],
-                default => ['orders'],
+                'produksi' => ['orders'],
+                default => [],
             },
         ];
     }

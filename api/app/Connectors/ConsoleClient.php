@@ -4,13 +4,18 @@ namespace App\Connectors;
 
 use App\Connectors\Exceptions\ConsoleException;
 use App\Models\Console;
+use Closure;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use InvalidArgumentException;
+use Throwable;
 
 /**
  * The single gateway for every HTTP call the portal makes to a console.
@@ -95,6 +100,56 @@ class ConsoleClient
     }
 
     /**
+     * Send one authenticated request per console in parallel. Failures come back as ConsoleException
+     * values (never thrown), so one dead console never hides the answers of the others.
+     *
+     * @param  iterable<Console>  $consoles
+     * @param  Closure(Console): array{0: string, 1: string, 2: array<string, mixed>|null}  $request  method, path, body
+     * @return array<string, ConsoleResponse|ConsoleException> keyed by console slug
+     */
+    public function pool(iterable $consoles, Closure $request, int $timeout): array
+    {
+        $results = [];
+        $sendable = [];
+
+        foreach ($consoles as $console) {
+            if (! $console->is_active) {
+                $results[$console->slug] = new ConsoleException('CONSOLE_UNREACHABLE', "{$console->name} dinonaktifkan di portal.", $console->slug);
+            } elseif ($reason = $this->guard->violation($console->base_url)) {
+                $results[$console->slug] = new ConsoleException('CONSOLE_UNREACHABLE', "{$console->name} diblokir: {$reason}", $console->slug);
+            } else {
+                $sendable[$console->slug] = $console;
+            }
+        }
+
+        if ($sendable === []) {
+            return $results;
+        }
+
+        $urls = [];
+        $responses = Http::pool(function (Pool $pool) use ($sendable, $request, $timeout, &$urls) {
+            foreach ($sendable as $slug => $console) {
+                [$method, $path, $body] = $request($console);
+                $urls[$slug] = $this->url($console, $path);
+                $this->authenticate($this->configure($pool->as($slug), $timeout), $console)
+                    ->send(strtoupper($method), $urls[$slug], $body === null ? [] : ['json' => $body]);
+            }
+        });
+
+        foreach ($sendable as $slug => $console) {
+            $response = $responses[$slug] ?? null;
+
+            $results[$slug] = match (true) {
+                $response instanceof Response => ConsoleResponse::from($response, (int) round(($response->transferStats?->getTransferTime() ?? 0) * 1000), $urls[$slug]),
+                $response instanceof ConnectionException => $this->connectionError($console, $response, $timeout),
+                default => $this->unexpected($console, $response),
+            };
+        }
+
+        return $results;
+    }
+
+    /**
      * Join base URL and a relative path, rejecting absolute URLs and traversal.
      */
     public function url(Console $console, string $path): string
@@ -138,13 +193,21 @@ class ConsoleClient
      */
     private function pending(array $opts): PendingRequest
     {
-        return Http::acceptJson()
+        return $this->configure(Http::createPendingRequest(), (int) ($opts['timeout'] ?? config('consolehub.default_timeout_seconds', 8)));
+    }
+
+    /**
+     * Headers and limits shared by every console call: JSON, request id, acting user, timeouts, no redirects.
+     */
+    private function configure(PendingRequest $request, int $timeout): PendingRequest
+    {
+        return $request->acceptJson()
             ->withHeaders(array_filter([
                 'X-Request-Id' => Context::get('request_id'),
                 'X-Acting-User' => (string) (Context::get('acting_user') ?? Auth::id() ?? ''),
             ]))
-            ->timeout((int) ($opts['timeout'] ?? config('consolehub.default_timeout_seconds', 8)))
-            ->connectTimeout(5)
+            ->timeout($timeout)
+            ->connectTimeout(min(5, $timeout))
             ->withoutRedirecting();
     }
 
@@ -178,6 +241,15 @@ class ConsoleClient
         }
 
         return ConsoleResponse::from($response, (int) round((hrtime(true) - $started) / 1e6), $url);
+    }
+
+    private function unexpected(Console $console, mixed $failure): ConsoleException
+    {
+        if ($failure instanceof Throwable) {
+            Log::error('Console call failed unexpectedly', ['console' => $console->slug, 'exception' => $failure::class, 'message' => $failure->getMessage()]);
+        }
+
+        return new ConsoleException('CONSOLE_ERROR', "{$console->name} gagal dipanggil.", $console->slug);
     }
 
     private function connectionError(Console $console, ConnectionException $e, int $timeout): ConsoleException
