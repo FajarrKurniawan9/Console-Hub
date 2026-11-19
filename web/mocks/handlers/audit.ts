@@ -30,6 +30,6 @@ export const auditHandlers = [
     const start = cursor ? matches.findIndex((e) => e.id < cursor) : 0
     const slice = start < 0 ? [] : matches.slice(start, start + limit)
     const next = start >= 0 && start + limit < matches.length ? String(slice.at(-1)!.id) : null
-    return page(structuredClone(slice), next, matches.length)
+    return page(structuredClone(slice), next, { total: matches.length })
   }),
 ]

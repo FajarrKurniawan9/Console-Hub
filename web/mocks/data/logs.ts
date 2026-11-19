@@ -2,7 +2,7 @@ import type { LogEntry, LogLevel } from '../../src/lib/api/schemas'
 import { getScenario } from '../scenarios'
 import { consoleSeeds, DOWN_SINCE, isDown } from './consoles'
 import { PEOPLE, username } from './people'
-import { pad, seeded } from './random'
+import { seeded } from './random'
 
 type Slug = 'hr' | 'gudang' | 'produksi'
 type Template = (r: ReturnType<typeof seeded>) => {
@@ -11,160 +11,65 @@ type Template = (r: ReturnType<typeof seeded>) => {
   event: string
 }
 
-const rp = (n: number) => `Rp${n.toLocaleString('id-ID')}`
 const person = (r: ReturnType<typeof seeded>) => username(r.pick(PEOPLE))
+const ITEM_NAMES = ['Kain katun', 'Besi beton 10 mm', 'Buku tulis 58 lembar', 'Sarden kaleng 425 g']
+const AREAS = ['Area Tekstil A', 'Area Logam B', 'Area Percetakan', 'Area Pangan']
 
 const TEMPLATES: Record<Slug, Record<'info' | 'warn' | 'error', Template[]>> = {
   hr: {
     info: [
+      (r) => ({ message: 'Personel baru ditambahkan', actor: person(r), event: 'person.created' }),
       (r) => ({
-        message: `Karyawan E-${pad(r.int(13, 40))} dibuat`,
+        message: `Role personel diubah menjadi ${r.pick(['Kurir', 'Staf Gudang', 'Operator Produksi'])}`,
         actor: person(r),
-        event: 'employee.created',
+        event: 'person.updated',
       }),
-      (r) => ({
-        message: `Data karyawan E-${pad(r.int(1, 12))} diperbarui`,
-        actor: person(r),
-        event: 'employee.updated',
-      }),
-      (r) => ({
-        message: `Hak akses "${r.pick(['Operator gudang', 'Supervisor produksi', 'Staf HR'])}" diberikan ke E-${pad(r.int(1, 12))}`,
-        actor: person(r),
-        event: 'access.granted',
-      }),
-      (r) => ({
-        message: `Karyawan E-${pad(r.int(1, 12))} dipindahkan ke divisi ${r.pick(['Produksi', 'Gudang', 'Keuangan'])}`,
-        actor: person(r),
-        event: 'employee.moved',
-      }),
+      (r) => ({ message: `Daftar personel dibaca (${r.int(2, 25)} ID)`, actor: 'hub', event: 'person.listed' }),
     ],
     warn: [
-      (r) => ({
-        message: `Login gagal 3 kali untuk akun ${person(r)}`,
-        actor: null,
-        event: 'auth.failed',
-      }),
-      (r) => ({
-        message: `Kontrak karyawan E-${pad(r.int(1, 12))} berakhir dalam 7 hari`,
-        actor: null,
-        event: 'contract.expiring',
-      }),
+      () => ({ message: 'Kunci layanan salah pada permintaan dari 10.0.4.12', actor: null, event: 'auth.failed' }),
+      (r) => ({ message: `Batas permintaan hampir tercapai (${r.int(50, 59)}/60 per menit)`, actor: 'hub', event: 'rate.near' }),
     ],
     error: [
-      () => ({
-        message: 'Sinkronisasi divisi gagal: direktori LDAP tidak merespons (timeout 10 dtk)',
-        actor: null,
-        event: 'sync.failed',
-      }),
-      (r) => ({
-        message: `Gagal mengirim email aktivasi ke E-${pad(r.int(13, 40))}: SMTP 550`,
-        actor: null,
-        event: 'mail.failed',
-      }),
+      () => ({ message: 'Koneksi database terputus (SSL SYSCALL error: EOF detected)', actor: null, event: 'db.lost' }),
     ],
   },
   gudang: {
     info: [
+      (r) => ({ message: `Barang "${r.pick(ITEM_NAMES)}" ditambahkan`, actor: person(r), event: 'item.created' }),
       (r) => ({
-        message: `Reservasi RSV-2026-${pad(r.int(100, 400), 4)} dibuat untuk PO-2026-${pad(r.int(1, 60), 4)}`,
-        actor: 'sistem',
-        event: 'reservation.created',
-      }),
-      (r) => ({
-        message: `Barang masuk SKU-BB-${pad(r.int(1, 8))} sebanyak ${r.int(5, 40) * 10} kg`,
+        message: `Jumlah "${r.pick(ITEM_NAMES)}" diubah menjadi ${r.int(5, 400)}`,
         actor: person(r),
-        event: 'stock.in',
+        event: 'item.updated',
       }),
-      (r) => ({
-        message: `Barang keluar SKU-BJ-${pad(r.int(1, 7))} sebanyak ${r.int(2, 30)} karton`,
-        actor: person(r),
-        event: 'stock.out',
-      }),
-      (r) => ({
-        message: `Akses area Gudang ${r.pick(['A', 'B', 'C'])} diberikan ke E-${pad(r.int(1, 12))}`,
-        actor: 'sistem',
-        event: 'area.granted',
-      }),
+      (r) => ({ message: `Daftar barang dibaca (${r.int(5, 25)} baris)`, actor: 'hub', event: 'item.listed' }),
     ],
     warn: [
       (r) => ({
-        message: `Stok SKU-BB-${pad(r.int(1, 8))} di bawah minimum (sisa ${r.int(2, 40)} kg, minimum 50 kg)`,
-        actor: 'sistem',
-        event: 'stock.low',
-      }),
-      (r) => ({
-        message: `Akses area Gudang ${r.pick(['A', 'B'])} ditolak untuk E-${pad(r.int(1, 12))}`,
-        actor: null,
-        event: 'area.denied',
-      }),
-      (r) => ({
-        message: `Reservasi RSV-2026-${pad(r.int(100, 400), 4)} dibatalkan`,
-        actor: 'sistem',
-        event: 'reservation.canceled',
+        message: `Permintaan PATCH ditolak: VERSION_CONFLICT (versi ${r.int(2, 6)})`,
+        actor: person(r),
+        event: 'item.conflict',
       }),
     ],
     error: [
-      () => ({
-        message: 'Gagal menulis mutasi stok: deadlock terdeteksi pada tabel stock_moves',
-        actor: null,
-        event: 'db.deadlock',
-      }),
-      (r) => ({
-        message: `Reservasi untuk PO-2026-${pad(r.int(1, 60), 4)} ditolak: stok SKU-BB-${pad(r.int(1, 8))} tidak cukup`,
-        actor: 'sistem',
-        event: 'reservation.rejected',
-      }),
+      () => ({ message: 'Query daftar barang melebihi batas waktu 5 dtk', actor: null, event: 'db.timeout' }),
     ],
   },
   produksi: {
     info: [
-      (r) => ({
-        message: `Pesanan PO-2026-${pad(r.int(1, 60), 4)} masuk antrean (posisi ${r.int(1, 9)})`,
-        actor: 'sistem',
-        event: 'queue.added',
-      }),
-      (r) => {
-        const old = r.int(10, 30) * 5000
-        return {
-          message: `Harga SKU-BJ-${pad(r.int(1, 6))} diubah dari ${rp(old)} menjadi ${rp(old + 10000)}`,
-          actor: person(r),
-          event: 'price.updated',
-        }
-      },
-      (r) => ({
-        message: `Pengiriman DO-2026-${pad(r.int(1, 300), 4)} berangkat`,
-        actor: person(r),
-        event: 'shipment.departed',
-      }),
-      (r) => ({
-        message: `Pesanan PO-2026-${pad(r.int(1, 60), 4)} selesai diproduksi`,
-        actor: 'sistem',
-        event: 'order.finished',
-      }),
+      (r) => ({ message: `Produksi ${r.pick(AREAS)} diperbarui`, actor: person(r), event: 'production.updated' }),
+      (r) => ({ message: `Pengantar produksi ${r.pick(AREAS)} diganti`, actor: person(r), event: 'production.courier' }),
+      (r) => ({ message: `Daftar produksi dibaca (${r.int(2, 6)} ID)`, actor: 'hub', event: 'production.listed' }),
     ],
     warn: [
       (r) => ({
-        message: `Pesanan PO-2026-${pad(r.int(1, 60), 4)} terlambat ${r.int(1, 5)} jam dari jadwal`,
-        actor: 'sistem',
-        event: 'order.late',
-      }),
-      () => ({
-        message: 'Tim shift malam kurang 1 operator',
-        actor: 'sistem',
-        event: 'shift.understaffed',
+        message: `Permintaan POST ditolak: DUPLICATE (${r.pick(AREAS)} sudah punya jenis itu)`,
+        actor: person(r),
+        event: 'production.duplicate',
       }),
     ],
     error: [
-      (r) => ({
-        message: `Mesin LINE-${r.int(1, 4)} berhenti: sensor suhu di luar batas`,
-        actor: null,
-        event: 'machine.stopped',
-      }),
-      (r) => ({
-        message: `Pengiriman DO-2026-${pad(r.int(1, 300), 4)} gagal dijadwalkan: armada tidak tersedia`,
-        actor: null,
-        event: 'shipment.failed',
-      }),
+      () => ({ message: 'Gagal menulis app_logs: disk penuh', actor: null, event: 'log.failed' }),
     ],
   },
 }
@@ -210,8 +115,6 @@ function pushLog(slug: Slug, at: number, rand = r) {
     level,
     message: t.message,
     actor: t.actor,
-    // Linked to real mock transactions in phase 3.
-    tx_id: null,
     raw: rawFor(slug, level, iso, t, id),
   })
 }
@@ -228,49 +131,7 @@ export function visibleLogs(): LogEntry[] {
   const s = getScenario()
   if (s === 'empty') return []
   const cut = new Date(DOWN_SINCE).getTime()
-  return logs.filter((l) => !(isDown(l.console.slug) && new Date(l.occurred_at).getTime() > cut))
-}
-
-/** A log line written by a console while it takes part in a transaction. */
-export function logTx(
-  slug: Slug,
-  level: LogLevel,
-  message: string,
-  actor: string | null,
-  txId: string,
-) {
-  logTxAt(slug, level, message, actor, txId, Date.now())
-}
-
-/** Same, at a given time. Seeded history is inserted out of order, so ids are re-sorted. */
-export function logTxAt(
-  slug: Slug,
-  level: LogLevel,
-  message: string,
-  actor: string | null,
-  txId: string,
-  at: number,
-) {
-  const c = consoleSeeds.find((x) => x.slug === slug)!
-  const id = logs.length + 1
-  const iso = new Date(at).toISOString()
-  logs.push({
-    id,
-    console: { id: c.id, slug: c.slug, name: c.name },
-    occurred_at: iso,
-    level,
-    message,
-    actor,
-    tx_id: txId,
-    raw: rawFor(slug, level, iso, { message, actor, event: 'tx.participant' }, id),
-  })
-  if (at < Date.now() - 1000) renumber()
-}
-
-/** Keep "ascending time = ascending id", which the cursor and the "log baru" marker rely on. */
-function renumber() {
-  logs.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at))
-  logs.forEach((l, i) => (l.id = i + 1))
+  return logs.filter((l) => !(isDown(l.console.slug as Slug) && new Date(l.occurred_at).getTime() > cut))
 }
 
 /** Pull new logs from live consoles. Returns how many arrived per console. */

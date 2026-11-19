@@ -19,7 +19,7 @@ export function ConsoleCard({ console: c }: { console: ConsoleInfo }) {
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold">{c.name}</span>
         <span className="font-mono text-xs text-muted tabular-nums">
-          {c.last_latency_ms !== null ? duration(c.last_latency_ms) : '—'}
+          {c.latency_ms !== null ? duration(c.latency_ms) : '—'}
         </span>
       </div>
       <div className="flex items-center justify-between gap-2 text-dense">
@@ -28,12 +28,7 @@ export function ConsoleCard({ console: c }: { console: ConsoleInfo }) {
           {c.last_checked_at ? `dicek ${relative(c.last_checked_at)}` : 'belum pernah dicek'}
         </span>
       </div>
-      {down ? (
-        <p className="text-xs text-muted">
-          {since ? `Mati sejak ${shortTime(since)}. ` : ''}
-          <span className="font-mono">{c.last_error}</span>
-        </p>
-      ) : null}
+      {down && since ? <p className="text-xs text-muted">Mati sejak {shortTime(since)}.</p> : null}
     </Link>
   )
 }

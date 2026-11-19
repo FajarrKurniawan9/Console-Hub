@@ -1,12 +1,9 @@
 import { auditHandlers } from './audit'
 import { authHandlers } from './auth'
-import { consistencyHandlers } from './consistency'
 import { consoleHandlers } from './consoles'
 import { logHandlers } from './logs'
 import { overviewHandlers } from './overview'
 import { rbacHandlers } from './rbac'
-import { txHandlers } from './transactions'
-import { workHandlers } from './work'
 
 export const handlers = [
   ...authHandlers,
@@ -14,8 +11,5 @@ export const handlers = [
   ...logHandlers,
   ...overviewHandlers,
   ...rbacHandlers,
-  ...workHandlers,
-  ...txHandlers,
-  ...consistencyHandlers,
   ...auditHandlers,
 ]

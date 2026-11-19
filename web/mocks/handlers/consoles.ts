@@ -6,6 +6,7 @@ import {
   consoleView,
   DOWN_ERROR,
   isDown,
+  isSlow,
   touchCheck,
 } from '../data/consoles'
 import { fail, guard, latency, ok, page, url } from '../http'
@@ -16,7 +17,7 @@ export const consoleHandlers = [
     await latency()
     const g = guard(request, 'admin.consoles.view')
     if (g.error) return g.error
-    return page(consoleSeeds.map(consoleView), null, consoleSeeds.length)
+    return page(consoleSeeds.map(consoleView), null, { total: consoleSeeds.length })
   }),
 
   http.get(url('/admin/consoles/:id'), async ({ request, params }) => {
@@ -24,7 +25,7 @@ export const consoleHandlers = [
     const g = guard(request, 'admin.consoles.view')
     if (g.error) return g.error
     const seed = consoleById(Number(params.id))
-    if (!seed) return fail('NOT_FOUND', `Console #${params.id} tidak ada.`)
+    if (!seed) return fail('NOT_FOUND', `Sumber data #${params.id} tidak ada.`)
     return ok({ data: consoleView(seed) })
   }),
 
@@ -32,7 +33,7 @@ export const consoleHandlers = [
     const g = guard(request, 'admin.consoles.view')
     if (g.error) return g.error
     const seed = consoleById(Number(params.id))
-    if (!seed) return fail('NOT_FOUND', `Console #${params.id} tidak ada.`)
+    if (!seed) return fail('NOT_FOUND', `Sumber data #${params.id} tidak ada.`)
     touchCheck(seed.slug)
     const log = (status: string, latency_ms: number | null) =>
       recordAudit(g.user, 'console.tested', { type: 'console', id: seed.slug }, seed.slug, {
@@ -44,9 +45,9 @@ export const consoleHandlers = [
       log('down', null)
       return ok({ data: { status: 'down', latency_ms: null, message: DOWN_ERROR(seed) } })
     }
-    const ms = Math.round(seed.latency * (0.8 + Math.random() * 0.4))
+    const ms = isSlow(seed.slug) ? 3000 : Math.round(seed.latency * (0.8 + Math.random() * 0.4))
     if (!mockConfig.instant) await delay(Math.min(ms, 3000))
-    const status = seed.status
+    const status = isSlow(seed.slug) ? 'slow' : seed.status
     const message =
       status === 'slow'
         ? `Terhubung, tetapi lambat (${ms} ms, batas 2000 ms).`

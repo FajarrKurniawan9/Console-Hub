@@ -2,11 +2,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { CircleAlert } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
 import { ApiError } from '../lib/api/client'
-import { CONSOLE_CODES } from '../lib/errors'
+import { SOURCE_CODES } from '../lib/errors'
 
 /**
- * User shell: one plain line when any loaded data failed because a console is down.
- * Users cannot see console status, so this is derived from failed queries in the cache.
+ * User shell: one plain line when any loaded data failed because a source is down.
+ * Users cannot see source status, so this is derived from failed queries in the cache.
  */
 export function ServiceTroubleBar() {
   const qc = useQueryClient()
@@ -17,7 +17,7 @@ export function ServiceTroubleBar() {
       cache
         .getAll()
         .some(
-          (q) => q.state.error instanceof ApiError && CONSOLE_CODES.includes(q.state.error.code),
+          (q) => q.state.error instanceof ApiError && SOURCE_CODES.includes(q.state.error.code),
         ),
   )
   if (!trouble) return null

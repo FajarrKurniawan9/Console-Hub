@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
-import type { Resource } from '../../lib/api/work'
-import { RESOURCES } from '../../lib/api/work'
+import { RESOURCES, type Resource } from '../../lib/api/work'
 import { workKeys } from './queries'
 import { useWrite } from './useWrite'
 import { WriteFeedback } from './WriteFeedback'
 
 /** Confirm → DELETE ?expected_version= (deactivates) → result in the same dialog. */
 export function useDeactivate(resource: Resource, noun: string, onReload: () => void) {
-  const write = useWrite()
+  const write = useWrite(resource)
   const [target, setTarget] = useState<{ id: string; label: string; version: number } | null>(null)
   const close = () => {
     if (write.busy) return
@@ -20,7 +19,7 @@ export function useDeactivate(resource: Resource, noun: string, onReload: () => 
       open
       onOpenChange={(o) => !o && close()}
       title={`Nonaktifkan ${target.label}?`}
-      description={`${noun[0]!.toUpperCase()}${noun.slice(1)} ini tidak dapat dipakai lagi di transaksi baru. Data lamanya tetap tersimpan.`}
+      description={`${noun[0]!.toUpperCase()}${noun.slice(1)} ini tidak dapat dipilih lagi untuk data baru. Data lamanya tetap tersimpan.`}
       confirmLabel="Nonaktifkan"
       busyLabel="Menonaktifkan…"
       danger
@@ -33,7 +32,7 @@ export function useDeactivate(resource: Resource, noun: string, onReload: () => 
           },
           {
             success: `${target.label} dinonaktifkan`,
-            invalidate: [workKeys.all(resource)],
+            invalidate: [workKeys.root],
             onDone: () => setTarget(null),
           },
         )

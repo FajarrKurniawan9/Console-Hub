@@ -24,16 +24,16 @@ describe('request', () => {
     expect(auth).toBe('Bearer abc')
   })
 
-  it('maps an ApiError body to a typed error with fields and details', async () => {
+  it('maps an ApiError body to a typed error with details and field messages', async () => {
     server.use(
       http.post(url, () =>
         HttpResponse.json(
           {
             error: {
-              code: 'TRANSACTION_REFUSED',
-              message: 'Stok tidak cukup',
+              code: 'REFERENCED',
+              message: 'Masih dipakai',
               details: {
-                refusals: [{ console: 'gudang', code: 'INSUFFICIENT_STOCK', message: 'x' }],
+                used_by: [{ source: 'gudang', type: 'item', id: 'i-1', name: 'Kain katun' }],
               },
             },
           },
@@ -45,29 +45,57 @@ describe('request', () => {
       (e: unknown) => e,
     )
     expect(err).toBeInstanceOf(ApiError)
-    expect(err).toMatchObject({ code: 'TRANSACTION_REFUSED', status: 409 })
-    expect((err as ApiError).details?.refusals).toHaveLength(1)
+    expect(err).toMatchObject({ code: 'REFERENCED', status: 409 })
+    expect((err as ApiError).details?.used_by).toHaveLength(1)
   })
 
-  it('sends an Idempotency-Key on writes and reuses a given key', async () => {
-    const keys: (string | null)[] = []
+  it('reads details.fields as messages, or as a list of field names', async () => {
+    server.use(
+      http.post(url, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'x',
+              details: { fields: { name: ['Nama wajib diisi.'] } },
+            },
+          },
+          { status: 422 },
+        ),
+      ),
+      http.patch(url, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: 'REFERENCE_NOT_FOUND',
+              message: 'x',
+              details: { fields: ['responsible_id'] },
+            },
+          },
+          { status: 422 },
+        ),
+      ),
+    )
+    const a = (await request(z.unknown(), { url: '/thing', method: 'POST' }).catch(
+      (e: unknown) => e,
+    )) as ApiError
+    expect(a.fields).toEqual({ name: ['Nama wajib diisi.'] })
+    const b = (await request(z.unknown(), { url: '/thing', method: 'PATCH' }).catch(
+      (e: unknown) => e,
+    )) as ApiError
+    expect(b.fields).toEqual({ responsible_id: [] })
+  })
+
+  it('sends no Idempotency-Key (removed in update 2)', async () => {
+    let key: string | null = 'unset'
     server.use(
       http.post(url, ({ request }) => {
-        keys.push(request.headers.get('Idempotency-Key'))
-        return HttpResponse.json({ data: null })
-      }),
-      http.get(url, ({ request }) => {
-        keys.push(request.headers.get('Idempotency-Key'))
+        key = request.headers.get('Idempotency-Key')
         return HttpResponse.json({ data: null })
       }),
     )
-    await request(z.unknown(), { url: '/thing', method: 'POST', idempotencyKey: 'k-1' })
-    await request(z.unknown(), { url: '/thing', method: 'POST', idempotencyKey: 'k-1' })
     await request(z.unknown(), { url: '/thing', method: 'POST' })
-    await request(z.unknown(), { url: '/thing' })
-    expect(keys.slice(0, 2)).toEqual(['k-1', 'k-1'])
-    expect(keys[2]).toMatch(/^[0-9a-f-]{36}$/)
-    expect(keys[3]).toBeNull()
+    expect(key).toBeNull()
   })
 
   it('rejects responses that break the contract', async () => {

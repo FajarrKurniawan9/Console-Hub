@@ -133,7 +133,7 @@ function AddUser({ roles, onClose }: { roles: RbacRole[]; onClose: () => void })
   const create = useCreateUser()
   const error = create.error ? toApiError(create.error) : null
   const err = (k: string) =>
-    error?.code === 'VALIDATION_FAILED' ? error.fields[k]?.[0] : undefined
+    error?.code === 'VALIDATION_ERROR' ? error.fields[k]?.[0] : undefined
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
@@ -174,7 +174,7 @@ function AddUser({ roles, onClose }: { roles: RbacRole[]; onClose: () => void })
             </option>
           ))}
         </SelectField>
-        {error && error.code !== 'VALIDATION_FAILED' ? (
+        {error && error.code !== 'VALIDATION_ERROR' ? (
           <p role="alert" className="text-dense text-error">
             {describeError(error, true).title}: {error.message}
           </p>

@@ -11,15 +11,14 @@ const HTTP: Record<ErrorCode, number> = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
-  TRANSACTION_REFUSED: 409,
   VERSION_CONFLICT: 409,
-  LOCKED: 409,
-  VALIDATION_FAILED: 422,
+  REFERENCED: 409,
+  VALIDATION_ERROR: 422,
+  REFERENCE_NOT_FOUND: 422,
   RATE_LIMITED: 429,
-  INTERNAL_ERROR: 500,
-  CONSOLE_ERROR: 502,
-  CONSOLE_UNREACHABLE: 502,
-  CONSOLE_TIMEOUT: 504,
+  SERVER_ERROR: 500,
+  SOURCE_UNREACHABLE: 502,
+  SOURCE_TIMEOUT: 504,
 }
 
 export function fail(
@@ -38,8 +37,8 @@ export const ok = (data: JsonBodyType, status = 200) => HttpResponse.json(data, 
 export const page = <T extends JsonBodyType>(
   data: T[],
   next_cursor: string | null = null,
-  total: number | null = null,
-) => HttpResponse.json({ data, meta: { next_cursor, total } } as JsonBodyType)
+  extra: { total?: number; unavailable?: string[] } = {},
+) => HttpResponse.json({ data, meta: { next_cursor, ...extra } } as JsonBodyType)
 
 /** Scenario latency. `slow` adds 1–4 s; the default adds a little so skeletons are visible. */
 export async function latency() {
@@ -63,7 +62,7 @@ const FORBIDDEN_IN_SCENARIO: Permission[] = [
   'admin.logs.view',
   'admin.audit.view',
   'barang.view',
-  'pesanan.create',
+  'personel.create',
 ]
 
 /** Resolves the user or returns an error response (401 / 403 / 429 per scenario and permission). */

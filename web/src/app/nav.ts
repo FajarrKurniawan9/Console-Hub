@@ -1,13 +1,12 @@
 import {
   Boxes,
+  Factory,
   ClipboardList,
-  FileSearch,
   House,
   LayoutList,
-  Network,
+  Route,
   ScrollText,
   Server,
-  ShieldCheck,
   Users,
   UsersRound,
   type LucideIcon,
@@ -22,20 +21,18 @@ export interface NavItem {
 }
 
 export const WORK_NAV: NavItem[] = [
-  { to: '/pesanan', label: 'Pesanan', icon: ClipboardList, perm: 'pesanan.view' },
   { to: '/barang', label: 'Barang', icon: Boxes, perm: 'barang.view' },
-  { to: '/karyawan', label: 'Karyawan', icon: UsersRound, perm: 'karyawan.view' },
-  { to: '/divisi', label: 'Divisi', icon: Network, perm: 'divisi.view' },
+  { to: '/produksi', label: 'Produksi', icon: Factory, perm: 'produksi.view' },
+  { to: '/personel', label: 'Personel', icon: UsersRound, perm: 'personel.view' },
+  { to: '/lacak', label: 'Lacak barang', icon: Route, perm: 'lacak.view' },
 ]
 
 export const ADMIN_NAV: NavItem[] = [
   { to: '/', label: 'Ringkasan', icon: LayoutList, perm: 'admin.dashboard.view' },
-  { to: '/console', label: 'Console', icon: Server, perm: 'admin.consoles.view' },
+  { to: '/console', label: 'Sumber data', icon: Server, perm: 'admin.consoles.view' },
   { to: '/log', label: 'Log gabungan', icon: ScrollText, perm: 'admin.logs.view' },
-  { to: '/transaksi', label: 'Transaksi', icon: FileSearch, perm: 'admin.transactions.view' },
-  { to: '/konsistensi', label: 'Konsistensi', icon: ShieldCheck, perm: 'admin.consistency.view' },
   { to: '/rbac', label: 'Pengguna & izin', icon: Users, perm: 'admin.rbac.manage' },
-  { to: '/audit', label: 'Audit', icon: ScrollText, perm: 'admin.audit.view' },
+  { to: '/audit', label: 'Audit', icon: ClipboardList, perm: 'admin.audit.view' },
 ]
 
 export const USER_HOME: Omit<NavItem, 'perm'> = { to: '/', label: 'Beranda', icon: House }

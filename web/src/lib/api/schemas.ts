@@ -1,28 +1,36 @@
-// Portal API contract (/api/v1), brief v3 section 5. Every response is parsed against these schemas.
+// Portal API contract (/api/v1), prompt v3 update 2 §3. Every response is parsed against these schemas.
 import { z } from 'zod'
 
+export const SOURCES = ['gudang', 'produksi', 'hr'] as const
+export const source = z.enum(SOURCES)
+export type Source = z.infer<typeof source>
+
 export const one = <T extends z.ZodType>(item: T) => z.object({ data: item })
+export const listMeta = z.object({
+  next_cursor: z.string().nullable(),
+  /** Sources that were down while the hub merged this page. */
+  unavailable: z.array(source).optional(),
+  /** Admin lists (logs, audit) still report a total. */
+  total: z.number().nullable().optional(),
+})
+export type ListMeta = z.infer<typeof listMeta>
 export const many = <T extends z.ZodType>(item: T) =>
-  z.object({
-    data: z.array(item),
-    meta: z.object({ next_cursor: z.string().nullable(), total: z.number().nullable() }),
-  })
-export type Page<T> = { data: T[]; meta: { next_cursor: string | null; total: number | null } }
+  z.object({ data: z.array(item), meta: listMeta })
+export type Page<T> = { data: T[]; meta: ListMeta }
 
 export const ERROR_CODES = [
   'UNAUTHENTICATED',
   'FORBIDDEN',
   'NOT_FOUND',
-  'VALIDATION_FAILED',
-  'RATE_LIMITED',
-  'TRANSACTION_REFUSED',
+  'VALIDATION_ERROR',
   'VERSION_CONFLICT',
-  'LOCKED',
+  'REFERENCE_NOT_FOUND',
+  'REFERENCED',
+  'SOURCE_UNREACHABLE',
+  'SOURCE_TIMEOUT',
+  'RATE_LIMITED',
   'CONFLICT',
-  'CONSOLE_ERROR',
-  'CONSOLE_UNREACHABLE',
-  'CONSOLE_TIMEOUT',
-  'INTERNAL_ERROR',
+  'SERVER_ERROR',
 ] as const
 export type ErrorCode = (typeof ERROR_CODES)[number]
 
@@ -30,42 +38,39 @@ export const apiErrorBody = z.object({
   error: z.object({
     code: z.enum(ERROR_CODES),
     message: z.string(),
-    fields: z.record(z.string(), z.array(z.string())).optional(),
     details: z.record(z.string(), z.unknown()).optional(),
   }),
 })
 export type ApiErrorBody = z.infer<typeof apiErrorBody>
 
+/** `details.used_by` on 409 REFERENCED (Admin IT only). */
+export const usedBy = z.array(
+  z.object({ source, type: z.string(), id: z.string(), name: z.string() }),
+)
+export type UsedBy = z.infer<typeof usedBy>
+
 const iso = z.string()
-const ref = z.object({ id: z.string(), name: z.string() })
 
 // ---- Auth ----
 
 export const PERMISSIONS = [
-  'karyawan.view',
-  'karyawan.create',
-  'karyawan.update',
-  'karyawan.delete',
-  'divisi.view',
-  'divisi.create',
-  'divisi.update',
-  'divisi.delete',
   'barang.view',
   'barang.create',
   'barang.update',
   'barang.delete',
-  'pesanan.view',
-  'pesanan.create',
-  'pesanan.complete',
-  'pesanan.cancel',
+  'produksi.view',
+  'produksi.create',
+  'produksi.update',
+  'produksi.delete',
+  'personel.view',
+  'personel.create',
+  'personel.update',
+  'personel.delete',
+  'lacak.view',
   'admin.dashboard.view',
   'admin.logs.view',
   'admin.consoles.view',
   'admin.consoles.manage',
-  'admin.transactions.view',
-  'admin.transactions.resolve',
-  'admin.consistency.view',
-  'admin.consistency.repair',
   'admin.rbac.manage',
   'admin.audit.view',
 ] as const
@@ -75,7 +80,7 @@ export const authUser = z.object({
   id: z.number(),
   name: z.string(),
   email: z.string(),
-  // Brief: 'admin_it' | 'user'. Widened to string because RBAC can hold more roles (design-notes).
+  // 'admin_it' | 'user', widened to string because RBAC can hold more roles (design-notes).
   role: z.object({ code: z.string(), name: z.string() }),
   // Unknown strings are kept (a newer backend may add some); checks only look for known ones.
   permissions: z.array(z.string()),
@@ -83,154 +88,72 @@ export const authUser = z.object({
 export type AuthUser = z.infer<typeof authUser>
 export const loginResult = z.object({ token: z.string(), user: authUser })
 
-// ---- Work data ----
+// ---- Work data (merged by the hub from three sources) ----
 
-const activeStatus = z.enum(['aktif', 'nonaktif'])
+export const activeStatus = z.enum(['aktif', 'nonaktif'])
+export type Status = z.infer<typeof activeStatus>
 
-export const division = z.object({
+export const personRef = z.object({ id: z.string(), name: z.string(), role: z.string() })
+export type PersonRef = z.infer<typeof personRef>
+export const productionRef = z.object({
   id: z.string(),
-  kode: z.string(),
-  nama: z.string(),
+  area: z.string(),
+  production_type: z.string(),
+})
+export type ProductionRef = z.infer<typeof productionRef>
+
+const stamps = {
   status: activeStatus,
   version: z.number(),
-})
-export type Division = z.infer<typeof division>
+  created_at: iso,
+  updated_at: iso,
+}
 
-export const employee = z.object({
+export const person = z.object({ id: z.string(), name: z.string(), role: z.string(), ...stamps })
+export type Person = z.infer<typeof person>
+
+export const production = z.object({
   id: z.string(),
-  nik: z.string(),
-  name: z.string(),
-  division: z.object({ id: z.string(), nama: z.string() }),
-  position: z.string().nullable(),
-  status: activeStatus,
-  version: z.number(),
-  areas: z.array(z.string()),
-  teams: z.array(z.string()),
+  area: z.string(),
+  production_type: z.string(),
+  courier_id: z.string().nullable(),
+  // Merged by the hub; null when unset or when HR is unavailable.
+  courier: personRef.nullable(),
+  ...stamps,
 })
-export type Employee = z.infer<typeof employee>
+export type Production = z.infer<typeof production>
 
 export const item = z.object({
   id: z.string(),
-  sku: z.string(),
-  nama: z.string(),
-  jenis: z.enum(['bahan_baku', 'barang_jadi']),
-  satuan: z.string(),
-  harga_jual_idr: z.number().nullable(),
-  min_stock: z.number(),
-  status: activeStatus,
-  version: z.number(),
-  stok_tersedia: z.number(),
-  pic: ref.nullable(),
+  name: z.string(),
+  kind: z.string(),
+  production_id: z.string().nullable(),
+  production: productionRef.nullable(),
+  responsible_id: z.string().nullable(),
+  responsible: personRef.nullable(),
+  quantity: z.number(),
+  unit: z.string(),
+  ...stamps,
 })
 export type Item = z.infer<typeof item>
 
-export const orderLine = z.object({
-  item_id: z.string(),
-  sku: z.string(),
-  nama: z.string(),
-  qty: z.number(),
-  unit_price_idr: z.number(),
+export const sourceStatus = z.object({
+  source,
+  status: z.enum(['ok', 'unavailable', 'not_found']),
+  latency_ms: z.number().nullable(),
 })
-export type OrderLine = z.infer<typeof orderLine>
+export type SourceStatus = z.infer<typeof sourceStatus>
 
-export const orderStatus = z.enum(['ANTRE', 'SELESAI', 'DIBATALKAN'])
-export type OrderStatus = z.infer<typeof orderStatus>
-export const order = z.object({
-  id: z.string(),
-  order_no: z.string(),
-  customer: z.string(),
-  pic: ref,
-  status: orderStatus,
-  lines: z.array(orderLine),
-  created_at: iso,
-  version: z.number(),
+export const trackingResult = z.object({
+  item,
+  production: production.nullable(),
+  responsible: personRef.nullable(),
+  courier: personRef.nullable(),
+  warnings: z.array(z.string()),
+  /** Only for accounts with `admin.consoles.view`. */
+  sources: z.array(sourceStatus).optional(),
 })
-export type Order = z.infer<typeof order>
-
-/** `?verify=all` on admin detail pages. Shape assumed (brief 8.5 names it only); see design-notes. */
-export const verifyResult = z.object({
-  in_sync: z.boolean(),
-  consoles: z.array(
-    z.object({
-      console: z.object({ slug: z.string(), name: z.string() }),
-      version: z.number().nullable(),
-      // Assumed, optional (Update 1): the console's content checksum, null when missing/unreachable.
-      checksum: z.string().nullable().optional(),
-      status: z.enum(['match', 'missing', 'version_mismatch', 'checksum_mismatch', 'unreachable']),
-    }),
-  ),
-})
-export type VerifyResult = z.infer<typeof verifyResult>
-export const withConsistency = <T extends z.ZodObject>(s: T) =>
-  s.extend({ consistency: verifyResult.optional() })
-
-// ---- Transactions ----
-
-export const TX_STATES = [
-  'preparing',
-  'prepared',
-  'committing',
-  'committed',
-  'aborting',
-  'aborted',
-  'needs_attention',
-] as const
-export const txState = z.enum(TX_STATES)
-export type TxState = z.infer<typeof txState>
-export const FINAL_TX_STATES: TxState[] = ['committed', 'aborted', 'needs_attention']
-
-export const consoleSlug = z.enum(['hr', 'gudang', 'produksi'])
-export type ConsoleSlug = z.infer<typeof consoleSlug>
-
-export const txParticipant = z.object({
-  console: z.object({ slug: consoleSlug, name: z.string() }),
-  prepare_state: z.enum(['pending', 'ok', 'refused', 'error']),
-  decision_state: z.enum(['pending', 'committed', 'aborted', 'failed']),
-  refusal_code: z.string().optional(),
-  refusal_message: z.string().optional(),
-  attempts: z.number(),
-  last_error: z.string().nullable().optional(),
-  prepared_at: iso.nullable().optional(),
-  finished_at: iso.nullable().optional(),
-})
-export type TxParticipant = z.infer<typeof txParticipant>
-
-export const transaction = z.object({
-  id: z.string(),
-  operation: z.string(),
-  entity_type: z.string().nullable(),
-  entity_id: z.string().nullable(),
-  state: txState,
-  requested_by: z.object({ id: z.number(), name: z.string() }),
-  created_at: iso,
-  decided_at: iso.nullable(),
-  finished_at: iso.nullable(),
-  failure_code: z.string().nullable(),
-  failure_message: z.string().nullable(),
-  participants: z.array(txParticipant),
-  payload: z.unknown().optional(),
-})
-export type Transaction = z.infer<typeof transaction>
-
-/** `GET /transactions/{id}`: what the owner of a 202 write may see. */
-export const txStatus = z.object({ id: z.string(), state: txState, message: z.string().optional() })
-export type TxStatus = z.infer<typeof txStatus>
-
-/** Body of a successful (200/201/202) write. `entity` may be absent on 202. */
-export const writeResult = <T extends z.ZodType>(entity: T) =>
-  one(
-    z.object({
-      transaction: z.object({ id: z.string(), state: txState }),
-      entity: entity.optional(),
-    }),
-  )
-
-export const refusal = z.object({
-  console: z.string(),
-  code: z.string(),
-  message: z.string(),
-})
-export type Refusal = z.infer<typeof refusal>
+export type TrackingResult = z.infer<typeof trackingResult>
 
 // ---- Admin ----
 
@@ -239,15 +162,16 @@ export type ConsoleStatus = z.infer<typeof consoleStatus>
 export const logLevel = z.enum(['debug', 'info', 'warn', 'error'])
 export type LogLevel = z.infer<typeof logLevel>
 
+/** One source API as registered in the hub. */
 export const consoleInfo = z.object({
   id: z.number(),
-  slug: consoleSlug,
+  slug: source,
   name: z.string(),
   base_url: z.string(),
+  is_active: z.boolean(),
   status: consoleStatus,
-  last_latency_ms: z.number().nullable(),
+  latency_ms: z.number().nullable(),
   last_checked_at: iso.nullable(),
-  last_error: z.string().nullable(),
 })
 export type ConsoleInfo = z.infer<typeof consoleInfo>
 
@@ -265,7 +189,6 @@ export const logEntry = z.object({
   level: logLevel,
   message: z.string(),
   actor: z.string().nullable(),
-  tx_id: z.string().nullable(),
   raw: z.unknown().optional(),
 })
 export type LogEntry = z.infer<typeof logEntry>
@@ -279,44 +202,6 @@ export const logSyncResult = z.array(
   }),
 )
 export type LogSyncResult = z.infer<typeof logSyncResult>
-
-export const consistencyCheck = z.object({
-  id: z.number(),
-  entity_type: z.enum(['divisi', 'karyawan', 'barang']),
-  status: z.enum(['running', 'clean', 'drift', 'failed']),
-  checked_count: z.number(),
-  drift_count: z.number(),
-  started_at: iso,
-  finished_at: iso.nullable(),
-})
-export type ConsistencyCheck = z.infer<typeof consistencyCheck>
-
-export const consistencyFinding = z.object({
-  id: z.number(),
-  check_id: z.number(),
-  entity_type: z.string(),
-  entity_id: z.string(),
-  label: z.string(),
-  console: z.object({ slug: z.string(), name: z.string() }),
-  kind: z.enum(['missing', 'version_mismatch', 'checksum_mismatch']),
-  owner_version: z.number().nullable(),
-  console_version: z.number().nullable(),
-  repaired_at: iso.nullable(),
-})
-export type ConsistencyFinding = z.infer<typeof consistencyFinding>
-export const consistencyCheckDetail = consistencyCheck.extend({
-  findings: z.array(consistencyFinding),
-})
-export type ConsistencyCheckDetail = z.infer<typeof consistencyCheckDetail>
-
-export const overview = z.object({
-  consoles: z.array(consoleInfo),
-  error_logs_24h: z.number(),
-  tx_counts: z.partialRecord(txState, z.number()),
-  recent_transactions: z.array(transaction),
-  last_consistency: consistencyCheck.nullable(),
-})
-export type Overview = z.infer<typeof overview>
 
 export const rbacUser = z.object({
   id: z.number(),
@@ -346,3 +231,10 @@ export const auditEvent = z.object({
   created_at: iso,
 })
 export type AuditEvent = z.infer<typeof auditEvent>
+
+export const overview = z.object({
+  sources: z.array(consoleInfo),
+  log_errors_24h: z.number(),
+  recent_audit: z.array(auditEvent),
+})
+export type Overview = z.infer<typeof overview>

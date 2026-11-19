@@ -1,15 +1,18 @@
 export const SCENARIOS = [
   'ok',
   'slow',
-  'gudang-down',
-  'all-down',
-  'commit-stuck',
-  'drift',
   'empty',
   'unauthenticated',
   'forbidden',
   'validation-error',
   'rate-limited',
+  'hr-down',
+  'produksi-down',
+  'gudang-down',
+  'all-down',
+  'slow-source',
+  'conflict',
+  'referenced',
 ] as const
 
 export type Scenario = (typeof SCENARIOS)[number]
@@ -46,8 +49,5 @@ export function setScenario(s: Scenario) {
   }
 }
 
-/**
- * Test hooks. `instant`: no artificial HTTP latency. `instantTx`: transaction phases advance
- * without delay (used by the mock engine from phase 2).
- */
-export const mockConfig = { instant: false, instantTx: false }
+/** Test hook. `instant`: no artificial HTTP latency (the `slow-source` 3 s delay included). */
+export const mockConfig = { instant: false }

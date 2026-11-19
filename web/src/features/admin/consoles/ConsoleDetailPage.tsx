@@ -19,13 +19,13 @@ export function ConsoleDetailPage() {
 
   if (q.isPending)
     return (
-      <DetailShell title="Console" backTo="/console" backLabel="Semua console">
-        <RowsSkeleton rows={6} label="Memuat console" />
+      <DetailShell title="Sumber data" backTo="/console" backLabel="Semua sumber data">
+        <RowsSkeleton rows={6} label="Memuat sumber data" />
       </DetailShell>
     )
   if (q.isError)
     return (
-      <DetailShell title="Console" backTo="/console" backLabel="Semua console">
+      <DetailShell title="Sumber data" backTo="/console" backLabel="Semua sumber data">
         <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
       </DetailShell>
     )
@@ -38,7 +38,7 @@ export function ConsoleDetailPage() {
         title={c.name}
         meta={
           <Link to="/console" className="hover:text-fg">
-            ← Semua console
+            ← Semua sumber data
           </Link>
         }
         actions={
@@ -102,8 +102,8 @@ export function ConsoleDetailPage() {
                 sejak <TimeText iso={since} />
               </>
             ) : null}
-            . Pesan terakhir: <span className="font-mono">{c.last_error}</span>. Semua penulisan
-            data akan ditolak dan log console ini tertinggal sampai console pulih.
+            . Penulisan data milik sumber ini ditolak, kolom gabungan dari sumber ini tampil
+            "Tidak tersedia", dan log-nya tertinggal sampai sumber pulih.
           </span>
         </p>
       ) : null}
@@ -116,14 +116,14 @@ export function ConsoleDetailPage() {
           </dd>
           <dt className="text-muted">Latensi terakhir</dt>
           <dd className="font-mono">
-            {c.last_latency_ms !== null ? duration(c.last_latency_ms) : '—'}
+            {c.latency_ms !== null ? duration(c.latency_ms) : '—'}
           </dd>
           <dt className="text-muted">Pemeriksaan terakhir</dt>
           <dd>{c.last_checked_at ? <TimeText iso={c.last_checked_at} /> : 'Belum pernah'}</dd>
           <dt className="text-muted">Alamat</dt>
           <dd className="font-mono">{c.base_url}</dd>
-          <dt className="text-muted">Error terakhir</dt>
-          <dd className="font-mono">{c.last_error ?? '—'}</dd>
+          <dt className="text-muted">Aktif di hub</dt>
+          <dd>{c.is_active ? 'Ya' : 'Tidak'}</dd>
           <dt className="text-muted">Slug</dt>
           <dd className="font-mono">{c.slug}</dd>
         </dl>

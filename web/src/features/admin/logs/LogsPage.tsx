@@ -1,7 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowUp, CircleAlert, CircleCheck } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router'
 import { ConsoleChip } from '../../../components/ConsoleChip'
 import { EmptyState } from '../../../components/EmptyState'
 import { ErrorState } from '../../../components/ErrorState'
@@ -189,7 +188,6 @@ export function LogsPage() {
                 <col className="w-[120px]" />
                 <col className="w-[88px]" />
                 <col />
-                <col className="w-[112px]" />
                 <col className="w-[132px]" />
               </colgroup>
               <thead>
@@ -199,7 +197,6 @@ export function LogsPage() {
                   <Th>Tingkat</Th>
                   <Th>Pesan</Th>
                   <Th>Aktor</Th>
-                  <Th>Transaksi</Th>
                 </tr>
               </thead>
               <tbody>
@@ -234,19 +231,6 @@ export function LogsPage() {
                         </Tooltip>
                       </Td>
                       <Td className="truncate text-muted">{l.actor ?? '—'}</Td>
-                      <Td className="truncate font-mono text-xs">
-                        {l.tx_id ? (
-                          <Link
-                            to={`/transaksi/${l.tx_id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-accent underline-offset-4 hover:underline"
-                          >
-                            {l.tx_id}
-                          </Link>
-                        ) : (
-                          <span className="text-muted">—</span>
-                        )}
-                      </Td>
                     </Tr>
                   )
                 })}

@@ -67,8 +67,8 @@ export function toApiError(err: unknown): ApiError {
     if (!err.response) return new ApiError('NETWORK', 'Tidak dapat terhubung ke server portal.', 0)
     const parsed = apiErrorBody.safeParse(err.response.data)
     if (parsed.success) {
-      const { code, message, ...extra } = parsed.data.error
-      return new ApiError(code, message, status, extra)
+      const { code, message, details } = parsed.data.error
+      return new ApiError(code, message, status, { fields: fieldsOf(details), details })
     }
     return new ApiError(
       'CONTRACT_MISMATCH',
@@ -77,6 +77,19 @@ export function toApiError(err: unknown): ApiError {
     )
   }
   return new ApiError('NETWORK', err instanceof Error ? err.message : String(err), 0)
+}
+
+/**
+ * `details.fields` per field. 422 VALIDATION_ERROR sends `{field: [messages]}`;
+ * REFERENCE_NOT_FOUND may send just the field names, which get no message of their own.
+ */
+function fieldsOf(details: Record<string, unknown> | undefined): Record<string, string[]> {
+  const f = details?.fields
+  if (Array.isArray(f)) return Object.fromEntries(f.map((k) => [String(k), []]))
+  if (!f || typeof f !== 'object') return {}
+  return Object.fromEntries(
+    Object.entries(f).map(([k, v]) => [k, (Array.isArray(v) ? v : [v]).map(String)]),
+  )
 }
 
 let onUnauthenticated = () => {}
@@ -90,9 +103,6 @@ export function setForbiddenHandler(fn: () => void) {
   onForbidden = fn
 }
 
-/** A new key per user intent. Pass the same key again when the user retries the same request. */
-export const newIdempotencyKey = () => crypto.randomUUID()
-
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: { Accept: 'application/json' },
@@ -104,21 +114,15 @@ http.interceptors.request.use((config) => {
   return config
 })
 
-export type RequestConfig = AxiosRequestConfig & { idempotencyKey?: string }
-
 /**
  * Single entry point for the portal API: auth header, zod validation, typed errors, 401 handling.
- * Writes (POST/PATCH/PUT/DELETE) always carry an `Idempotency-Key`; 403 is thrown as
- * `ApiError('FORBIDDEN')` and shown by the caller (route guards already hide what the user cannot do).
+ * 403 is thrown as `ApiError('FORBIDDEN')` and shown by the caller (route guards already hide
+ * what the user cannot do).
  */
 export async function request<S extends z.ZodType>(
   schema: S,
-  { idempotencyKey, ...config }: RequestConfig,
+  config: AxiosRequestConfig,
 ): Promise<z.infer<S>> {
-  const method = (config.method ?? 'GET').toUpperCase()
-  if (method !== 'GET' && config.url !== '/auth/login' && config.url !== '/auth/logout') {
-    config.headers = { ...config.headers, 'Idempotency-Key': idempotencyKey ?? newIdempotencyKey() }
-  }
   let data: unknown
   try {
     data = (await http.request(config)).data

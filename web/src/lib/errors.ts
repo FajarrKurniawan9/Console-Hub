@@ -6,37 +6,33 @@ interface ErrorCopy {
   next: string
 }
 
-// Technical copy for Admin IT. Codes and console names are fine here.
+// Technical copy for Admin IT. Codes and source names are fine here.
 const ADMIN: Record<ClientErrorCode, ErrorCopy> = {
-  CONSOLE_TIMEOUT: {
-    title: 'Console tidak merespons dalam batas waktu',
-    next: 'Tidak ada data yang berubah. Cek halaman Console, lalu coba lagi.',
+  SOURCE_TIMEOUT: {
+    title: 'API sumber tidak merespons dalam batas waktu',
+    next: 'Tidak ada data yang berubah. Cek halaman Sumber data, lalu coba lagi.',
   },
-  CONSOLE_UNREACHABLE: {
-    title: 'Console tidak dapat dihubungi',
-    next: 'Tidak ada data yang berubah. Console mungkin mati; cek halaman Console, lalu coba lagi.',
-  },
-  CONSOLE_ERROR: {
-    title: 'Console mengembalikan error',
-    next: 'Tidak ada data yang berubah. Lihat pesan di bawah dan log console terkait.',
-  },
-  TRANSACTION_REFUSED: {
-    title: 'Transaksi ditolak',
-    next: 'Tidak ada data yang berubah. Lihat alasan penolakan per console.',
+  SOURCE_UNREACHABLE: {
+    title: 'API sumber tidak dapat dihubungi',
+    next: 'Tidak ada data yang berubah. API sumber mungkin mati; cek halaman Sumber data, lalu coba lagi.',
   },
   VERSION_CONFLICT: {
     title: 'Data baru saja diubah',
     next: 'Muat ulang untuk mendapat versi terbaru, lalu coba lagi.',
   },
-  LOCKED: {
-    title: 'Data sedang diproses transaksi lain',
-    next: 'Tunggu beberapa detik, muat ulang, lalu coba lagi.',
+  REFERENCE_NOT_FOUND: {
+    title: 'Data rujukan tidak ditemukan',
+    next: 'Pilih data rujukan yang masih aktif, lalu kirim lagi.',
+  },
+  REFERENCED: {
+    title: 'Masih dipakai data lain',
+    next: 'Lepaskan dulu rujukan dari data di bawah, lalu coba lagi.',
   },
   CONFLICT: {
-    title: 'Status tidak cocok',
+    title: 'Permintaan bertentangan',
     next: 'Data sudah berubah sejak terakhir dimuat. Muat ulang, lalu coba lagi.',
   },
-  VALIDATION_FAILED: {
+  VALIDATION_ERROR: {
     title: 'Data tidak valid',
     next: 'Perbaiki field yang ditandai, lalu kirim lagi.',
   },
@@ -50,7 +46,7 @@ const ADMIN: Record<ClientErrorCode, ErrorCopy> = {
     title: 'Terlalu banyak permintaan',
     next: 'Tunggu beberapa detik, lalu coba lagi.',
   },
-  INTERNAL_ERROR: {
+  SERVER_ERROR: {
     title: 'Error di server portal',
     next: 'Coba lagi. Bila berulang, periksa log portal pada waktu kejadian.',
   },
@@ -64,17 +60,23 @@ const ADMIN: Record<ClientErrorCode, ErrorCopy> = {
   },
 }
 
-// Plain copy for User: no console names, codes, or system words.
+// Plain copy for User: no source names, codes, or system words.
 const SERVICE_DOWN: ErrorCopy = {
   title: 'Layanan sedang bermasalah',
-  next: 'Tidak ada data yang berubah. Coba lagi beberapa menit lagi.',
+  next: 'Perubahan data sementara tidak dapat disimpan. Coba lagi beberapa menit lagi.',
 }
 const USER: Partial<Record<ClientErrorCode, ErrorCopy>> = {
-  CONSOLE_TIMEOUT: SERVICE_DOWN,
-  CONSOLE_UNREACHABLE: SERVICE_DOWN,
-  CONSOLE_ERROR: SERVICE_DOWN,
-  INTERNAL_ERROR: SERVICE_DOWN,
-  TRANSACTION_REFUSED: { title: 'Tidak dapat disimpan', next: 'Tidak ada data yang berubah.' },
+  SOURCE_TIMEOUT: SERVICE_DOWN,
+  SOURCE_UNREACHABLE: SERVICE_DOWN,
+  SERVER_ERROR: SERVICE_DOWN,
+  VERSION_CONFLICT: {
+    title: 'Data baru saja diubah',
+    next: 'Data ini baru saja diubah orang lain. Muat ulang lalu coba lagi.',
+  },
+  REFERENCED: {
+    title: 'Belum bisa dinonaktifkan',
+    next: 'Data ini masih dipakai oleh data lain, jadi belum bisa dinonaktifkan.',
+  },
   FORBIDDEN: {
     title: 'Anda tidak punya akses',
     next: 'Hubungi admin IT bila Anda memerlukan akses ini.',
@@ -92,8 +94,18 @@ export function describeError(err: unknown, technical: boolean) {
   return { ...copy, code: e.code, message: e.message, error: e }
 }
 
-export const CONSOLE_CODES: ClientErrorCode[] = [
-  'CONSOLE_TIMEOUT',
-  'CONSOLE_UNREACHABLE',
-  'CONSOLE_ERROR',
-]
+export const SOURCE_CODES: ClientErrorCode[] = ['SOURCE_TIMEOUT', 'SOURCE_UNREACHABLE']
+
+const REFERENCE_FIELD: Record<string, string> = {
+  responsible_id: 'Personel yang dipilih tidak ditemukan atau sudah nonaktif.',
+  courier_id: 'Personel yang dipilih tidak ditemukan atau sudah nonaktif.',
+  production_id: 'Produksi yang dipilih tidak ditemukan atau sudah nonaktif.',
+}
+
+/** Message under a form field: the server's 422 text, or the plain sentence for a bad reference. */
+export function fieldMessage(e: ApiError, name: string): string | undefined {
+  if (e.code === 'VALIDATION_ERROR') return e.fields[name]?.[0]
+  if (e.code === 'REFERENCE_NOT_FOUND' && name in e.fields)
+    return e.fields[name]?.[0] ?? REFERENCE_FIELD[name]
+  return undefined
+}

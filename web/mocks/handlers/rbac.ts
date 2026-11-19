@@ -12,7 +12,7 @@ export const rbacHandlers = [
     await latency()
     const g = guard(request, 'admin.rbac.manage')
     if (g.error) return g.error
-    return page(users.map(rbacView), null, users.length)
+    return page(users.map(rbacView), null, { total: users.length })
   }),
 
   http.post(url('/admin/rbac/users'), async ({ request }) => {
@@ -32,7 +32,7 @@ export const rbacHandlers = [
       fields.email = ['Email ini sudah dipakai pengguna lain.']
     if (!role) fields.role_code = ['Pilih peran.']
     if (Object.keys(fields).length)
-      return fail('VALIDATION_FAILED', 'Periksa kembali isian yang ditandai.', { fields })
+      return fail('VALIDATION_ERROR', 'Periksa kembali isian yang ditandai.', { details: { fields } })
     const u = {
       id: Math.max(...users.map((x) => x.id)) + 1,
       name,
@@ -60,8 +60,8 @@ export const rbacHandlers = [
     if ('role_code' in b) {
       const role = roles.find((r) => r.code === b.role_code)
       if (!role)
-        return fail('VALIDATION_FAILED', 'Peran tidak dikenal.', {
-          fields: { role_code: ['Pilih peran.'] },
+        return fail('VALIDATION_ERROR', 'Peran tidak dikenal.', {
+          details: { fields: { role_code: ['Pilih peran.'] } },
         })
       if (u.id === g.user.id && !role.permissions.includes('admin.rbac.manage'))
         return fail('CONFLICT', 'Anda tidak dapat mencabut akses RBAC dari akun Anda sendiri.')
@@ -93,14 +93,14 @@ export const rbacHandlers = [
     await latency()
     const g = guard(request, 'admin.rbac.manage')
     if (g.error) return g.error
-    return page(structuredClone(roles), null, roles.length)
+    return page(structuredClone(roles), null, { total: roles.length })
   }),
 
   http.get(url('/admin/rbac/permissions'), async ({ request }) => {
     await latency()
     const g = guard(request, 'admin.rbac.manage')
     if (g.error) return g.error
-    return page([...PERMISSIONS], null, PERMISSIONS.length)
+    return page([...PERMISSIONS], null, { total: PERMISSIONS.length })
   }),
 
   http.put(url('/admin/rbac/roles/:id/permissions'), async ({ request, params }) => {
@@ -112,8 +112,8 @@ export const rbacHandlers = [
     const b = await body(request)
     const next = Array.isArray(b.permissions) ? (b.permissions as unknown[]).map(String) : null
     if (!next || next.some((p) => !known.has(p)))
-      return fail('VALIDATION_FAILED', 'Daftar izin tidak valid.', {
-        fields: { permissions: ['Ada izin yang tidak dikenal.'] },
+      return fail('VALIDATION_ERROR', 'Daftar izin tidak valid.', {
+        details: { fields: { permissions: ['Ada izin yang tidak dikenal.'] } },
       })
     if (role.code === 'admin_it' && !next.includes('admin.rbac.manage'))
       return fail(

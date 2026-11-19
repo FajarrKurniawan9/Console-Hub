@@ -1,21 +1,15 @@
 import type { AuditEvent } from '../../../lib/api/schemas'
 
 export const ACTIONS: Record<string, string> = {
-  'karyawan.create': 'Karyawan dibuat',
-  'karyawan.update': 'Karyawan diubah',
-  'karyawan.deactivate': 'Karyawan dinonaktifkan',
-  'divisi.create': 'Divisi dibuat',
-  'divisi.update': 'Divisi diubah',
-  'divisi.deactivate': 'Divisi dinonaktifkan',
   'barang.create': 'Barang dibuat',
   'barang.update': 'Barang diubah',
-  'barang.deactivate': 'Barang dinonaktifkan',
-  'pesanan.create': 'Pesanan dibuat',
-  'pesanan.complete': 'Pesanan diselesaikan',
-  'pesanan.cancel': 'Pesanan dibatalkan',
-  'transaction.resolved': 'Transaksi diselesaikan manual',
-  'consistency.checked': 'Konsistensi diperiksa',
-  'consistency.repaired': 'Temuan diperbaiki',
+  'barang.delete': 'Barang dinonaktifkan',
+  'produksi.create': 'Produksi dibuat',
+  'produksi.update': 'Produksi diubah',
+  'produksi.delete': 'Produksi dinonaktifkan',
+  'personel.create': 'Personel dibuat',
+  'personel.update': 'Personel diubah',
+  'personel.delete': 'Personel dinonaktifkan',
   'rbac.user_created': 'Pengguna dibuat',
   'rbac.user_updated': 'Pengguna diubah',
   'rbac.role_updated': 'Izin peran diubah',
@@ -58,12 +52,10 @@ export function summaryOf(e: AuditEvent): string {
         : []
       const failed = results.filter((r) => r.status !== 'ok').map((r) => r.console)
       return failed.length
-        ? `${results.length} console, gagal: ${failed.join(', ')}`
-        : `${results.length} console, semua berhasil`
+        ? `${results.length} sumber, gagal: ${failed.join(', ')}`
+        : `${results.length} sumber, semua berhasil`
     }
-    case 'transaction.resolved':
-      return `${show(d.tx_id)} · ${d.action === 'retry_commit' ? 'commit ulang' : 'dibatalkan'}`
     default:
-      return typeof d.tx_id === 'string' ? `transaksi ${d.tx_id}` : ''
+      return typeof d.name === 'string' ? d.name : ''
   }
 }

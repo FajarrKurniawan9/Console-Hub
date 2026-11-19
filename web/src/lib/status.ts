@@ -1,4 +1,4 @@
-import type { ConsoleStatus, LogLevel, OrderStatus, TxState } from './api/schemas'
+import type { ConsoleStatus, LogLevel, SourceStatus } from './api/schemas'
 
 export type Tone = 'ok' | 'warn' | 'error' | 'muted' | 'accent'
 
@@ -17,22 +17,6 @@ export const CONSOLE_STATUS: Record<ConsoleStatus, { label: string; tone: Tone }
   unknown: { label: 'Belum dicek', tone: 'muted' },
 }
 
-export const TX_STATE: Record<TxState, { label: string; tone: Tone }> = {
-  preparing: { label: 'Menyiapkan', tone: 'accent' },
-  prepared: { label: 'Siap', tone: 'accent' },
-  committing: { label: 'Menyelesaikan', tone: 'accent' },
-  committed: { label: 'Berhasil', tone: 'ok' },
-  aborting: { label: 'Membatalkan', tone: 'warn' },
-  aborted: { label: 'Dibatalkan', tone: 'muted' },
-  needs_attention: { label: 'Perlu tindakan', tone: 'error' },
-}
-
-export const ORDER_STATUS: Record<OrderStatus, { label: string; tone: Tone }> = {
-  ANTRE: { label: 'Antre', tone: 'accent' },
-  SELESAI: { label: 'Selesai', tone: 'ok' },
-  DIBATALKAN: { label: 'Dibatalkan', tone: 'muted' },
-}
-
 export const ACTIVE_STATUS: Record<'aktif' | 'nonaktif', { label: string; tone: Tone }> = {
   aktif: { label: 'Aktif', tone: 'ok' },
   nonaktif: { label: 'Nonaktif', tone: 'muted' },
@@ -43,4 +27,11 @@ export const LOG_LEVEL: Record<LogLevel, { label: string; tone: Tone }> = {
   info: { label: 'Info', tone: 'accent' },
   warn: { label: 'Warn', tone: 'warn' },
   error: { label: 'Error', tone: 'error' },
+}
+
+/** Per-source result of one merged read (Lacak Barang, Admin IT). */
+export const SOURCE_RESULT: Record<SourceStatus['status'], { label: string; tone: Tone }> = {
+  ok: { label: 'Berhasil', tone: 'ok' },
+  unavailable: { label: 'Tidak tersedia', tone: 'error' },
+  not_found: { label: 'Tidak ditemukan', tone: 'warn' },
 }

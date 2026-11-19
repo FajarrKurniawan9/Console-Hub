@@ -4,18 +4,16 @@ import { PERMISSIONS } from '../../src/lib/api/schemas'
 // Mock credentials, documented in README (mock section). Removed at integration.
 export const PASSWORD = 'demo12345'
 
+// Update 2 §3.2: default User permissions.
 const WORK_DEFAULT: Permission[] = [
-  'karyawan.view',
-  'karyawan.create',
-  'karyawan.update',
-  'divisi.view',
   'barang.view',
   'barang.create',
   'barang.update',
-  'pesanan.view',
-  'pesanan.create',
-  'pesanan.complete',
-  'pesanan.cancel',
+  'produksi.view',
+  'produksi.create',
+  'produksi.update',
+  'personel.view',
+  'lacak.view',
 ]
 
 // Mutable: the RBAC screen edits these, and `me` reads them on every call.
@@ -25,8 +23,8 @@ const seedRoles = (): RbacRole[] => [
   {
     id: 3,
     code: 'user_lihat',
-    name: 'User (tanpa buat pesanan)',
-    permissions: WORK_DEFAULT.filter((p) => p !== 'pesanan.create'),
+    name: 'User (hanya lihat)',
+    permissions: WORK_DEFAULT.filter((p) => p.endsWith('.view')),
   },
 ]
 export const roles = seedRoles()

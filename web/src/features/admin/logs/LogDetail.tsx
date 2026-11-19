@@ -1,4 +1,3 @@
-import { Link } from 'react-router'
 import { ConsoleChip } from '../../../components/ConsoleChip'
 import { ErrorState } from '../../../components/ErrorState'
 import { JsonView } from '../../../components/JsonView'
@@ -39,19 +38,6 @@ export function LogDetail({ id, onClose }: { id: number | null; onClose: () => v
             </dd>
             <dt className="text-muted">Aktor</dt>
             <dd>{q.data.actor ?? <span className="text-muted">sistem / tidak diketahui</span>}</dd>
-            <dt className="text-muted">Transaksi</dt>
-            <dd className="font-mono">
-              {q.data.tx_id ? (
-                <Link
-                  to={`/transaksi/${q.data.tx_id}`}
-                  className="text-accent underline-offset-4 hover:underline"
-                >
-                  {q.data.tx_id}
-                </Link>
-              ) : (
-                '—'
-              )}
-            </dd>
             <dt className="text-muted">ID</dt>
             <dd className="font-mono">{q.data.id}</dd>
           </dl>

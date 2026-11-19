@@ -8,15 +8,13 @@ export interface MatrixRow {
 }
 
 const RESOURCE_LABEL: Record<string, string> = {
-  karyawan: 'Karyawan',
-  divisi: 'Divisi',
   barang: 'Barang',
-  pesanan: 'Pesanan',
+  produksi: 'Produksi',
+  personel: 'Personel',
+  lacak: 'Lacak barang',
   'admin.dashboard': 'Ringkasan',
-  'admin.consoles': 'Console',
+  'admin.consoles': 'Sumber data',
   'admin.logs': 'Log gabungan',
-  'admin.transactions': 'Transaksi',
-  'admin.consistency': 'Konsistensi',
   'admin.rbac': 'Pengguna & izin',
   'admin.audit': 'Audit',
 }
@@ -26,15 +24,11 @@ export const ACTION_LABEL: Record<string, string> = {
   create: 'Tambah',
   update: 'Ubah',
   delete: 'Nonaktifkan',
-  complete: 'Selesaikan',
-  cancel: 'Batalkan',
   manage: 'Kelola',
-  resolve: 'Selesaikan',
-  repair: 'Perbaiki',
 }
 
-export const WORK_ACTIONS = ['view', 'create', 'update', 'delete', 'complete', 'cancel']
-export const ADMIN_ACTIONS = ['view', 'manage', 'resolve', 'repair']
+export const WORK_ACTIONS = ['view', 'create', 'update', 'delete']
+export const ADMIN_ACTIONS = ['view', 'manage']
 
 export function buildMatrix(permissions: string[]) {
   const rows = new Map<string, MatrixRow>()

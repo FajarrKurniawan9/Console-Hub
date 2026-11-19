@@ -40,7 +40,7 @@ export function LoginPage() {
   let formError: string | null = null
   if (error?.code === 'UNAUTHENTICATED') formError = 'Email atau sandi salah.'
   else if (error?.code === 'FORBIDDEN') formError = error.message
-  else if (error && error.code !== 'VALIDATION_FAILED') {
+  else if (error && error.code !== 'VALIDATION_ERROR') {
     const d = describeError(error, false)
     formError = `${d.title}. ${d.next}`
   }

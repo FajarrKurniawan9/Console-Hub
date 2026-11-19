@@ -1,5 +1,5 @@
 import type { AuditEvent } from '../../src/lib/api/schemas'
-import { pad, seeded } from './random'
+import { seeded } from './random'
 import { users } from './users'
 
 export const audit: AuditEvent[] = []
@@ -29,37 +29,29 @@ export function recordAudit(
 const r = seeded(777)
 const now = Date.now()
 const active = users.filter((u) => u.is_active)
-const tx = () => `tx_${pad(r.int(1, 40), 4)}`
 
 type Make = () => Parameters<typeof recordAudit>
 const MAKERS: Make[] = [
   () => [
     r.pick(active),
-    'karyawan.update',
-    { type: 'karyawan', id: `E-${pad(r.int(1, 12), 4)}` },
-    null,
-    { tx_id: tx(), changes: { position: { old: 'Operator', new: 'Supervisor' } } },
-  ],
-  () => [
-    r.pick(active),
     'barang.update',
-    { type: 'barang', id: `SKU-BB-${pad(r.int(1, 8))}` },
-    null,
-    { tx_id: tx(), changes: { min_stock: { old: 40, new: r.pick([50, 60, 80]) } } },
+    { type: 'item', id: r.pick(['Kain katun', 'Besi beton 10 mm', 'Sarden kaleng 425 g']) },
+    'gudang',
+    { changes: { quantity: { old: r.int(10, 80), new: r.int(81, 200) } } },
   ],
   () => [
     r.pick(active),
-    'pesanan.create',
-    { type: 'pesanan', id: `PO-2026-${pad(r.int(1, 8), 4)}` },
-    null,
-    { tx_id: tx(), customer: r.pick(['CV Sumber Rezeki', 'PT Maju Bersama', 'UD Sinar Jaya']) },
+    'produksi.update',
+    { type: 'production', id: r.pick(['Area Tekstil A', 'Area Logam B', 'Area Pangan']) },
+    'produksi',
+    { changes: { courier_id: { old: null, new: 'Dedi Kurniawan' } } },
   ],
   () => [
-    r.pick(active),
-    'pesanan.complete',
-    { type: 'pesanan', id: `PO-2026-${pad(r.int(1, 8), 4)}` },
-    null,
-    { tx_id: tx(), changes: { status: { old: 'ANTRE', new: 'SELESAI' } } },
+    users[0]!,
+    'personel.create',
+    { type: 'person', id: r.pick(['Yusuf Hidayat', 'Lina Marlina']) },
+    'hr',
+    { name: r.pick(['Yusuf Hidayat', 'Lina Marlina']) },
   ],
   () => {
     const c = r.pick(['hr', 'gudang', 'produksi'])

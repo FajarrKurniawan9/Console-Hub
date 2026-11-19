@@ -12,7 +12,7 @@ export const authHandlers = [
     else if (!/^\S+@\S+\.\S+$/.test(body.email)) fields.email = ['Format email tidak valid.']
     if (!body.password) fields.password = ['Sandi wajib diisi.']
     if (Object.keys(fields).length)
-      return fail('VALIDATION_FAILED', 'Data login tidak valid.', { fields })
+      return fail('VALIDATION_ERROR', 'Data login tidak valid.', { details: { fields } })
     const user = users.find((u) => u.email === body.email)
     if (!user || body.password !== PASSWORD)
       return fail('UNAUTHENTICATED', 'Email atau sandi salah.')
