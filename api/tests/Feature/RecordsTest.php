@@ -230,3 +230,11 @@ it('never puts a service key in responses, errors, audit or logs', function () {
     expect(implode('', $responses).AuditEvent::all()->toJson())->not->toContain('test-key-');
     Log::shouldNotHaveReceived('error', fn ($message, $context = []) => str_contains(json_encode($context), 'test-key-'));
 });
+
+it('never forwards a client-chosen id', function () {
+    actingAsRole('admin_it');
+
+    $this->postJson('/api/v1/people', ['id' => '11111111-1111-4111-8111-111111111111', 'name' => 'Rina', 'role' => 'Kurir'])->assertCreated();
+
+    expect(FakeSources::$rows['people'])->not->toHaveKey('11111111-1111-4111-8111-111111111111');
+});

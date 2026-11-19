@@ -4,7 +4,7 @@ Rule: the JSON shape follows the **frontend** (zod schemas are parsed at runtime
 (`kontrak-3-api-console-hub-v1.md`) already use the same names, so Resources mostly pass them through
 and add the merged parts.
 
-Status: phases A-E done. "To do" rows are fixed in the
+Status: phases A-F done. "To do" rows are fixed in the
 phase named.
 
 ## Envelope and errors
@@ -61,3 +61,4 @@ Kept `consolehub_test` (renaming a database is the Cloud role's job).
 ## Open
 
 1. `GET /items/kinds` is USULAN in the API contract and not in `schemas.ts`; the hub does not expose it.
+2. **API contract gap (USULAN added to the contract):** `hub:seed-demo` writes through the hub with uuid v5 ids, but the contract's `POST` bodies have no `id`. Proposal: optional `id` on `POST` (implemented in `tools/console-stub`); the hub strips `id` from user requests. Needs Kak Jo and the three API builders to agree.

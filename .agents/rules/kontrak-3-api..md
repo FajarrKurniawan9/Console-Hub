@@ -174,6 +174,8 @@ UUID seed deterministik (disepakati bersama):
 - `uuid v5(namespace = "7a1f6c3e-5b8d-4f21-9a0c-3e2d1b4c5a60", name = "person:<nama-slug>")` untuk personel.
 - `uuid v5(namespace, "production:<area-slug>:<jenis-slug>")` untuk produksi.
 - `uuid v5(namespace, "item:<nama-slug>")` untuk barang.
+- **(USULAN)** Slug: huruf kecil, setiap deretan karakter selain huruf/angka menjadi `-`, tanpa `-` di ujung (`Str::slug` Laravel). Contoh: `person:rina-wulandari`, `production:area-tekstil-a:tenun`.
+- **(USULAN)** Agar seed lewat hub (`hub:seed-demo`) menghasilkan ID ini, `POST` setiap API menerima `id` (UUID) opsional; bila sudah dipakai: `409 DUPLICATE`. Endpoint publik hub tidak pernah meneruskan `id` dari pengguna.
 
 ---
 

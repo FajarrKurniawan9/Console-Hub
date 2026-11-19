@@ -29,7 +29,7 @@ pest()->extend(TestCase::class)
         Http::preventStrayRequests();
         Sleep::fake();
     })
-    ->in('Feature', 'Unit');
+    ->in('Feature', 'Unit', 'Stub');
 
 /*
 |--------------------------------------------------------------------------
