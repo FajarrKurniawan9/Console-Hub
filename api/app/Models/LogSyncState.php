@@ -9,12 +9,11 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $console_id
- * @property array<string, mixed> $cursor
  * @property Carbon|null $last_synced_at
- * @property Carbon|null $last_success_at
+ * @property string|null $last_cursor
  * @property string|null $last_error
  */
-#[Fillable(['console_id', 'cursor', 'last_synced_at', 'last_success_at', 'last_error'])]
+#[Fillable(['console_id', 'last_synced_at', 'last_cursor', 'last_error'])]
 class LogSyncState extends Model
 {
     protected $table = 'log_sync_state';
@@ -23,15 +22,15 @@ class LogSyncState extends Model
 
     public $incrementing = false;
 
+    public $timestamps = false;
+
     /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
-            'cursor' => 'array',
             'last_synced_at' => 'datetime',
-            'last_success_at' => 'datetime',
         ];
     }
 

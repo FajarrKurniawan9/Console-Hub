@@ -14,13 +14,15 @@ use Illuminate\Support\Carbon;
  * @property string $level
  * @property string $message
  * @property string|null $actor
- * @property string $dedupe_key
+ * @property string|null $tx_id
  * @property array<string, mixed>|null $raw
- * @property Carbon $ingested_at
+ * @property string $fingerprint
  */
-#[Fillable(['console_id', 'occurred_at', 'level', 'message', 'actor', 'dedupe_key', 'raw', 'ingested_at'])]
+#[Fillable(['console_id', 'occurred_at', 'level', 'message', 'actor', 'tx_id', 'raw', 'fingerprint'])]
 class LogEntry extends Model
 {
+    public $timestamps = false;
+
     /**
      * @return array<string, string>
      */
@@ -28,7 +30,6 @@ class LogEntry extends Model
     {
         return [
             'occurred_at' => 'datetime',
-            'ingested_at' => 'datetime',
             'raw' => 'array',
         ];
     }

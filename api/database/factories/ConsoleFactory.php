@@ -15,49 +15,25 @@ class ConsoleFactory extends Factory
      */
     public function definition(): array
     {
-        $slug = fake()->unique()->slug(2);
+        $slug = fake()->unique()->randomElement(['hr', 'gudang', 'produksi']);
 
         return [
             'slug' => $slug,
-            'name' => 'Web '.ucfirst($slug),
+            'name' => ucfirst($slug),
             'base_url' => "http://{$slug}.test",
             'auth_type' => 'api_key',
-            'credentials' => ['header' => 'X-API-Key', 'key' => 'test-api-key-'.fake()->uuid()],
-            'config' => ['health' => ['path' => '/health', 'requires_auth' => false]],
-            'timezone' => 'UTC',
+            'service_key' => 'test-key-'.$slug,
             'is_active' => true,
-            'status' => 'unknown',
+            'is_owner_of' => match ($slug) {
+                'hr' => ['divisions', 'employees'],
+                'gudang' => ['items'],
+                default => ['orders'],
+            },
         ];
-    }
-
-    public function bearer(int $ttlSeconds = 300): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'auth_type' => 'bearer',
-            'credentials' => ['username' => 'hub', 'password' => 'bearer-secret-pass'],
-            'config' => [
-                'health' => ['path' => '/health', 'requires_auth' => false],
-                'auth' => ['login' => [
-                    'path' => '/auth/login',
-                    'method' => 'POST',
-                    'body' => ['username' => '{{secret.username}}', 'password' => '{{secret.password}}'],
-                    'token_path' => 'access_token',
-                    'ttl_seconds' => $ttlSeconds,
-                ]],
-            ],
-        ]);
-    }
-
-    public function basic(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'auth_type' => 'basic',
-            'credentials' => ['username' => 'hub', 'password' => 'basic-secret-pass'],
-        ]);
     }
 
     public function inactive(): static
     {
-        return $this->state(fn (array $attributes) => ['is_active' => false]);
+        return $this->state(fn () => ['is_active' => false]);
     }
 }

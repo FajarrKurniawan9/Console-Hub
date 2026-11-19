@@ -5,28 +5,26 @@ namespace App\Models;
 use Database\Factories\ConsoleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Support\Carbon;
 
 /**
+ * A console reached only through its internal HTTP API. `service_key` is encrypted and never serialised.
+ *
  * @property int $id
  * @property string $slug
  * @property string $name
  * @property string $base_url
  * @property string $auth_type
- * @property array<string, mixed> $credentials
- * @property array<string, mixed> $config
- * @property string $timezone
+ * @property string|null $service_key
  * @property bool $is_active
- * @property string $status
- * @property int|null $last_latency_ms
- * @property Carbon|null $last_checked_at
+ * @property list<string> $is_owner_of
  */
-#[Fillable(['slug', 'name', 'base_url', 'auth_type', 'credentials', 'config', 'timezone', 'is_active', 'status', 'last_latency_ms', 'last_checked_at'])]
-#[Hidden(['credentials'])]
+#[Fillable(['slug', 'name', 'base_url', 'auth_type', 'service_key', 'is_active', 'is_owner_of'])]
+#[Hidden(['service_key'])]
 class Console extends Model
 {
     /** @use HasFactory<ConsoleFactory> */
@@ -38,12 +36,22 @@ class Console extends Model
     protected function casts(): array
     {
         return [
-            'credentials' => 'encrypted:array',
-            'config' => 'array',
+            'service_key' => 'encrypted',
             'is_active' => 'boolean',
-            'last_latency_ms' => 'integer',
-            'last_checked_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Postgres TEXT[] <-> PHP list.
+     *
+     * @return Attribute<list<string>, list<string>>
+     */
+    protected function isOwnerOf(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value === null || $value === '{}' ? [] : array_values(array_filter(explode(',', trim($value, '{}')))),
+            set: fn (array $value) => '{'.implode(',', array_map(fn (string $v) => preg_replace('/[^a-z_]/', '', $v), $value)).'}',
+        );
     }
 
     /**
@@ -55,14 +63,6 @@ class Console extends Model
     }
 
     /**
-     * @return HasOne<ConsoleHealthCheck, $this>
-     */
-    public function latestHealthCheck(): HasOne
-    {
-        return $this->hasOne(ConsoleHealthCheck::class)->latestOfMany('checked_at');
-    }
-
-    /**
      * @return HasMany<ConsoleHealthCheck, $this>
      */
     public function healthChecks(): HasMany
@@ -71,10 +71,10 @@ class Console extends Model
     }
 
     /**
-     * Read a value from the connector config using dot notation.
+     * @return HasOne<ConsoleHealthCheck, $this>
      */
-    public function setting(string $key, mixed $default = null): mixed
+    public function latestHealthCheck(): HasOne
     {
-        return data_get($this->config, $key, $default);
+        return $this->hasOne(ConsoleHealthCheck::class)->latestOfMany('checked_at');
     }
 }

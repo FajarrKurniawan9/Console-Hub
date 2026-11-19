@@ -10,20 +10,23 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $console_id
- * @property string $status
+ * @property bool $ok
  * @property int|null $latency_ms
- * @property string|null $message
+ * @property string|null $error
  * @property Carbon $checked_at
  */
-#[Fillable(['console_id', 'status', 'latency_ms', 'message', 'checked_at'])]
+#[Fillable(['console_id', 'ok', 'latency_ms', 'error', 'checked_at'])]
 class ConsoleHealthCheck extends Model
 {
+    public $timestamps = false;
+
     /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
+            'ok' => 'boolean',
             'latency_ms' => 'integer',
             'checked_at' => 'datetime',
         ];

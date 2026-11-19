@@ -4,40 +4,32 @@ namespace Database\Seeders;
 
 use App\Models\Console;
 use Illuminate\Database\Seeder;
-use RuntimeException;
 
+/**
+ * The three consoles from CONSOLE_* in .env. A console without a key is created inactive.
+ */
 class ConsoleSeeder extends Seeder
 {
     public function run(): void
     {
-        $consoles = json_decode((string) file_get_contents(database_path('seeders/data/consoles.json')), true, flags: JSON_THROW_ON_ERROR);
+        /** @var array<string, array{name: string, base_url: string, service_key: string|null, is_owner_of: list<string>}> $consoles */
+        $consoles = config('consolehub.consoles');
 
-        foreach ($consoles as $console) {
-            $console = $this->fillEnv($console);
+        foreach ($consoles as $slug => $console) {
+            $hasKey = is_string($console['service_key']) && $console['service_key'] !== '';
 
-            Console::query()->updateOrCreate(['slug' => $console['slug']], $console);
+            if (! $hasKey) {
+                $this->command?->warn('CONSOLE_'.strtoupper($slug)."_KEY kosong: console {$slug} dibuat nonaktif.");
+            }
+
+            Console::query()->updateOrCreate(['slug' => $slug], [
+                'name' => $console['name'],
+                'base_url' => $console['base_url'],
+                'auth_type' => 'api_key',
+                'service_key' => $hasKey ? $console['service_key'] : null,
+                'is_active' => $hasKey,
+                'is_owner_of' => $console['is_owner_of'],
+            ]);
         }
-    }
-
-    /**
-     * Replace "{{env NAME}}" placeholders with environment values; fail loudly when one is empty.
-     */
-    private function fillEnv(mixed $value): mixed
-    {
-        if (is_array($value)) {
-            return array_map(fn ($item) => $this->fillEnv($item), $value);
-        }
-
-        if (! is_string($value) || ! preg_match('/^\{\{env (\w+)\}\}$/', $value, $match)) {
-            return $value;
-        }
-
-        $resolved = env($match[1]);
-
-        if (! is_string($resolved) || $resolved === '') {
-            throw new RuntimeException("{$match[1]} kosong. Isi di .env sebelum menjalankan seeder.");
-        }
-
-        return $resolved;
     }
 }

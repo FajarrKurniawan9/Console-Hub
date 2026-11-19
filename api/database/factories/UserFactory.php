@@ -2,24 +2,20 @@
 
 namespace Database\Factories;
 
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
     protected static ?string $password;
 
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
@@ -27,27 +23,35 @@ class UserFactory extends Factory
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
-            'is_admin' => false,
+            'role_id' => fn () => self::role(Role::USER)->id,
+            'is_active' => true,
         ];
-    }
-
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
     }
 
     public function admin(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'is_admin' => true,
-        ]);
+        return $this->state(fn () => ['role_id' => self::role(Role::ADMIN_IT)->id]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['is_active' => false]);
+    }
+
+    /**
+     * The seeded role with its default permissions, created on first use in tests.
+     */
+    public static function role(string $code): Role
+    {
+        $role = Role::query()->firstOrCreate(['code' => $code], ['name' => $code === Role::ADMIN_IT ? 'Admin IT' : 'User']);
+
+        if ($role->wasRecentlyCreated) {
+            $codes = $code === Role::ADMIN_IT ? array_keys(Permission::ALL) : Permission::USER_DEFAULTS;
+            $ids = collect($codes)->map(fn (string $c) => Permission::query()->firstOrCreate(['code' => $c], ['description' => Permission::ALL[$c]])->id);
+            $role->permissions()->sync($ids->all());
+        }
+
+        return $role;
     }
 }

@@ -18,7 +18,7 @@ class HubDbCheck extends Command
         'roles', 'permissions', 'role_permissions', 'users', 'code_counters', 'consoles',
         'console_health_checks', 'log_sync_state', 'log_entries', 'audit_events', 'transactions',
         'transaction_participants', 'consistency_checks', 'consistency_findings',
-        'migrations', 'personal_access_tokens', 'jobs', 'failed_jobs', 'cache',
+        'migrations', 'personal_access_tokens', 'jobs', 'job_batches', 'failed_jobs', 'cache', 'cache_locks',
     ];
 
     public function handle(): int
