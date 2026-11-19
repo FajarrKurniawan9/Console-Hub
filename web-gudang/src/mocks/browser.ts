@@ -1,3 +1,7 @@
+import { setupWorker } from 'msw/browser'
+import { handlers } from './handlers'
+
 export async function startMocks() {
-  // Diisi pada fase 2.
+  const worker = setupWorker(...handlers)
+  await worker.start({ onUnhandledFrame: 'bypass', quiet: true })
 }

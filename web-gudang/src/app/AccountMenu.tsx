@@ -1,15 +1,18 @@
 import { NavLink } from 'react-router'
-import { CircleUser } from 'lucide-react'
+import { useSession } from '../features/auth/useSession'
 
 export function AccountMenu() {
+  const { user } = useSession()
   return (
     <div className="border-t p-2">
       <NavLink
         to="/akun"
-        className="flex h-8 items-center gap-2 rounded-sm px-2 text-muted hover:bg-bg hover:text-fg"
+        className={({ isActive }) =>
+          `flex flex-col rounded-sm px-2 py-1.5 hover:bg-bg ${isActive ? 'bg-bg ring-1 ring-border' : ''}`
+        }
       >
-        <CircleUser size={16} strokeWidth={1.5} aria-hidden />
-        Akun
+        <span className="truncate font-semibold">{user?.name}</span>
+        <span className="truncate text-xs text-muted">{user?.email}</span>
       </NavLink>
     </div>
   )
