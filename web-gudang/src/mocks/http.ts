@@ -58,7 +58,9 @@ export function guard(request: Request): Response | string {
   const s = getScenario()
   if (s === 'unauthenticated' || !bearer(request).startsWith(`mock-${MOCK_ACCOUNT.id}-`))
     return fail('UNAUTHENTICATED', 'Sesi tidak valid atau sudah berakhir.')
-  if (s === 'server-error') return fail('SERVER_ERROR', 'Terjadi galat di server gudang.')
+  // Sesi tetap jalan agar galat tiap layar (bukan galat sesi) yang terlihat.
+  if (s === 'server-error' && !new URL(request.url).pathname.endsWith('/auth/me'))
+    return fail('SERVER_ERROR', 'Terjadi galat di server gudang.')
   return MOCK_ACCOUNT.name
 }
 

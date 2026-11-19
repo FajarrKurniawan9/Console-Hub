@@ -25,3 +25,7 @@ export const formatNumber = (n: number) => nf.format(n)
 
 /** Jumlah bertanda: +12 / −5 / 0. */
 export const formatSigned = (n: number) => (n > 0 ? `+${nf.format(n)}` : n < 0 ? `−${nf.format(-n)}` : '0')
+
+/** Tanggal `yyyy-mm-dd` dari input → batas hari waktu Jakarta dalam ISO UTC. */
+export const dayStartIso = (d: string) => (d ? new Date(`${d}T00:00:00+07:00`).toISOString() : undefined)
+export const dayEndIso = (d: string) => (d ? new Date(`${d}T23:59:59.999+07:00`).toISOString() : undefined)

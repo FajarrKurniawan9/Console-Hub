@@ -21,7 +21,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryKey: ['auth', 'me', token],
     queryFn: ({ signal }) => request(dataOf(uiUser), '/auth/me', { signal }).then((r) => r.data),
     enabled: !!token,
-    retry: (n, e) => n < 1 && !(e instanceof ApiError && e.status < 500 && e.status > 0),
     staleTime: Infinity,
   })
 
