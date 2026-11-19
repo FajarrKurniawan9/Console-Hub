@@ -21,7 +21,6 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             RolePermissionSeeder::class,
             ConsoleSeeder::class,
-            CodeCounterSeeder::class,
             UserSeeder::class,
         ]);
     }

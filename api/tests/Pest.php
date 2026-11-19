@@ -1,15 +1,9 @@
 <?php
 
-use App\Models\Console;
-use App\Models\Transaction;
 use App\Models\User;
-use App\Services\Tx\Coordinator;
-use App\Services\Tx\OperationRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
-use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -79,64 +73,4 @@ function actingAsRole(string $role = 'user'): User
     Sanctum::actingAs($user);
 
     return $user;
-}
-
-/**
- * Three consoles behind Http::fake. $script[slug][phase] is a response, a closure, or 'down'/'timeout'.
- * Every call is recorded in ConsoleCalls::$log as "slug phase".
- */
-final class ConsoleCalls
-{
-    /** @var list<string> */
-    public static array $log = [];
-}
-
-function fakeConsoles(array $script = []): void
-{
-    ConsoleCalls::$log = [];
-
-    foreach (['hr', 'gudang', 'produksi'] as $slug) {
-        Console::query()->where('slug', $slug)->exists() || Console::factory()->create(['slug' => $slug, 'name' => ucfirst($slug), 'base_url' => "http://{$slug}.test", 'service_key' => "key-{$slug}"]);
-    }
-
-    Http::fake(function (Request $request) use ($script) {
-        $slug = explode('.', parse_url($request->url(), PHP_URL_HOST))[0];
-        $path = parse_url($request->url(), PHP_URL_PATH);
-        $phase = match (true) {
-            str_ends_with($path, '/tx/prepare') => 'prepare',
-            str_ends_with($path, '/commit') => 'commit',
-            str_ends_with($path, '/abort') => 'abort',
-            str_contains($path, '/tx/') => 'status',
-            default => 'read',
-        };
-        ConsoleCalls::$log[] = "{$slug} {$phase}";
-        $answer = $script[$slug][$phase] ?? match ($phase) {
-            'read' => $script[$slug]['read'] ?? Http::response(['error' => 'not scripted'], 404),
-            'prepare' => ['vote' => 'ok'],
-            'commit' => ['state' => 'committed'],
-            'abort' => ['state' => 'aborted'],
-            default => Http::response(['error' => 'not scripted'], 404),
-        };
-
-        if ($answer instanceof Closure) {
-            $answer = $answer($request);
-        }
-
-        return match (true) {
-            $answer === 'down' => Http::failedConnection()($request),
-            $answer === 'timeout' => Http::failedConnection('cURL error 28: Operation timed out after 8000 milliseconds')($request),
-            is_array($answer) => Http::response($answer),
-            default => $answer,
-        };
-    });
-}
-
-function runTx(string $operation, array $input, ?string $target = null, ?string $key = null, ?User $user = null): Transaction
-{
-    return app(Coordinator::class)->run(app(OperationRegistry::class)->get($operation), $input, $target, $user ?? auth()->user(), $key ?? (string) Str::uuid());
-}
-
-function calls(string $phase): array
-{
-    return array_values(array_filter(ConsoleCalls::$log, fn ($c) => str_ends_with($c, " {$phase}")));
 }

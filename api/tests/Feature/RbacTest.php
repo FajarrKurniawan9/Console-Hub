@@ -133,14 +133,14 @@ it('replaces the permissions of a role and audits what was added and removed', f
     actingAsRole('admin_it');
     $role = UserFactory::role(Role::USER);
 
-    $this->putJson("/api/v1/admin/rbac/roles/{$role->id}/permissions", ['permissions' => ['karyawan.view', 'admin.audit.view']])
+    $this->putJson("/api/v1/admin/rbac/roles/{$role->id}/permissions", ['permissions' => ['personel.view', 'admin.audit.view']])
         ->assertOk()
-        ->assertJsonPath('data.permissions', ['admin.audit.view', 'karyawan.view']);
+        ->assertJsonPath('data.permissions', ['admin.audit.view', 'personel.view']);
 
     $audit = AuditEvent::query()->where('action', 'rbac.role_updated')->sole();
     expect($audit->new_value['ditambah'])->toBe(['admin.audit.view'])
-        ->and($audit->new_value['dicabut'])->toContain('pesanan.create')
-        ->and($audit->old_value['permissions'])->toContain('pesanan.create');
+        ->and($audit->new_value['dicabut'])->toContain('barang.create')
+        ->and($audit->old_value['permissions'])->toContain('barang.create');
 });
 
 it('keeps admin.rbac.manage on admin_it and rejects unknown permissions', function () {

@@ -5,6 +5,9 @@ namespace Database\Seeders;
 use App\Models\Permission;
 use Illuminate\Database\Seeder;
 
+/**
+ * Upserts every code in Permission::ALL and drops codes that no longer exist (with their grants).
+ */
 class PermissionSeeder extends Seeder
 {
     public function run(): void
@@ -16,5 +19,6 @@ class PermissionSeeder extends Seeder
         }
 
         Permission::query()->upsert($rows, ['code'], ['description']);
+        Permission::query()->whereNotIn('code', array_keys(Permission::ALL))->delete();
     }
 }

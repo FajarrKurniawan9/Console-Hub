@@ -1,47 +1,37 @@
 <?php
 
 use App\Models\AuditEvent;
-use App\Models\ConsistencyCheck;
 use App\Models\Console;
 use App\Models\LogEntry;
-use App\Models\Transaction;
-use App\Models\TransactionParticipant;
 use App\Services\Audit;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(fn () => Carbon::setTestNow('2026-11-19 10:00:00'));
 
-it('returns the overview with counts, recent transactions and the last check', function () {
-    $admin = actingAsRole('admin_it');
+it('returns the overview with sources, error count and recent audit', function () {
+    actingAsRole('admin_it');
     $console = Console::factory()->create(['slug' => 'hr']);
     foreach ([[0, 'error'], [48, 'error'], [0, 'warn']] as $i => [$hoursAgo, $level]) {
         LogEntry::query()->create(['console_id' => $console->id, 'occurred_at' => now()->subHours($hoursAgo), 'level' => $level, 'message' => "m{$i}", 'fingerprint' => sha1("m{$i}")]);
     }
-    $tx = Transaction::query()->create(['operation' => 'karyawan.create', 'entity_type' => 'karyawan', 'entity_id' => (string) Str::uuid(), 'payload' => [], 'state' => 'committed', 'idempotency_key' => 'k1', 'requested_by' => $admin->id]);
-    TransactionParticipant::query()->create(['tx_id' => $tx->id, 'console_id' => $console->id, 'prepare_state' => 'ok', 'decision_state' => 'committed', 'latency_ms' => 120, 'version' => 1]);
-    Transaction::query()->create(['operation' => 'barang.update', 'payload' => [], 'state' => 'aborted', 'idempotency_key' => 'k2']);
-    ConsistencyCheck::query()->create(['entity_type' => 'karyawan', 'status' => 'clean', 'checked_count' => 12]);
+    app(Audit::class)->record('console.tested', 'console', (string) $console->id, null, ['console' => 'hr']);
 
     $this->getJson('/api/v1/admin/overview')
         ->assertOk()
-        ->assertJsonPath('data.error_logs_24h', 1)
-        ->assertJsonPath('data.tx_counts', ['aborted' => 1, 'committed' => 1])
-        ->assertJsonCount(1, 'data.consoles')
-        ->assertJsonCount(2, 'data.recent_transactions')
-        ->assertJsonPath('data.recent_transactions.1.participants.0.console', ['slug' => 'hr', 'name' => $console->name])
-        ->assertJsonPath('data.recent_transactions.1.participants.0.latency_ms', 120)
-        ->assertJsonPath('data.recent_transactions.0.requested_by', ['id' => 0, 'name' => 'Sistem'])
-        ->assertJsonPath('data.last_consistency.status', 'clean');
+        ->assertJsonPath('data.log_errors_24h', 1)
+        ->assertJsonCount(1, 'data.sources')
+        ->assertJsonPath('data.sources.0.slug', 'hr')
+        ->assertJsonCount(1, 'data.recent_audit')
+        ->assertJsonPath('data.recent_audit.0.action', 'console.tested');
 });
 
 it('returns an empty overview on a fresh portal', function () {
     actingAsRole('admin_it');
 
     $this->getJson('/api/v1/admin/overview')->assertOk()
-        ->assertJsonPath('data.tx_counts', [])
-        ->assertJsonPath('data.last_consistency', null);
+        ->assertJsonPath('data.sources', [])
+        ->assertJsonPath('data.recent_audit', []);
 });
 
 it('lists audit events in the AuditEvent shape with changes and filters', function () {
