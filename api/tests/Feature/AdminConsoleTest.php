@@ -23,9 +23,9 @@ it('lists consoles in the ConsoleInfo shape without the service key', function (
 
     $response = $this->getJson('/api/v1/admin/consoles')
         ->assertOk()
-        ->assertJsonStructure(['data' => [['id', 'slug', 'name', 'base_url', 'status', 'last_latency_ms', 'last_checked_at', 'last_error']], 'meta' => ['next_cursor', 'total']])
+        ->assertJsonStructure(['data' => [['id', 'slug', 'name', 'base_url', 'is_active', 'status', 'latency_ms', 'last_checked_at', 'resource']], 'meta' => ['next_cursor', 'total']])
         ->assertJsonPath('data.0.status', 'ok')
-        ->assertJsonPath('data.0.last_latency_ms', 120)
+        ->assertJsonPath('data.0.latency_ms', 120)
         ->assertJsonPath('data.0.has_service_key', true);
 
     expect($response->getContent())->not->toContain('kunci-rahasia-hr')->not->toContain('"service_key"');
@@ -71,14 +71,14 @@ it('reports a failing console test as down', function () {
 
 it('creates and updates a console, keeps the key encrypted and out of responses and audit', function () {
     $response = $this->postJson('/api/v1/admin/consoles', [
-        'slug' => 'hr', 'name' => 'HR', 'base_url' => 'http://hr.test', 'service_key' => 'super-secret-key', 'is_owner_of' => ['divisions', 'employees'],
+        'slug' => 'hr', 'name' => 'HR', 'base_url' => 'http://hr.test', 'service_key' => 'super-secret-key', 'resource' => 'people',
     ])->assertCreated();
 
     $console = Console::query()->findOrFail($response->json('data.id'));
     expect($response->getContent())->not->toContain('super-secret-key')
         ->and($console->service_key)->toBe('super-secret-key')
         ->and($console->getRawOriginal('service_key'))->not->toContain('super-secret-key')
-        ->and($console->is_owner_of)->toBe(['divisions', 'employees']);
+        ->and($console->resource)->toBe('people');
 
     $this->patchJson("/api/v1/admin/consoles/{$console->id}", ['name' => 'HR Baru', 'service_key' => 'kunci-baru-123'])
         ->assertOk()->assertJsonPath('data.name', 'HR Baru');
@@ -97,6 +97,17 @@ it('rejects base urls blocked by the host guard', function () {
 
     assertApiError($response, 422, 'VALIDATION_FAILED');
     $response->assertJsonStructure(['error' => ['fields' => ['base_url']]]);
+});
+
+it('requires one console per resource', function () {
+    Console::factory()->create(['slug' => 'hr']);
+
+    $missing = $this->postJson('/api/v1/admin/consoles', ['slug' => 'hr2', 'name' => 'HR 2', 'base_url' => 'http://hr2.test', 'service_key' => 'abcdefgh']);
+    $taken = $this->postJson('/api/v1/admin/consoles', ['slug' => 'hr2', 'name' => 'HR 2', 'base_url' => 'http://hr2.test', 'service_key' => 'abcdefgh', 'resource' => 'people']);
+
+    assertApiError($missing, 422, 'VALIDATION_FAILED');
+    assertApiError($taken, 422, 'VALIDATION_FAILED');
+    $taken->assertJsonStructure(['error' => ['fields' => ['resource']]]);
 });
 
 it('needs admin.consoles.manage to change consoles', function () {

@@ -17,26 +17,26 @@ return [
     'slow_threshold_ms' => 1500,
 
     /*
-    | The three consoles, seeded by ConsoleSeeder. Keys come only from .env.
+    | The three source APIs, seeded by ConsoleSeeder. Keys come only from .env.
     */
     'consoles' => [
         'hr' => [
             'name' => 'HR',
             'base_url' => env('CONSOLE_HR_URL', 'http://127.0.0.1:9101'),
             'service_key' => env('CONSOLE_HR_KEY'),
-            'is_owner_of' => ['divisions', 'employees'],
+            'resource' => 'people',
         ],
         'gudang' => [
             'name' => 'Gudang',
             'base_url' => env('CONSOLE_GUDANG_URL', 'http://127.0.0.1:9102'),
             'service_key' => env('CONSOLE_GUDANG_KEY'),
-            'is_owner_of' => ['items'],
+            'resource' => 'items',
         ],
         'produksi' => [
             'name' => 'Produksi',
             'base_url' => env('CONSOLE_PRODUKSI_URL', 'http://127.0.0.1:9103'),
             'service_key' => env('CONSOLE_PRODUKSI_KEY'),
-            'is_owner_of' => ['orders'],
+            'resource' => 'productions',
         ],
     ],
 

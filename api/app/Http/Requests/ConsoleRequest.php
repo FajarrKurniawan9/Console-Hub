@@ -29,8 +29,7 @@ class ConsoleRequest extends FormRequest
             'auth_type' => ['sometimes', Rule::in(['api_key', 'bearer', 'basic'])],
             'service_key' => [$required, 'string', 'min:8', 'max:500'],
             'is_active' => ['sometimes', 'boolean'],
-            'is_owner_of' => ['sometimes', 'array'],
-            'is_owner_of.*' => [Rule::in(['divisions', 'employees', 'items', 'orders'])],
+            'resource' => [$required, Rule::in(['items', 'productions', 'people']), Rule::unique('consoles', 'resource')->ignore($console instanceof Console ? $console->id : null)],
         ];
     }
 

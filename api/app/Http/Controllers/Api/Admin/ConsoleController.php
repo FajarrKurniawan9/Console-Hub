@@ -79,6 +79,6 @@ class ConsoleController extends Controller
      */
     private function auditable(Console $console): array
     {
-        return ['console' => $console->slug, ...$console->only(['name', 'base_url', 'auth_type', 'is_active', 'is_owner_of'])];
+        return ['console' => $console->slug, ...$console->only(['name', 'base_url', 'auth_type', 'is_active', 'resource'])];
     }
 }

@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class ConsoleFactory extends Factory
 {
+    public const RESOURCES = ['gudang' => 'items', 'produksi' => 'productions', 'hr' => 'people'];
+
     /**
      * @return array<string, mixed>
      */
@@ -25,12 +27,7 @@ class ConsoleFactory extends Factory
             'service_key' => 'test-key-'.$slug,
             'is_active' => true,
             // Follows the final slug, also when a test overrides it.
-            'is_owner_of' => fn (array $attributes) => match ($attributes['slug']) {
-                'hr' => ['divisions', 'employees'],
-                'gudang' => ['items'],
-                'produksi' => ['orders'],
-                default => [],
-            },
+            'resource' => fn (array $attributes) => self::RESOURCES[$attributes['slug']] ?? 'items',
         ];
     }
 
