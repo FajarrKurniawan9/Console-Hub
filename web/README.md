@@ -13,7 +13,7 @@ Dua peran dalam satu aplikasi:
   tombol mengikuti izin RBAC.
 
 Frontend hanya memanggil API portal (`/api/v1`). Sampai backend Laravel siap, semua respons
-datang dari mock MSW di `mocks/` yang mengikuti kontrak (brief v3 §5).
+datang dari mock MSW di `mocks/` yang mengikuti kontrak (brief v3 + update 2 §3).
 
 ## Menjalankan
 
@@ -38,42 +38,44 @@ npm run dev              # http://localhost:5173
 
 ## Mock (dihapus saat integrasi)
 
-Akun mock, data dummy saja:
+Mock meniru **hub**: tiga sumber di memori (HR → Personel, Produksi → Produksi, Gudang → Barang),
+data digabung lintas sumber, referensi diperiksa sebelum menulis. Akun mock, data dummy saja:
 
 | Email               | Sandi       | Peran                              |
 | ------------------- | ----------- | ---------------------------------- |
 | `admin@example.com` | `demo12345` | Admin IT                           |
 | `user@example.com`  | `demo12345` | User                               |
-| `siti@example.com`  | `demo12345` | User tanpa izin `pesanan.create`   |
+| `siti@example.com`  | `demo12345` | User (hanya lihat)                 |
 | `agus@example.com`  | `demo12345` | User dinonaktifkan (login ditolak) |
 
 Pilih skenario dengan `?scenario=<nama>` di URL (diingat untuk tab itu) atau lewat panel
 **skenario mock** di kiri bawah:
 
-| Skenario           | Yang terjadi                                                                                    |
-| ------------------ | ----------------------------------------------------------------------------------------------- |
-| `ok`               | Normal (bawaan). Gudang berstatus Lambat (2,4 dtk).                                             |
-| `slow`             | Latensi 1–4 dtk; penulisan menjawab 202 lalu selesai.                                           |
-| `gudang-down`      | Gudang mati: log Gudang berhenti, daftar Barang gagal, semua tulis ditolak 502.                 |
-| `all-down`         | Ketiga console mati.                                                                            |
-| `commit-stuck`     | Tulis menjawab 202; Produksi gagal commit 3 kali → `needs_attention` (selesaikan di Transaksi). |
-| `drift`            | Pemeriksaan konsistensi Karyawan/Divisi menemukan baris hilang dan versi/checksum berbeda.      |
-| `empty`            | Tanpa data kerja, log, transaksi, pemeriksaan, atau audit.                                      |
-| `unauthenticated`  | Semua panggilan setelah login menjawab 401 → kembali ke login dengan catatan sesi berakhir.     |
-| `forbidden`        | Log, Audit, daftar Barang, dan buat pesanan menjawab 403 walau peran mengizinkan.               |
-| `validation-error` | Form tulis menjawab 422 dengan `fields`.                                                        |
-| `rate-limited`     | ±30% permintaan menjawab 429.                                                                   |
+| Skenario           | Yang terjadi                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| `ok`               | Normal (bawaan).                                                                            |
+| `slow`             | Latensi 1–4 dtk di semua permintaan.                                                        |
+| `empty`            | Tanpa data kerja, log, atau audit.                                                          |
+| `unauthenticated`  | Semua panggilan setelah login menjawab 401 → kembali ke login dengan catatan sesi berakhir. |
+| `forbidden`        | Log, Audit, daftar Barang, dan tambah personel menjawab 403 walau peran mengizinkan.        |
+| `validation-error` | Setiap tulis menjawab 422 dengan `details.fields`.                                          |
+| `rate-limited`     | ±30% permintaan menjawab 429.                                                               |
+| `hr-down`          | HR mati: penanggung jawab/pengantar `null`, `meta.unavailable=['hr']`, tulis Personel 502.  |
+| `produksi-down`    | Produksi mati: asal produksi `null`, daftar dan tulis Produksi 502.                         |
+| `gudang-down`      | Gudang mati: daftar Barang 502 (Gudang pemilik data); Produksi dan Personel tetap jalan.    |
+| `all-down`         | Ketiga sumber mati.                                                                         |
+| `slow-source`      | HR menjawab setelah 3 dtk; Lacak Barang menampilkan status memuat per bagian.               |
+| `conflict`         | Setiap PATCH menjawab 409 `VERSION_CONFLICT`.                                               |
+| `referenced`       | Setiap DELETE menjawab 409 `REFERENCED`.                                                    |
 
 Yang layak dicoba:
 
-- **Penolakan per peran:** buat pesanan _Roti tawar kupas 400 g_ jumlah 500 (stok 120). User
-  hanya melihat kalimatnya; Admin IT juga melihat alasan per console. Dengan PIC _Hendra
-  Gunawan_ (sudah memegang 5 pesanan) muncul penolakan kedua dari HR.
-- **Transaksi tersangkut:** Ringkasan → baris "Perlu tindakan" → "Coba commit ulang".
-- **RBAC mengubah menu:** Pengguna & izin → Peran dan izin → User → hapus "Divisi: Lihat" →
+- **Lacak barang:** Beranda → Lacak barang → ketik "kain" → _Kain katun_. Admin IT melihat
+  tiga baris "Sumber data" dengan status dan waktu respons. Ulangi dengan `?scenario=hr-down`.
+- **Referensi:** sebagai Admin, Produksi → Nonaktifkan _Area Logam B · Pengecoran_ → muncul
+  "masih dipakai" beserta daftar barang yang memakainya.
+- **RBAC mengubah menu:** Pengguna & izin → Peran dan izin → User → hapus "Personel: Lihat" →
   Simpan, lalu masuk sebagai `user@example.com`.
-- **Konsistensi:** Barang → klik baris _Gula pasir_ → "Berbeda di Produksi" → Konsistensi →
-  Perbaiki.
 
 ## Struktur
 
@@ -81,10 +83,10 @@ Yang layak dicoba:
 src/
   app/            router, provider, AdminLayout, UserLayout, penjaga rute, bar offline/console
   components/ui/  pembungkus Radix tipis (gaya shadcn) memakai token desain
-  components/     StatusDot (+ TxStateBadge, LevelBadge), ConfirmDialog, JsonView, EmptyState, ErrorState…
+  components/     StatusDot (+ LevelBadge), ConfirmDialog, JsonView, EmptyState, ErrorState…
   features/auth/
-  features/work/  Karyawan, Divisi, Barang, Pesanan, Beranda User, useWrite (perilaku menyimpan)
-  features/admin/ overview, consoles, logs, transactions, consistency, rbac, audit
+  features/work/  Barang, Produksi, Personel, Lacak Barang, Beranda User, useWrite (perilaku menyimpan)
+  features/admin/ overview, consoles (Sumber data), logs, rbac, audit
   lib/api/        client.ts (klien tunggal), schemas.ts (kontrak + zod), work.ts
   lib/            permissions.tsx (hasPermission, useCan, <Can>), errors.ts, format.ts, status.ts
   styles/         tokens.css (token terang/gelap, skala Admin/User)

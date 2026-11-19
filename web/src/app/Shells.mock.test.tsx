@@ -9,7 +9,7 @@ describe('shells and guards', () => {
     expect(await screen.findByRole('heading', { name: 'Masuk' })).toBeInTheDocument()
   })
 
-  it.each(['/log', '/console', '/transaksi', '/rbac', '/audit', '/konsistensi'])(
+  it.each(['/log', '/console', '/rbac', '/audit'])(
     'User opening %s directly gets 403',
     async (path) => {
       renderApp(path, 'user')
@@ -21,8 +21,9 @@ describe('shells and guards', () => {
   it('User menu hides what the role cannot see', async () => {
     renderApp('/', 'user')
     await screen.findByRole('heading', { name: /Halo/ })
-    // Default User role has divisi.view but no admin permissions.
-    expect(screen.getByRole('link', { name: 'Divisi' })).toBeInTheDocument()
+    // Default User role: Barang, Produksi, Personel, Lacak barang; no admin permissions.
+    for (const name of ['Barang', 'Produksi', 'Personel', 'Lacak barang'])
+      expect(screen.getAllByRole('link', { name })[0]).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Audit' })).not.toBeInTheDocument()
   })
 
@@ -30,7 +31,7 @@ describe('shells and guards', () => {
     setScenario('gudang-down')
     renderApp('/', 'admin')
     expect(await screen.findByText(/tidak dapat dihubungi sejak/)).toHaveTextContent('Gudang')
-    expect(screen.getByRole('link', { name: 'Lihat console' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Lihat sumber data' })).toHaveAttribute(
       'href',
       '/console/2',
     )

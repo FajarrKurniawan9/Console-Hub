@@ -12,6 +12,9 @@ describe('status pages', () => {
   it('keeps the title and back link while a detail page fails', async () => {
     renderApp('/console/99', 'admin')
     expect(await screen.findByText('Data tidak ditemukan')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Semua console/ })).toHaveAttribute('href', '/console')
+    expect(screen.getByRole('link', { name: /Semua sumber data/ })).toHaveAttribute(
+      'href',
+      '/console',
+    )
   })
 })

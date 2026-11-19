@@ -36,19 +36,19 @@ describe('RBAC', () => {
   it('a permission change on the User role changes the User menu on the next me', async () => {
     renderApp('/rbac?tab=peran', 'admin')
     await userEvent.click(await screen.findByRole('tab', { name: 'User' }))
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Divisi: Lihat' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Personel: Lihat' }))
     await userEvent.click(screen.getByRole('button', { name: 'Simpan izin User' }))
     expect(await screen.findByText('Izin peran User disimpan')).toBeInTheDocument()
-    expect(roles.find((r) => r.code === 'user')!.permissions).not.toContain('divisi.view')
+    expect(roles.find((r) => r.code === 'user')!.permissions).not.toContain('personel.view')
   })
 
-  it('…and the User now sees no Divisi menu and gets 403 on /divisi', async () => {
+  it('…and the User now sees no Personel menu and gets 403 on /personel', async () => {
     roles.find((r) => r.code === 'user')!.permissions = roles
       .find((r) => r.code === 'user')!
-      .permissions.filter((p) => p !== 'divisi.view')
-    renderApp('/divisi', 'user')
+      .permissions.filter((p) => p !== 'personel.view')
+    renderApp('/personel', 'user')
     expect(await screen.findByRole('heading', { name: /403/ })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Divisi' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Personel' })).not.toBeInTheDocument()
   })
 
   it('saving the role you use reloads your own menu', async () => {

@@ -54,11 +54,3 @@ describe('LogsPage', () => {
     expect(within(box).getAllByText(/berhasil/)).toHaveLength(2)
   })
 })
-
-describe('LogsPage tx link', () => {
-  it('links a log row to its transaction', async () => {
-    renderApp('/log?q=tx_0001&range=7d', 'admin')
-    const links = await screen.findAllByRole('link', { name: 'tx_0001' })
-    expect(links[0]).toHaveAttribute('href', '/transaksi/tx_0001')
-  })
-})

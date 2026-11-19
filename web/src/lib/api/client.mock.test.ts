@@ -86,16 +86,20 @@ describe('request', () => {
     expect(b.fields).toEqual({ responsible_id: [] })
   })
 
-  it('sends no Idempotency-Key (removed in update 2)', async () => {
-    let key: string | null = 'unset'
+  it('writes send no app-specific header besides Authorization (update 2)', async () => {
+    tokenStore.set('abc')
+    let names: string[] = []
     server.use(
       http.post(url, ({ request }) => {
-        key = request.headers.get('Idempotency-Key')
+        names = [...request.headers.keys()]
         return HttpResponse.json({ data: null })
       }),
     )
-    await request(z.unknown(), { url: '/thing', method: 'POST' })
-    expect(key).toBeNull()
+    await request(z.unknown(), { url: '/thing', method: 'POST', data: { a: 1 } })
+    // Transport headers (host, user-agent, …) come from the HTTP stack, not from the client.
+    const TRANSPORT =
+      /^(accept|accept-encoding|accept-language|connection|content-length|content-type|host|referer|user-agent|origin)$/
+    expect(names.filter((n) => !TRANSPORT.test(n))).toEqual(['authorization'])
   })
 
   it('rejects responses that break the contract', async () => {

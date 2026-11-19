@@ -49,7 +49,12 @@ export function RowsTable<T extends { id: string; status: string }>({
             tabIndex={0}
             aria-label={label(r)}
             onClick={() => onOpen(r)}
-            onKeyDown={(k) => k.key === 'Enter' && k.target === k.currentTarget && onOpen(r)}
+            onKeyDown={(k) => {
+              if (k.key !== 'Enter' || k.target !== k.currentTarget) return
+              // Without this the same Enter activates the drawer's close button once focus moves.
+              k.preventDefault()
+              onOpen(r)
+            }}
             className={clsx(
               'cursor-pointer hover:bg-surface',
               r.status === 'nonaktif' && 'text-muted',

@@ -1,3 +1,10 @@
+> **Update 2 (2026-11-19):** transaksi dua fase, 202, `Idempotency-Key`, konsistensi, dan
+> "Jejak 3 console" sudah dihapus. Butir di bawah yang menyebutnya tidak berlaku lagi; periksa
+> sebagai gantinya: Barang/Produksi/Personel (tambah, ubah, nonaktifkan, `VERSION_CONFLICT`,
+> `REFERENCE_NOT_FOUND`, `REFERENCED`), Lacak Barang (tiga sumber, `warnings`, `sources` hanya
+> untuk Admin), dan perilaku saat satu sumber mati (`meta.unavailable`). Langkah penghapusan mock
+> tidak berubah.
+
 # Integrasi dengan backend
 
 Ditulis sekarang, **dikerjakan nanti** setelah backend Laravel siap (brief v3 §12). Jangan

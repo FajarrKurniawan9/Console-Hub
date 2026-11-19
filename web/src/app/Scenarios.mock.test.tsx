@@ -20,7 +20,7 @@ describe('scenario: unauthenticated', () => {
 
   it('a stored session that expires sends you to login', async () => {
     setScenario('unauthenticated')
-    renderApp('/pesanan', 'user')
+    renderApp('/barang', 'user')
     expect(await screen.findByRole('heading', { name: 'Masuk' })).toBeInTheDocument()
   })
 })
@@ -46,11 +46,11 @@ describe('scenario: forbidden', () => {
 describe('scenario: rate-limited', () => {
   it('pages still load (one automatic retry), and a final 429 says to wait', async () => {
     setScenario('rate-limited')
-    renderApp('/transaksi', 'admin')
+    renderApp('/barang', 'admin')
     await waitFor(
       () =>
         expect(
-          screen.queryAllByRole('row', { name: /Buka transaksi/ }).length +
+          screen.queryAllByRole('row', { name: /^Detail / }).length +
             screen.queryAllByText('Terlalu banyak permintaan').length,
         ).toBeGreaterThan(0),
       { timeout: 8000 },
@@ -63,24 +63,25 @@ describe('scenario: all-down', () => {
     setScenario('all-down')
     renderApp('/', 'admin')
     expect(await screen.findAllByText(/tidak dapat dihubungi sejak/)).toHaveLength(3)
-    const grid = screen.getByRole('heading', { name: 'Console' }).closest('section')!
+    const grid = screen.getByRole('heading', { name: 'Sumber data' }).closest('section')!
     expect(within(grid).getAllByText('Mati')).toHaveLength(3)
   })
 
   it('User: work lists fail with one plain banner, writes refused', async () => {
     setScenario('all-down')
-    renderApp('/pesanan', 'user')
+    renderApp('/barang', 'user')
     expect(await screen.findByText(/Sebagian layanan sedang bermasalah/)).toBeInTheDocument()
     const alert = screen.getAllByRole('alert')[0]!
     expect(alert).toHaveTextContent('Layanan sedang bermasalah')
-    expect(document.body).not.toHaveTextContent(/HR|Gudang|Produksi|CONSOLE_/)
+    // "Produksi" is a menu item for User; source names must not appear in messages.
+    expect(screen.getByRole('main')).not.toHaveTextContent(/\bHR\b|Gudang|SOURCE_|API/)
   })
 })
 
 describe('network', () => {
   it('offline bar appears when the browser goes offline', async () => {
-    renderApp('/pesanan', 'user')
-    await screen.findByRole('heading', { name: 'Pesanan' })
+    renderApp('/barang', 'user')
+    await screen.findByRole('heading', { name: 'Barang' })
     Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false })
     act(() => void window.dispatchEvent(new Event('offline')))
     expect(await screen.findByText(/Koneksi internet terputus/)).toBeInTheDocument()

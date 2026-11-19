@@ -38,7 +38,7 @@ describe('LoginPage', () => {
   it('User lands on a plain home without admin items', async () => {
     await login('user@example.com')
     expect(await screen.findByRole('heading', { name: /Halo, Budi/ })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Pesanan' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Barang' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Log gabungan' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Ringkasan' })).not.toBeInTheDocument()
   })

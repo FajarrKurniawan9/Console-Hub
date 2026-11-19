@@ -13,7 +13,7 @@ describe('AuditPage', () => {
   it('shows old and new values for a change', async () => {
     renderApp('/audit?action=barang.update', 'admin')
     const rows = (await screen.findAllByRole('row')).slice(1)
-    expect(rows[0]).toHaveTextContent('min_stock')
+    expect(rows[0]).toHaveTextContent(/quantity: \d+ → \d+/)
   })
 
   it('is 403 for User, and the table never renders', async () => {
@@ -32,12 +32,12 @@ describe('AuditPage (phase 4)', () => {
       { type: 'role', id: 'user' },
       null,
       {
-        changes: { dicabut: { old: ['divisi.view'], new: null } },
+        changes: { dicabut: { old: ['personel.view'], new: null } },
       },
     )
     renderApp('/audit?action=rbac.role_updated', 'admin')
     const row = (await screen.findAllByRole('row'))[1]!
     expect(row).toHaveTextContent('rbac.role_updated')
-    expect(row).toHaveTextContent('divisi.view')
+    expect(row).toHaveTextContent('personel.view')
   })
 })

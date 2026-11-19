@@ -105,3 +105,26 @@ v3 replaces the v2 product (processes, runs, the resource editor) with: two role
 58. **"Cek di 3 console"** reuses the v3 detail side panel (no new `VerifyAllDialog`); the check now runs on demand from the button instead of on open. The badge reads "Sama di 3 console".
 59. **`slow` scenario** now delays only Gudang (2–3.5 s; 0.6 s in tests) so one console clearly answers later, as the update asks.
 60. **Demo accounts** moved from the login page to the mock dev panel (user's choice), so `src/` holds no dummy credentials.
+
+## Update 2 (2026-11-19): domain logistik
+
+Supersedes every note above about transactions, 202, `Idempotency-Key`, consistency checks,
+Karyawan/Divisi/Pesanan, and the "Jejak 3 console" panel (all removed).
+
+- **No `types.ts`.** Types are still inferred from the zod schemas in `lib/api/schemas.ts`, so the
+  update-2 types live there (`Item`, `Production`, `Person`, `TrackingResult`, `SourceStatus`, …).
+- **`details.fields`.** The update-2 error envelope has no top-level `fields`; the client reads
+  `details.fields` either as `{field: [messages]}` (422 `VALIDATION_ERROR`) or as a list of field
+  names (422 `REFERENCE_NOT_FOUND`), which then get the plain sentence from `lib/errors.ts`.
+- **`meta.total` is optional.** Work lists only send `next_cursor` (+ `unavailable`); admin logs
+  and audit keep sending `total`.
+- **Writes are off only when the owning source is down** (`ListFrame` → `unavailableOf`): items
+  need Gudang, productions Produksi, people HR. A down joined source only greys its column.
+- **Merged column without data:** id present + ref `null` → "Tidak tersedia" with a tooltip;
+  no id → "—".
+- **"Dipakai oleh" on the person drawer** is not rendered: the contract has no field for it
+  (update 2 says "only when the backend provides it").
+- **Lacak Barang loading:** one request covers all three sources, so "per-section loading" is a
+  skeleton in each of the three steps while that request runs.
+- **Row Enter fix:** Enter on a table row now calls `preventDefault`, otherwise the same key
+  press activated the drawer's close button once focus moved into it.

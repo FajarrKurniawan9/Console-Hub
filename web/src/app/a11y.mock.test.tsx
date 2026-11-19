@@ -1,27 +1,31 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { setScenario } from '../../mocks/scenarios'
 import { axeViolations } from '../test/a11y'
 import { renderApp } from '../test/utils'
 
+const KAIN = 'c3000000-0000-4000-8000-000000000001'
 const ADMIN: [string, RegExp][] = [
   ['/', /Ringkasan/],
-  ['/console', /^Console$/],
+  ['/console', /^Sumber data$/],
+  ['/console/1', /^HR$/],
   ['/log', /Log gabungan/],
-  ['/transaksi', /^Transaksi$/],
-  ['/transaksi/tx_0037', /Buat pesanan/],
-  ['/konsistensi?check=2', /Konsistensi data/],
   ['/rbac', /Pengguna & izin/],
   ['/rbac?tab=peran', /Pengguna & izin/],
   ['/audit', /^Audit$/],
   ['/barang', /^Barang$/],
-  ['/pesanan', /^Pesanan$/],
+  ['/produksi', /^Produksi$/],
+  ['/personel', /^Personel$/],
+  [`/lacak/${KAIN}`, /Lacak barang/],
 ]
 const USER: [string, RegExp][] = [
   ['/', /Halo/],
-  ['/karyawan', /^Karyawan$/],
-  ['/pesanan', /^Pesanan$/],
   ['/barang', /^Barang$/],
+  ['/produksi', /^Produksi$/],
+  ['/personel', /^Personel$/],
+  ['/lacak', /Lacak barang/],
+  [`/lacak/${KAIN}`, /Lacak barang/],
   ['/log', /403/],
 ]
 
@@ -45,51 +49,52 @@ describe('axe (WCAG 2 A/AA, structure)', () => {
     expect(await axeViolations()).toEqual([])
   })
 
-  it('order form (User)', async () => {
-    renderApp('/pesanan', 'user')
-    await userEvent.click(await screen.findByRole('button', { name: 'Buat pesanan' }))
-    await screen.findByRole('dialog', { name: 'Buat pesanan' })
+  it('item form (User)', async () => {
+    renderApp('/barang', 'user')
+    await userEvent.click(await screen.findByRole('button', { name: 'Tambah barang' }))
+    await screen.findByRole('dialog', { name: 'Tambah barang' })
     expect(await axeViolations()).toEqual([])
   })
 })
 
 describe('keyboard', () => {
-  it('skip link, then the order form opens and submits from the keyboard', async () => {
+  it('skip link, then the item form opens and closes from the keyboard', async () => {
     const user = userEvent.setup()
-    renderApp('/pesanan', 'user')
-    await screen.findByRole('button', { name: 'Buat pesanan' })
+    renderApp('/barang', 'user')
+    await screen.findByRole('button', { name: 'Tambah barang' })
     await user.tab()
     expect(screen.getByRole('link', { name: 'Lewati ke konten' })).toHaveFocus()
-    screen.getByRole('button', { name: 'Buat pesanan' }).focus()
+    screen.getByRole('button', { name: 'Tambah barang' }).focus()
     await user.keyboard('{Enter}')
-    const dialog = await screen.findByRole('dialog', { name: 'Buat pesanan' })
+    const dialog = await screen.findByRole('dialog', { name: 'Tambah barang' })
     expect(dialog).toContainElement(document.activeElement as HTMLElement)
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Buat pesanan' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Tambah barang' })).toHaveFocus())
   })
 
-  it('table rows open with Enter', async () => {
+  it('table rows open their drawer with Enter', async () => {
     const user = userEvent.setup()
-    renderApp('/transaksi', 'admin')
-    const [row] = await screen.findAllByRole('row', { name: /Buka transaksi/ })
-    row!.focus()
+    renderApp('/barang', 'admin')
+    const row = await screen.findByRole('row', { name: 'Detail Kain katun' })
+    row.focus()
     await user.keyboard('{Enter}')
-    expect(await screen.findByRole('list', { name: 'Fase per console' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Kain katun' })).toBeInTheDocument()
   })
 })
 
-describe('axe: "Jejak 3 console"', () => {
-  it('Admin panel after a save', async () => {
-    renderApp('/karyawan', 'admin')
-    await userEvent.click(await screen.findByRole('button', { name: 'Ubah Ratna Kusuma' }))
-    const dialog = await screen.findByRole('dialog')
-    const field = within(dialog).getByLabelText('Jabatan')
-    await userEvent.clear(field)
-    await userEvent.type(field, 'Kepala shift malam')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Simpan' }))
-    await screen.findByText('Mengenai 3 dari 3 console')
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+describe('axe: drawers and source-down states', () => {
+  it('item drawer (Admin)', async () => {
+    renderApp('/barang', 'admin')
+    await userEvent.click(await screen.findByRole('row', { name: 'Detail Kain katun' }))
+    await screen.findByRole('dialog', { name: 'Kain katun' })
+    expect(await axeViolations()).toEqual([])
+  })
+
+  it('Lacak barang with hr-down (User)', async () => {
+    setScenario('hr-down')
+    renderApp(`/lacak/${KAIN}`, 'user')
+    await screen.findByText('Data personel sedang tidak tersedia.')
     expect(await axeViolations()).toEqual([])
   })
 })
