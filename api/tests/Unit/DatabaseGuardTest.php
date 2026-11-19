@@ -8,8 +8,8 @@ afterEach(function () {
     DatabaseGuard::$enabled = true;
 });
 
-it('passes when the active database is console-test', function () {
-    DatabaseGuard::$resolver = fn () => 'console-test';
+it('passes when the active database is consolehub_test', function () {
+    DatabaseGuard::$resolver = fn () => 'consolehub_test';
 
     DatabaseGuard::assert();
 })->throwsNoExceptions();
@@ -18,8 +18,8 @@ it('refuses any other database name', function (string $name) {
     DatabaseGuard::$resolver = fn () => $name;
 
     DatabaseGuard::assert();
-})->with(['neondb', 'console_hr', 'console-test-2', 'postgres'])
-    ->throws(RuntimeException::class, 'seharusnya "console-test"');
+})->with(['neondb', 'console_hr', 'console-test', 'console_test', 'postgres'])
+    ->throws(RuntimeException::class, 'seharusnya "consolehub_test"');
 
 it('asks the server for current_database() when no resolver is set', function () {
     expect(DatabaseGuard::currentDatabase(DB::connection()))->toBe(DB::connection()->getDatabaseName());

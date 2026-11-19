@@ -8,11 +8,11 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * Refuses to run against any database other than the one portal database (`console-test`).
+ * Refuses to run against any database other than the one portal database (`consolehub_test`).
  */
 class DatabaseGuard
 {
-    public const EXPECTED = 'console-test';
+    public const EXPECTED = 'consolehub_test';
 
     /**
      * Test hook: returns the active database name instead of asking the server.

@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Every new database connection (web, queue, scheduler, migrate, seed) must point at `console-test`.
+     * Every new database connection (web, queue, scheduler, migrate, seed) must point at `consolehub_test`.
      * Tests run on their own local database and are exempt.
      */
     private function guardDatabase(): void

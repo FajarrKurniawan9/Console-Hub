@@ -7,7 +7,7 @@ Dokumen ini adalah aturan tetap (*system guidelines*) bagi AI Agent (Claude Code
 
 > **UPDATE v3 (2026-11-19) — menggantikan bagian yang bertentangan di bawah:**
 > Backend portal dibangun ulang mengikuti brief v3 (koordinator transaksi dua fase ke 3 console HR/Gudang/Produksi).
-> - Database portal: hanya Neon `console-test` (dijaga `App\Support\DatabaseGuard`). Tabel: `roles`, `permissions`, `role_permissions`, `users`, `code_counters`, `consoles`, `console_health_checks`, `log_sync_state`, `log_entries`, `audit_events`, `transactions`, `transaction_participants`, `consistency_checks`, `consistency_findings` (+ tabel bawaan Laravel).
+> - Database portal: hanya Neon `consolehub_test` (dijaga `App\Support\DatabaseGuard`). Tabel: `roles`, `permissions`, `role_permissions`, `users`, `code_counters`, `consoles`, `console_health_checks`, `log_sync_state`, `log_entries`, `audit_events`, `transactions`, `transaction_participants`, `consistency_checks`, `consistency_findings` (+ tabel bawaan Laravel).
 > - RBAC berbasis peran & izin (`admin_it`, `user`, izin `sumber.aksi`) **diizinkan** — non-goal no. 3 tidak berlaku lagi.
 > - Fitur proses/runs/resources (processes, process_steps, process_runs, run_steps, ExecuteRun, ProcessEngine, `/consoles/:id/resources`) **dihapus**.
 > - Kontrak JSON mengikuti `web/src/lib/api/schemas.ts`; selisih dicatat di `api/docs/contract-diff.md`.
