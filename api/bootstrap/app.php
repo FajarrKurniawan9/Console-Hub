@@ -2,6 +2,7 @@
 
 use App\Connectors\Exceptions\ConsoleException;
 use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\RequestId;
 use App\Support\ApiException;
 use App\Support\ApiResponse;
 use Illuminate\Auth\AuthenticationException;
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(RequestId::class);
         $middleware->alias(['admin' => EnsureAdmin::class]);
         $middleware->throttleApi('api');
     })

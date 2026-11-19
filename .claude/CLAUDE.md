@@ -5,6 +5,13 @@ Dokumen ini adalah aturan tetap (*system guidelines*) bagi AI Agent (Claude Code
 > **PENTING (STRICT BOUNDARY):**
 > Pengguna memegang peran sebagai **Fullstack Developer (Laravel + React)**. AI Agent **WAJIB** fokus secara ketat pada tugas Fullstack dan **DILARANG KERAS** melenceng atau merebut tanggung jawab dari role lain (Cloud/Infrastruktur dan DB Schema), serta **DILARANG** mengerjakan fitur di luar ruang lingkup (*non-goals*).
 
+> **UPDATE v3 (2026-11-19) — menggantikan bagian yang bertentangan di bawah:**
+> Backend portal dibangun ulang mengikuti brief v3 (koordinator transaksi dua fase ke 3 console HR/Gudang/Produksi).
+> - Database portal: hanya Neon `console-test` (dijaga `App\Support\DatabaseGuard`). Tabel: `roles`, `permissions`, `role_permissions`, `users`, `code_counters`, `consoles`, `console_health_checks`, `log_sync_state`, `log_entries`, `audit_events`, `transactions`, `transaction_participants`, `consistency_checks`, `consistency_findings` (+ tabel bawaan Laravel).
+> - RBAC berbasis peran & izin (`admin_it`, `user`, izin `sumber.aksi`) **diizinkan** — non-goal no. 3 tidak berlaku lagi.
+> - Fitur proses/runs/resources (processes, process_steps, process_runs, run_steps, ExecuteRun, ProcessEngine, `/consoles/:id/resources`) **dihapus**.
+> - Kontrak JSON mengikuti `web/src/lib/api/schemas.ts`; selisih dicatat di `api/docs/contract-diff.md`.
+
 ---
 
 ## 1. Pembagian Peran Tim & Batasan Kerja
@@ -15,7 +22,7 @@ Proyek ini dikerjakan oleh tim 3 orang dengan pembagian peran sesuai Dokumen Tek
 |---|---|---|
 | **Fullstack (Laravel + React)** | **ROLE KITA (FOKUS DI SINI)** | Mengembangkan seluruh aplikasi di folder `api/` (Laravel) dan `web/` (React). Memastikan API dan UI terhubung dengan benar, lolos tes, dan siap dijalankan di lokal maupun staging. |
 | **Cloud (NeonDB & Infra)** | **Orang Lain (JANGAN AMBIL ALIH)** | DILARANG mengurus infrastruktur cloud langsung: membuat project/branch Neon di cloud, hosting cloud/staging portal, CI/CD pipeline cloud, hosting mock-console di server eksternal, atau menulis `docs/ops.md`. Fullstack hanya menyediakan file `.env.example`, perintah build, serta perintah worker/scheduler. |
-| **DB Schema** | **Orang Lain (JANGAN AMBIL ALIH)** | DILARANG mendesain ulang arsitektur DB dari nol, membuat ERD terpisah, atau dataset JSON mock consoles. Fullstack hanya mengimplementasikan migrasi dan seeder di Laravel sesuai spesifikasi 10 tabel yang telah disepakati di dokumen teknis. |
+| **DB Schema** | **Orang Lain (JANGAN AMBIL ALIH)** | DILARANG mendesain ulang arsitektur DB dari nol, membuat ERD terpisah, atau dataset JSON mock consoles. Fullstack hanya mengimplementasikan migrasi dan seeder di Laravel sesuai daftar tabel di UPDATE v3. |
 
 ---
 
@@ -24,7 +31,7 @@ Proyek ini dikerjakan oleh tim 3 orang dengan pembagian peran sesuai Dokumen Tek
 Jangan pernah membuat atau mengusulkan hal-hal berikut karena berada di luar ruang lingkup (non-goals):
 1. ❌ **Editor alur visual drag-and-drop ala n8n**: Antarmuka proses cukup berupa daftar urutan langkah (*step list*) sederhana.
 2. ❌ **Percabangan & perulangan kompleks**: Mesin proses hanya menjalankan urutan langkah sekuensial (*sequential pipeline*), tanpa percabangan (*if/else*) atau perulangan (*looping*).
-3. ❌ **Manajemen role & permission rumit**: Cukup satu role pengguna standar + satu penanda admin (`is_admin = true`).
+3. ~~❌ **Manajemen role & permission rumit**~~ (dicabut oleh UPDATE v3: RBAC peran + izin).
 4. ❌ **Akses database console langsung**: Portal **HANYA** boleh berkomunikasi lewat HTTP API resmi masing-masing console. Tidak boleh ada koneksi database langsung ke console eksternal.
 5. ❌ **Notifikasi Real-time (WebSocket / SSE)**: Cukup gunakan polling berkala di frontend (misalnya polling tiap 2 detik untuk eksekusi proses).
 

@@ -6,7 +6,7 @@ return [
     | Allow console base URLs on private, loopback and link-local addresses.
     | Only enable this in local development.
     */
-    'allow_private_hosts' => (bool) env('ALLOW_PRIVATE_HOSTS', false),
+    'allow_private_hosts' => (bool) env('CONSOLE_ALLOW_PRIVATE_HOSTS', false),
 
     'default_timeout_seconds' => 8,
 

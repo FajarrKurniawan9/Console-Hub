@@ -84,6 +84,7 @@ return [
             ]) : [],
         ],
 
+        // Neon pooled host (-pooler): application runtime. No session-level features on this path.
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),
@@ -96,13 +97,14 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'sslmode' => env('DB_SSLMODE', 'require'),
         ],
 
+        // Neon direct host (no -pooler): migrations, seeders and the queue worker.
         'pgsql_direct' => [
             'driver' => 'pgsql',
-            'url' => env('DB_URL_DIRECT', env('DB_URL')),
-            'host' => env('DB_HOST', '127.0.0.1'),
+            'url' => env('DB_URL_DIRECT'),
+            'host' => env('DB_HOST_DIRECT', env('DB_HOST', '127.0.0.1')),
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'laravel'),
             'username' => env('DB_USERNAME', 'root'),
@@ -111,7 +113,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'sslmode' => env('DB_SSLMODE', 'require'),
         ],
 
         'sqlsrv' => [

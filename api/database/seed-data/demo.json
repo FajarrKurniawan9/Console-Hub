@@ -1,0 +1,412 @@
+{
+  "divisions": [
+    {
+      "kode": "HRD",
+      "nama": "HRD"
+    },
+    {
+      "kode": "GDG",
+      "nama": "Gudang"
+    },
+    {
+      "kode": "PRD",
+      "nama": "Produksi"
+    },
+    {
+      "kode": "KEU",
+      "nama": "Keuangan"
+    }
+  ],
+  "employees": [
+    {
+      "nik": "E-0001",
+      "name": "Rina Wulandari",
+      "division_kode": "HRD",
+      "position": "Kepala HRD",
+      "areas": [],
+      "teams": []
+    },
+    {
+      "nik": "E-0002",
+      "name": "Budi Santoso",
+      "division_kode": "PRD",
+      "position": "Staf administrasi produksi",
+      "areas": [],
+      "teams": [
+        "Shift Pagi"
+      ]
+    },
+    {
+      "nik": "E-0003",
+      "name": "Siti Rahmawati",
+      "division_kode": "HRD",
+      "position": "Staf rekrutmen",
+      "areas": [],
+      "teams": []
+    },
+    {
+      "nik": "E-0004",
+      "name": "Agus Prasetyo",
+      "division_kode": "GDG",
+      "position": "Operator forklift",
+      "areas": [
+        "Gudang A"
+      ],
+      "teams": []
+    },
+    {
+      "nik": "E-0005",
+      "name": "Dewi Lestari",
+      "division_kode": "PRD",
+      "position": "Supervisor produksi",
+      "areas": [],
+      "teams": [
+        "Shift Pagi"
+      ]
+    },
+    {
+      "nik": "E-0006",
+      "name": "Hendra Gunawan",
+      "division_kode": "PRD",
+      "position": "Koordinator pesanan",
+      "areas": [],
+      "teams": [
+        "Shift Siang"
+      ]
+    },
+    {
+      "nik": "E-0007",
+      "name": "Yuliana Sari",
+      "division_kode": "KEU",
+      "position": "Staf akuntansi",
+      "areas": [],
+      "teams": []
+    },
+    {
+      "nik": "E-0008",
+      "name": "Fajar Nugroho",
+      "division_kode": "GDG",
+      "position": "Kepala gudang",
+      "areas": [
+        "Gudang A",
+        "Gudang B"
+      ],
+      "teams": []
+    },
+    {
+      "nik": "E-0009",
+      "name": "Ratna Kusuma",
+      "division_kode": "PRD",
+      "position": "Operator mesin",
+      "areas": [],
+      "teams": [
+        "Shift Malam"
+      ]
+    },
+    {
+      "nik": "E-0010",
+      "name": "Joko Susilo",
+      "division_kode": "GDG",
+      "position": "Staf penerimaan barang",
+      "areas": [
+        "Gudang B"
+      ],
+      "teams": []
+    },
+    {
+      "nik": "E-0011",
+      "name": "Maya Anggraini",
+      "division_kode": "KEU",
+      "position": "Kepala keuangan",
+      "areas": [],
+      "teams": []
+    },
+    {
+      "nik": "E-0012",
+      "name": "Teguh Wibowo",
+      "division_kode": "PRD",
+      "position": "Operator pengemasan",
+      "areas": [],
+      "teams": [
+        "Shift Siang"
+      ]
+    }
+  ],
+  "items": [
+    {
+      "sku": "SKU-BB-001",
+      "nama": "Tepung terigu 25 kg",
+      "jenis": "bahan_baku",
+      "satuan": "karung",
+      "harga_jual_idr": null,
+      "min_stock": 40,
+      "pic_nik": "E-0008",
+      "status": "aktif",
+      "stok_awal": 186
+    },
+    {
+      "sku": "SKU-BB-002",
+      "nama": "Gula pasir 50 kg",
+      "jenis": "bahan_baku",
+      "satuan": "karung",
+      "harga_jual_idr": null,
+      "min_stock": 30,
+      "pic_nik": "E-0008",
+      "status": "aktif",
+      "stok_awal": 22
+    },
+    {
+      "sku": "SKU-BB-003",
+      "nama": "Minyak goreng 18 L",
+      "jenis": "bahan_baku",
+      "satuan": "jeriken",
+      "harga_jual_idr": null,
+      "min_stock": 20,
+      "pic_nik": "E-0010",
+      "status": "aktif",
+      "stok_awal": 64
+    },
+    {
+      "sku": "SKU-BB-004",
+      "nama": "Mentega industri 15 kg",
+      "jenis": "bahan_baku",
+      "satuan": "dus",
+      "harga_jual_idr": null,
+      "min_stock": 15,
+      "pic_nik": "E-0010",
+      "status": "aktif",
+      "stok_awal": 31
+    },
+    {
+      "sku": "SKU-BB-005",
+      "nama": "Telur ayam 15 kg",
+      "jenis": "bahan_baku",
+      "satuan": "peti",
+      "harga_jual_idr": null,
+      "min_stock": 25,
+      "pic_nik": "E-0004",
+      "status": "aktif",
+      "stok_awal": 48
+    },
+    {
+      "sku": "SKU-BB-006",
+      "nama": "Kemasan kardus A",
+      "jenis": "bahan_baku",
+      "satuan": "lembar",
+      "harga_jual_idr": null,
+      "min_stock": 500,
+      "pic_nik": "E-0010",
+      "status": "aktif",
+      "stok_awal": 2400
+    },
+    {
+      "sku": "SKU-BB-007",
+      "nama": "Plastik kemasan 1 kg",
+      "jenis": "bahan_baku",
+      "satuan": "rol",
+      "harga_jual_idr": null,
+      "min_stock": 40,
+      "pic_nik": "E-0004",
+      "status": "nonaktif",
+      "stok_awal": 0
+    },
+    {
+      "sku": "SKU-BB-008",
+      "nama": "Label stiker produk",
+      "jenis": "bahan_baku",
+      "satuan": "rol",
+      "harga_jual_idr": null,
+      "min_stock": 30,
+      "pic_nik": "E-0010",
+      "status": "aktif",
+      "stok_awal": 75
+    },
+    {
+      "sku": "SKU-BJ-001",
+      "nama": "Roti tawar kupas 400 g",
+      "jenis": "barang_jadi",
+      "satuan": "pak",
+      "harga_jual_idr": 18500,
+      "min_stock": 50,
+      "pic_nik": "E-0006",
+      "status": "aktif",
+      "stok_awal": 245
+    },
+    {
+      "sku": "SKU-BJ-002",
+      "nama": "Roti manis cokelat isi 10",
+      "jenis": "barang_jadi",
+      "satuan": "pak",
+      "harga_jual_idr": 27000,
+      "min_stock": 40,
+      "pic_nik": "E-0006",
+      "status": "aktif",
+      "stok_awal": 330
+    },
+    {
+      "sku": "SKU-BJ-003",
+      "nama": "Kue kering nastar 500 g",
+      "jenis": "barang_jadi",
+      "satuan": "toples",
+      "harga_jual_idr": 85000,
+      "min_stock": 20,
+      "pic_nik": "E-0005",
+      "status": "aktif",
+      "stok_awal": 108
+    },
+    {
+      "sku": "SKU-BJ-004",
+      "nama": "Bolu pandan loyang 22 cm",
+      "jenis": "barang_jadi",
+      "satuan": "loyang",
+      "harga_jual_idr": 62500,
+      "min_stock": 15,
+      "pic_nik": "E-0005",
+      "status": "aktif",
+      "stok_awal": 46
+    },
+    {
+      "sku": "SKU-BJ-005",
+      "nama": "Donat gula isi 12",
+      "jenis": "barang_jadi",
+      "satuan": "dus",
+      "harga_jual_idr": 45000,
+      "min_stock": 30,
+      "pic_nik": null,
+      "status": "aktif",
+      "stok_awal": 0
+    },
+    {
+      "sku": "SKU-BJ-006",
+      "nama": "Pia kacang hijau isi 20",
+      "jenis": "barang_jadi",
+      "satuan": "dus",
+      "harga_jual_idr": 54000,
+      "min_stock": 20,
+      "pic_nik": "E-0006",
+      "status": "aktif",
+      "stok_awal": 220
+    },
+    {
+      "sku": "SKU-BJ-007",
+      "nama": "Roti gandum utuh 500 g",
+      "jenis": "barang_jadi",
+      "satuan": "pak",
+      "harga_jual_idr": 32500,
+      "min_stock": 25,
+      "pic_nik": "E-0005",
+      "status": "aktif",
+      "stok_awal": 80
+    }
+  ],
+  "orders": [
+    {
+      "order_no": "PO-2026-0001",
+      "customer": "CV Sumber Rezeki",
+      "pic_nik": "E-0006",
+      "status": "ANTRE",
+      "lines": [
+        {
+          "sku": "SKU-BJ-001",
+          "qty": 40
+        },
+        {
+          "sku": "SKU-BJ-002",
+          "qty": 20
+        }
+      ]
+    },
+    {
+      "order_no": "PO-2026-0002",
+      "customer": "PT Maju Bersama",
+      "pic_nik": "E-0006",
+      "status": "ANTRE",
+      "lines": [
+        {
+          "sku": "SKU-BJ-003",
+          "qty": 12
+        }
+      ]
+    },
+    {
+      "order_no": "PO-2026-0003",
+      "customer": "UD Sinar Jaya",
+      "pic_nik": "E-0006",
+      "status": "ANTRE",
+      "lines": [
+        {
+          "sku": "SKU-BJ-006",
+          "qty": 30
+        },
+        {
+          "sku": "SKU-BJ-007",
+          "qty": 10
+        }
+      ]
+    },
+    {
+      "order_no": "PO-2026-0004",
+      "customer": "Toko Roti Melati",
+      "pic_nik": "E-0006",
+      "status": "ANTRE",
+      "lines": [
+        {
+          "sku": "SKU-BJ-001",
+          "qty": 25
+        }
+      ]
+    },
+    {
+      "order_no": "PO-2026-0005",
+      "customer": "Kafe Kopi Senja",
+      "pic_nik": "E-0006",
+      "status": "ANTRE",
+      "lines": [
+        {
+          "sku": "SKU-BJ-004",
+          "qty": 6
+        }
+      ]
+    },
+    {
+      "order_no": "PO-2026-0006",
+      "customer": "Koperasi Karyawan Sejahtera",
+      "pic_nik": "E-0005",
+      "status": "ANTRE",
+      "lines": [
+        {
+          "sku": "SKU-BJ-002",
+          "qty": 50
+        }
+      ]
+    },
+    {
+      "order_no": "PO-2026-0007",
+      "customer": "PT Pangan Nusantara",
+      "pic_nik": "E-0005",
+      "status": "SELESAI",
+      "lines": [
+        {
+          "sku": "SKU-BJ-001",
+          "qty": 60
+        },
+        {
+          "sku": "SKU-BJ-006",
+          "qty": 40
+        }
+      ]
+    },
+    {
+      "order_no": "PO-2026-0008",
+      "customer": "Hotel Griya Asri",
+      "pic_nik": "E-0002",
+      "status": "DIBATALKAN",
+      "lines": [
+        {
+          "sku": "SKU-BJ-003",
+          "qty": 8
+        }
+      ]
+    }
+  ]
+}
