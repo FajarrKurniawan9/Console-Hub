@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LogIndexRequest;
@@ -31,7 +31,9 @@ class LogController extends Controller
 
         if ($text = $request->validated('q')) {
             $like = '%'.addcslashes($text, '%_\\').'%';
-            $query->where(fn ($q) => $q->where('message', 'ilike', $like)->orWhere('actor', 'ilike', $like));
+            $query->where(fn ($q) => $q->where('message', 'ilike', $like)
+                ->orWhere('actor', 'ilike', $like)
+                ->orWhereRaw('tx_id::text ilike ?', [$like]));
         }
 
         if ($from = $request->validated('from')) {
@@ -52,31 +54,32 @@ class LogController extends Controller
         return (new LogEntryResource($log->load('console:id,slug,name')))->withRaw();
     }
 
+    /**
+     * Pull logs now. Answers 202 with the per-console result (frontend `LogSyncResult`).
+     */
     public function sync(LogSyncRequest $request, LogSync $sync, Audit $audit): JsonResponse
     {
         $consoleId = $request->validated('console_id');
         $consoles = Console::query()
             ->when($consoleId, fn ($q) => $q->whereKey($consoleId), fn ($q) => $q->where('is_active', true))
-            ->orderBy('name')
+            ->orderBy('id')
             ->get();
-
-        set_time_limit(max(60, $consoles->count() * 30));
 
         $results = $consoles->map(function (Console $console) use ($sync) {
             $result = $sync->syncConsole($console);
 
             return [
                 'console' => ['slug' => $console->slug, 'name' => $console->name],
-                'ok' => $result['status'] === 'ok',
-                'fetched' => $result['status'] === 'ok' ? $result['inserted'] : null,
-                'message' => $result['error'],
+                'status' => $result['status'],
+                'inserted' => $result['inserted'],
+                'error' => $result['error'],
             ];
         })->values();
 
-        $audit->record('logs.synced', null, null, $consoleId ? (int) $consoleId : null, [
-            'results' => $results->map(fn ($r) => ['console' => $r['console']['slug'], 'ok' => $r['ok'], 'fetched' => $r['fetched']])->all(),
+        $audit->record('logs.synced', 'logs', null, null, [
+            'results' => $results->map(fn ($r) => ['console' => $r['console']['slug'], 'status' => $r['status'], 'inserted' => $r['inserted']])->all(),
         ]);
 
-        return response()->json(['data' => ['results' => $results]], 202);
+        return response()->json(['data' => $results], 202);
     }
 }

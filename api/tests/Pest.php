@@ -1,9 +1,11 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Illuminate\Testing\TestResponse;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /*
@@ -61,7 +63,14 @@ function assertApiError(TestResponse $response, int $status, string $code): void
 |
 */
 
-function something()
+/**
+ * Log in as a fresh user of the given role through Sanctum.
+ */
+function actingAsRole(string $role = 'user'): User
 {
-    // ..
+    $factory = User::factory();
+    $user = ($role === 'admin_it' ? $factory->admin() : $factory)->create();
+    Sanctum::actingAs($user);
+
+    return $user;
 }

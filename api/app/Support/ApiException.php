@@ -11,6 +11,7 @@ class ApiException extends RuntimeException
 {
     /**
      * @param  array<string, list<string>>  $fields
+     * @param  array<string, mixed>  $details
      */
     public function __construct(
         public readonly int $status,
@@ -18,6 +19,7 @@ class ApiException extends RuntimeException
         string $message,
         public readonly array $fields = [],
         public readonly ?string $console = null,
+        public readonly array $details = [],
     ) {
         parent::__construct($message);
     }

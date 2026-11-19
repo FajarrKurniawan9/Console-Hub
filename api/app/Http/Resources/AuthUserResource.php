@@ -7,9 +7,11 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * Frontend `AuthUser`.
+ *
  * @mixin User
  */
-class UserResource extends JsonResource
+class AuthUserResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -20,7 +22,8 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'is_admin' => (bool) $this->is_admin,
+            'role' => ['code' => $this->role->code, 'name' => $this->role->name],
+            'permissions' => $this->permissionCodes(),
         ];
     }
 }

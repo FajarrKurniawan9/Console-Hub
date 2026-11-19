@@ -1,8 +1,9 @@
 <?php
 
 use App\Connectors\Exceptions\ConsoleException;
-use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\RequestId;
+use App\Http\Middleware\RequirePermission;
 use App\Support\ApiException;
 use App\Support\ApiResponse;
 use Illuminate\Auth\AuthenticationException;
@@ -12,6 +13,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -25,7 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(RequestId::class);
-        $middleware->alias(['admin' => EnsureAdmin::class]);
+        $middleware->alias(['perm' => RequirePermission::class, 'active' => EnsureActiveUser::class]);
+        // Check the permission before route model binding, so a missing record never leaks past a 403.
+        $middleware->prependToPriorityList(SubstituteBindings::class, RequirePermission::class);
+        $middleware->prependToPriorityList(RequirePermission::class, EnsureActiveUser::class);
         $middleware->throttleApi('api');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -37,7 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return match (true) {
-                $e instanceof ApiException => ApiResponse::error($e->status, $e->errorCode, $e->getMessage(), $e->console, $e->fields),
+                $e instanceof ApiException => ApiResponse::error($e->status, $e->errorCode, $e->getMessage(), $e->console, $e->fields, $e->details),
                 $e instanceof ConsoleException => ApiResponse::error($e->httpStatus(), $e->errorCode, $e->getMessage(), $e->console, details: $e->details),
                 $e instanceof ValidationException => ApiResponse::error(422, 'VALIDATION_FAILED', 'Input tidak valid.', fields: $e->errors()),
                 $e instanceof AuthenticationException => ApiResponse::error(401, 'UNAUTHENTICATED', 'Sesi tidak valid. Silakan masuk lagi.'),

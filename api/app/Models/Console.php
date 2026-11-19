@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\HealthChecker;
 use Database\Factories\ConsoleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -71,10 +74,23 @@ class Console extends Model
     }
 
     /**
-     * @return HasOne<ConsoleHealthCheck, $this>
+     * The last few checks (enough to decide "down"); eager load with `withRecentHealth()`.
+     *
+     * @return HasMany<ConsoleHealthCheck, $this>
      */
-    public function latestHealthCheck(): HasOne
+    public function recentHealthChecks(): HasMany
     {
-        return $this->hasOne(ConsoleHealthCheck::class)->latestOfMany('checked_at');
+        return $this->hasMany(ConsoleHealthCheck::class)->latest('checked_at')->orderByDesc('id');
+    }
+
+    /**
+     * Eager load the latest checks per console without pulling the whole history.
+     *
+     * @param  Builder<Console>  $query
+     */
+    #[Scope]
+    protected function withRecentHealth(Builder $query): void
+    {
+        $query->with(['recentHealthChecks' => fn ($q) => $q->limit(HealthChecker::DOWN_AFTER)]);
     }
 }

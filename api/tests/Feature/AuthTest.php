@@ -1,27 +1,48 @@
 <?php
 
 use App\Models\AuditEvent;
+use App\Models\Permission;
 use App\Models\User;
 
-it('logs in with valid credentials and returns a token and user', function () {
+it('logs in and returns a token with the AuthUser shape', function () {
     $user = User::factory()->create(['password' => 'rahasia-123']);
 
     $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'rahasia-123'])
         ->assertOk()
-        ->assertJsonStructure(['data' => ['token', 'user' => ['id', 'name', 'email', 'is_admin']]])
+        ->assertJsonStructure(['data' => ['token', 'user' => ['id', 'name', 'email', 'role' => ['code', 'name'], 'permissions']]])
         ->assertJsonPath('data.user.id', $user->id)
+        ->assertJsonPath('data.user.role.code', 'user')
+        ->assertJsonPath('data.user.permissions', collect(Permission::USER_DEFAULTS)->sort()->values()->all())
         ->assertJsonMissingPath('data.user.password');
 
     expect(AuditEvent::query()->where('action', 'auth.login')->where('user_id', $user->id)->exists())->toBeTrue();
 });
 
-it('rejects a wrong password with 401', function () {
+it('gives the token the configured lifetime', function () {
+    config(['sanctum.expiration' => 480]);
     $user = User::factory()->create(['password' => 'rahasia-123']);
 
-    $response = $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'salah']);
+    $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'rahasia-123'])->assertOk();
 
-    assertApiError($response, 401, 'UNAUTHENTICATED');
-    $response->assertJsonPath('error.message', 'Email atau sandi salah');
+    expect($user->tokens()->first()->expires_at->diffInMinutes(now(), true))->toBeGreaterThan(479)->toBeLessThan(481);
+});
+
+it('answers the same for a wrong password and an unknown email', function () {
+    $user = User::factory()->create(['password' => 'rahasia-123']);
+
+    $wrong = $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'salah']);
+    $unknown = $this->postJson('/api/v1/auth/login', ['email' => 'tidak-ada@example.com', 'password' => 'salah']);
+
+    assertApiError($wrong, 401, 'UNAUTHENTICATED');
+    assertApiError($unknown, 401, 'UNAUTHENTICATED');
+    expect($wrong->json('error.message'))->toBe($unknown->json('error.message'))->toBe('Email atau sandi salah.');
+});
+
+it('refuses an inactive account at login', function () {
+    $user = User::factory()->inactive()->create(['password' => 'rahasia-123']);
+
+    assertApiError($this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'rahasia-123']), 403, 'FORBIDDEN');
+    expect($user->tokens()->count())->toBe(0);
 });
 
 it('rejects a malformed login body with 422 and field errors', function () {
@@ -31,14 +52,30 @@ it('rejects a malformed login body with 422 and field errors', function () {
     $response->assertJsonStructure(['error' => ['fields' => ['email', 'password']]]);
 });
 
-it('returns the current user from me', function () {
-    $user = User::factory()->admin()->create();
-    $token = $user->createToken('t')->plainTextToken;
+it('returns the current user with role and permissions from me', function () {
+    $admin = User::factory()->admin()->create();
 
-    $this->withToken($token)->getJson('/api/v1/auth/me')
+    $this->withToken($admin->createToken('t')->plainTextToken)->getJson('/api/v1/auth/me')
         ->assertOk()
-        ->assertJsonPath('data.id', $user->id)
-        ->assertJsonPath('data.is_admin', true);
+        ->assertJsonPath('data.id', $admin->id)
+        ->assertJsonPath('data.role', ['code' => 'admin_it', 'name' => 'Admin IT'])
+        ->assertJsonCount(count(Permission::ALL), 'data.permissions');
+});
+
+it('rejects an expired token with 401', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('t', ['*'], now()->subMinute())->plainTextToken;
+
+    assertApiError($this->withToken($token)->getJson('/api/v1/auth/me'), 401, 'UNAUTHENTICATED');
+});
+
+it('cuts off a deactivated user on the next request', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('t')->plainTextToken;
+    $user->update(['is_active' => false]);
+
+    assertApiError($this->withToken($token)->getJson('/api/v1/auth/me'), 401, 'UNAUTHENTICATED');
+    expect($user->tokens()->count())->toBe(0);
 });
 
 it('revokes only the current token on logout', function () {
@@ -57,4 +94,9 @@ it('rate limits login to 5 attempts per minute per email and ip', function () {
     }
 
     assertApiError($this->postJson('/api/v1/auth/login', ['email' => 'x@example.com', 'password' => 'salah']), 429, 'RATE_LIMITED');
+});
+
+it('echoes or creates an X-Request-Id on every response', function () {
+    $this->postJson('/api/v1/auth/login', [], ['X-Request-Id' => 'req-12345678'])->assertHeader('X-Request-Id', 'req-12345678');
+    expect($this->getJson('/api/v1/auth/me')->headers->get('X-Request-Id'))->toMatch('/^[0-9a-f-]{36}$/');
 });

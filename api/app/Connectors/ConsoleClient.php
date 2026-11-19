@@ -2,14 +2,12 @@
 
 namespace App\Connectors;
 
-use App\Connectors\Auth\ApiKeyAuth;
-use App\Connectors\Auth\AuthStrategy;
-use App\Connectors\Auth\BasicAuth;
-use App\Connectors\Auth\BearerAuth;
 use App\Connectors\Exceptions\ConsoleException;
 use App\Models\Console;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use InvalidArgumentException;
@@ -74,7 +72,7 @@ class ConsoleClient
     }
 
     /**
-     * Send a request without auth, retries or error mapping of non-2xx (used for bearer login and public health).
+     * Send a request without auth, retries or error mapping of non-2xx (public /health).
      *
      * @param  array<string, mixed>|list<mixed>|null  $body
      * @param  array{timeout?: int, query?: array<string, mixed>}  $opts
@@ -108,12 +106,18 @@ class ConsoleClient
         return rtrim($console->base_url, '/').$path;
     }
 
-    public function authFor(Console $console): AuthStrategy
+    /**
+     * Attach the console's service key. `api_key` (X-Service-Key) is used today; `bearer` (static token)
+     * and `basic` ("user:password") are kept for consoles registered later.
+     */
+    public function authenticate(PendingRequest $request, Console $console): PendingRequest
     {
+        $key = (string) $console->service_key;
+
         return match ($console->auth_type) {
-            'api_key' => new ApiKeyAuth,
-            'basic' => new BasicAuth,
-            'bearer' => new BearerAuth($this),
+            'api_key' => $request->withHeaders(['X-Service-Key' => $key]),
+            'bearer' => $request->withToken($key),
+            'basic' => $request->withBasicAuth(...array_pad(explode(':', $key, 2), 2, '')),
             default => throw new InvalidArgumentException("Tipe auth tidak dikenal: {$console->auth_type}"),
         };
     }
@@ -124,18 +128,9 @@ class ConsoleClient
      */
     private function send(Console $console, string $method, string $path, ?array $body, array $opts, bool $useAuth): ConsoleResponse
     {
-        if (! $useAuth) {
-            return $this->raw($console, $method, $path, $body, $opts);
-        }
+        $pending = $this->pending($opts);
 
-        $auth = $this->authFor($console);
-        $response = $this->dispatch($console, $auth->apply($this->pending($opts), $console), $method, $path, $body, $opts);
-
-        if ($response->status === 401 && $auth->invalidate($console)) {
-            $response = $this->dispatch($console, $auth->apply($this->pending($opts), $console), $method, $path, $body, $opts);
-        }
-
-        return $response;
+        return $this->dispatch($console, $useAuth ? $this->authenticate($pending, $console) : $pending, $method, $path, $body, $opts);
     }
 
     /**
@@ -144,6 +139,10 @@ class ConsoleClient
     private function pending(array $opts): PendingRequest
     {
         return Http::acceptJson()
+            ->withHeaders(array_filter([
+                'X-Request-Id' => Context::get('request_id'),
+                'X-Acting-User' => (string) (Context::get('acting_user') ?? Auth::id() ?? ''),
+            ]))
             ->timeout((int) ($opts['timeout'] ?? config('consolehub.default_timeout_seconds', 8)))
             ->connectTimeout(5)
             ->withoutRedirecting();

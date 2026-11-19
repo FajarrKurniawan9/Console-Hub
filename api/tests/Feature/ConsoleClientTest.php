@@ -1,11 +1,10 @@
 <?php
 
-use App\Connectors\Auth\BearerAuth;
 use App\Connectors\ConsoleClient;
 use App\Connectors\Exceptions\ConsoleException;
 use App\Models\Console;
 use Illuminate\Http\Client\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 
@@ -14,65 +13,31 @@ function client(): ConsoleClient
     return app(ConsoleClient::class);
 }
 
-it('sends the api key header', function () {
-    $console = Console::factory()->create(['base_url' => 'http://hr.test', 'credentials' => ['header' => 'X-API-Key', 'key' => 'k-123']]);
+it('sends the service key, request id and acting user', function () {
+    $console = Console::factory()->create(['base_url' => 'http://hr.test', 'service_key' => 'k-123']);
     Http::fake(['hr.test/*' => Http::response(['ok' => true])]);
+    Context::add('request_id', 'req-abcdef12');
+    $user = actingAsRole();
 
-    $response = client()->request($console, 'GET', '/employees');
+    $response = client()->request($console, 'GET', '/internal/v1/employees');
 
     expect($response->status)->toBe(200)->and($response->body)->toBe(['ok' => true]);
-    Http::assertSent(fn (Request $r) => $r->url() === 'http://hr.test/employees' && $r->header('X-API-Key') === ['k-123']);
+    Http::assertSent(fn (Request $r) => $r->url() === 'http://hr.test/internal/v1/employees'
+        && $r->header('X-Service-Key') === ['k-123']
+        && $r->header('X-Request-Id') === ['req-abcdef12']
+        && $r->header('X-Acting-User') === [(string) $user->id]);
 });
 
-it('uses basic auth', function () {
-    $console = Console::factory()->basic()->create(['base_url' => 'http://produksi.test']);
-    Http::fake(['produksi.test/*' => Http::response([])]);
+it('supports bearer and basic service keys for later consoles', function () {
+    $bearer = Console::factory()->create(['slug' => 'hr', 'base_url' => 'http://hr.test', 'auth_type' => 'bearer', 'service_key' => 'tok-1']);
+    $basic = Console::factory()->create(['slug' => 'gudang', 'base_url' => 'http://gudang.test', 'auth_type' => 'basic', 'service_key' => 'hub:rahasia']);
+    Http::fake(['*' => Http::response([])]);
 
-    client()->request($console, 'GET', '/log');
+    client()->request($bearer, 'GET', '/x');
+    client()->request($basic, 'GET', '/x');
 
-    Http::assertSent(fn (Request $r) => $r->header('Authorization') === ['Basic '.base64_encode('hub:basic-secret-pass')]);
-});
-
-it('logs in once for bearer consoles and caches the token', function () {
-    $console = Console::factory()->bearer()->create(['base_url' => 'http://gudang.test']);
-    Http::fake([
-        'gudang.test/auth/login' => Http::response(['access_token' => 'tok-1']),
-        'gudang.test/items' => Http::response([]),
-    ]);
-
-    client()->request($console, 'GET', '/items');
-    client()->request($console, 'GET', '/items');
-
-    Http::assertSentCount(3);
-    Http::assertSent(fn (Request $r) => $r->url() === 'http://gudang.test/auth/login' && $r['username'] === 'hub' && $r['password'] === 'bearer-secret-pass');
-    Http::assertSent(fn (Request $r) => $r->url() === 'http://gudang.test/items' && $r->header('Authorization') === ['Bearer tok-1']);
-    expect(Cache::get(BearerAuth::cacheKey($console)))->toBe('tok-1');
-});
-
-it('re-logs in exactly once after a 401 with an expired token', function () {
-    $console = Console::factory()->bearer()->create(['base_url' => 'http://gudang.test']);
-    Cache::put(BearerAuth::cacheKey($console), 'expired', 60);
-    Http::fake([
-        'gudang.test/auth/login' => Http::response(['access_token' => 'fresh']),
-        'gudang.test/items' => Http::sequence()->push(['message' => 'expired'], 401)->push(['ok' => true], 200),
-    ]);
-
-    $response = client()->request($console, 'GET', '/items');
-
-    expect($response->status)->toBe(200);
-    Http::assertSentCount(3);
-    expect(Cache::get(BearerAuth::cacheKey($console)))->toBe('fresh');
-});
-
-it('does not loop when the console keeps answering 401', function () {
-    $console = Console::factory()->bearer()->create(['base_url' => 'http://gudang.test']);
-    Http::fake([
-        'gudang.test/auth/login' => Http::response(['access_token' => 'tok']),
-        'gudang.test/items' => Http::response([], 401),
-    ]);
-
-    expect(client()->request($console, 'GET', '/items')->status)->toBe(401);
-    Http::assertSentCount(4);
+    Http::assertSent(fn (Request $r) => $r->header('Authorization') === ['Bearer tok-1']);
+    Http::assertSent(fn (Request $r) => $r->header('Authorization') === ['Basic '.base64_encode('hub:rahasia')]);
 });
 
 it('maps a timeout to CONSOLE_TIMEOUT after read retries', function () {

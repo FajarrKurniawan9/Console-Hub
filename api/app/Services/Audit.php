@@ -3,28 +3,28 @@
 namespace App\Services;
 
 use App\Models\AuditEvent;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Context;
 
+/**
+ * Writes `audit_events` rows in the `objek.aksi` format. Never pass secrets in old/new values.
+ */
 class Audit
 {
-    public function __construct(private Request $request) {}
-
     /**
-     * Record an audit event for the current user and request IP.
-     *
-     * @param  array<string, mixed>|null  $details
+     * @param  array<string, mixed>|null  $old
+     * @param  array<string, mixed>|null  $new
      */
-    public function record(string $action, ?string $targetType = null, ?string $targetId = null, ?int $consoleId = null, ?array $details = null, ?int $userId = null): AuditEvent
+    public function record(string $action, ?string $subjectType = null, ?string $subjectId = null, ?array $old = null, ?array $new = null, ?int $userId = null): AuditEvent
     {
         return AuditEvent::query()->create([
             'user_id' => $userId ?? Auth::id(),
             'action' => $action,
-            'target_type' => $targetType,
-            'target_id' => $targetId,
-            'console_id' => $consoleId,
-            'details' => $details,
-            'ip' => app()->runningInConsole() && ! app()->runningUnitTests() ? null : $this->request->ip(),
+            'subject_type' => $subjectType,
+            'subject_id' => $subjectId,
+            'old_value' => $old,
+            'new_value' => $new,
+            'request_id' => Context::get('request_id'),
         ]);
     }
 }

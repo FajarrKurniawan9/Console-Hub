@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * Frontend `LogEntry`; `raw` only on the detail endpoint.
+ *
  * @mixin LogEntry
  */
 class LogEntryResource extends JsonResource
@@ -26,14 +28,20 @@ class LogEntryResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'console' => ['id' => $this->console->id, 'slug' => $this->console->slug, 'name' => $this->console->name],
             'occurred_at' => Iso::utc($this->occurred_at),
             'level' => $this->level,
             'message' => $this->message,
             'actor' => $this->actor,
-            $this->mergeWhen($this->withRaw, fn () => ['raw' => $this->raw]),
+            'tx_id' => $this->tx_id,
         ];
+
+        if ($this->withRaw) {
+            $data['raw'] = $this->raw;
+        }
+
+        return $data;
     }
 }

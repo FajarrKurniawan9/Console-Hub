@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ConsoleRequest;
@@ -18,40 +18,43 @@ class ConsoleController extends Controller
 
     public function index(): JsonResponse
     {
-        $consoles = Console::query()->with(['syncState', 'latestHealthCheck'])->orderBy('name')->get();
+        $consoles = Console::query()->withRecentHealth()->orderBy('id')->get();
 
         return ApiResponse::list(ConsoleResource::collection($consoles), null, $consoles->count());
     }
 
     public function show(Console $console): ConsoleResource
     {
-        return new ConsoleResource($console->load(['syncState', 'latestHealthCheck']));
+        return new ConsoleResource($console->load(['recentHealthChecks' => fn ($q) => $q->limit(HealthChecker::DOWN_AFTER)]));
     }
 
     public function store(ConsoleRequest $request): JsonResponse
     {
         $console = Console::query()->create($request->validated());
 
-        $this->audit->record('console.created', 'console', (string) $console->id, $console->id, ['slug' => $console->slug]);
+        $this->audit->record('console.created', 'console', (string) $console->id, null, $this->auditable($console));
 
         return (new ConsoleResource($console))->response()->setStatusCode(201);
     }
 
     public function update(ConsoleRequest $request, Console $console): ConsoleResource
     {
+        $old = $this->auditable($console);
         $console->fill($request->validated())->save();
+        $new = $this->auditable($console);
 
-        $this->audit->record('console.updated', 'console', (string) $console->id, $console->id, [
-            'fields' => array_values(array_diff(array_keys($request->validated()), ['credentials'])),
-            'credentials_changed' => $request->has('credentials'),
-        ]);
+        if ($request->has('service_key')) {
+            $new['service_key_changed'] = true;
+        }
+
+        $this->audit->record('console.updated', 'console', (string) $console->id, $old, $new);
 
         return new ConsoleResource($console->refresh());
     }
 
     public function destroy(Console $console): Response
     {
-        $this->audit->record('console.deleted', 'console', (string) $console->id, null, ['slug' => $console->slug]);
+        $this->audit->record('console.deleted', 'console', (string) $console->id, $this->auditable($console));
 
         $console->delete();
 
@@ -62,8 +65,20 @@ class ConsoleController extends Controller
     {
         $result = $checker->check($console);
 
-        $this->audit->record('console.tested', 'console', (string) $console->id, $console->id, $result);
+        $this->audit->record('console.tested', 'console', (string) $console->id, null, [
+            'console' => $console->slug, 'status' => $result['status'], 'latency_ms' => $result['latency_ms'],
+        ]);
 
         return response()->json(['data' => $result]);
+    }
+
+    /**
+     * Console fields safe to keep in the audit trail (never the service key).
+     *
+     * @return array<string, mixed>
+     */
+    private function auditable(Console $console): array
+    {
+        return ['console' => $console->slug, ...$console->only(['name', 'base_url', 'auth_type', 'is_active', 'is_owner_of'])];
     }
 }
