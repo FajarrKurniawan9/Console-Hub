@@ -99,7 +99,7 @@ class ConsoleClient
 
         if ($retry !== []) {
             Sleep::for(self::READ_RETRY_DELAYS[0])->seconds();
-            $results = [...$results, ...$this->poolOnce($retry)];
+            $results = array_replace($results, $this->poolOnce($retry));
         }
 
         return $results;

@@ -4,21 +4,21 @@ Rule: the JSON shape follows the **frontend** (zod schemas are parsed at runtime
 (`kontrak-3-api-console-hub-v1.md`) already use the same names, so Resources mostly pass them through
 and add the merged parts.
 
-Status: phase A (desk comparison, after removing the transaction code). "To do" rows are fixed in the
+Status: phases A-E done. "To do" rows are fixed in the
 phase named.
 
 ## Envelope and errors
 
 | Item | Backend today | Frontend | Resolution |
 |---|---|---|---|
-| List meta | `{next_cursor, total}` | `{next_cursor, unavailable?, total?}` | Add `unavailable` on merged lists (phase D) |
+| List meta | `{next_cursor, total}` | `{next_cursor, unavailable?, total?}` | Done (phase D): `unavailable` only when a merged source was down |
 | Error body | `{code, message, console, fields, details}` | `{code, message, details?}`; zod strips extra keys | Done (phase C): `{code, message, details}` |
 | Validation | `422 VALIDATION_FAILED`, `error.fields` | `VALIDATION_ERROR`, `details.fields` | Done (phase C) |
 | Server error | `500 INTERNAL_ERROR` | `SERVER_ERROR` | Done (phase C) |
 | Source errors | `CONSOLE_ERROR`/`CONSOLE_UNREACHABLE` 502, `CONSOLE_TIMEOUT` 504 | `SOURCE_UNREACHABLE` 502, `SOURCE_TIMEOUT` 504 (no `SOURCE_ERROR`) | Done (phase C): any unexpected non-2xx maps to `SOURCE_UNREACHABLE`; Admin gets `details.source`, User an everyday sentence |
-| New codes | — | `REFERENCE_NOT_FOUND` 422, `REFERENCED` 409 (`details.used_by: [{source, type, id, name}]`) | Phase D |
-| `VERSION_CONFLICT` | — | 409, passed through from the source API | Phase D |
-| User vs Admin messages | — | User: everyday sentence, no source name/URL/id; Admin: `details.source`, `details.used_by` | Phase C/D |
+| New codes | — | `REFERENCE_NOT_FOUND` 422, `REFERENCED` 409 (`details.used_by: [{source, type, id, name}]`) | Done (phase D): `REFERENCE_NOT_FOUND` sends `details.fields.<field>: [sentence]`; `used_by` only for `admin.consoles.view` |
+| `VERSION_CONFLICT` | — | 409, passed through from the source API | Done (phase D), with `details.current_version` when the source sends it |
+| User vs Admin messages | — | User: everyday sentence, no source name/URL/id; Admin: `details.source`, `details.used_by` | Done |
 
 ## Auth
 
@@ -53,6 +53,9 @@ Kept `consolehub_test` (renaming a database is the Cloud role's job).
 ## Implementation notes
 
 - One `SourceClient` class parameterised by resource stands in for the brief's `GudangClient`/`ProduksiClient`/`HrClient`: the three would differ only by path.
+- One `RecordService` + `RecordController` (resource from the route default) instead of Item/Production/Person services and controllers; references live in `Enricher::JOINS`.
+- Audit actions: `item|production|person.created|updated|deactivated`; `new_value.console` names the owner so the audit filter by console works.
+- Tracker: HR is called once for the responsible person and once for the courier (latency summed in `sources`), as §8 describes.
 - Source `DUPLICATE` (production area + type) surfaces as 409 `CONFLICT` (not in the frontend enum).
 
 ## Open

@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\Admin\LogController;
 use App\Http\Controllers\Api\Admin\OverviewController;
 use App\Http\Controllers\Api\Admin\RbacController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\RecordController;
+use App\Http\Controllers\Api\TrackingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,6 +20,18 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
+
+        foreach (['items' => 'barang', 'productions' => 'produksi', 'people' => 'personel'] as $resource => $perm) {
+            Route::prefix($resource)->controller(RecordController::class)->group(function () use ($resource, $perm) {
+                Route::get('/', 'index')->middleware("perm:{$perm}.view")->defaults('resource', $resource);
+                Route::post('/', 'store')->middleware("perm:{$perm}.create")->defaults('resource', $resource);
+                Route::get('{id}', 'show')->middleware("perm:{$perm}.view")->defaults('resource', $resource);
+                Route::patch('{id}', 'update')->middleware("perm:{$perm}.update")->defaults('resource', $resource);
+                Route::delete('{id}', 'destroy')->middleware("perm:{$perm}.delete")->defaults('resource', $resource);
+            });
+        }
+
+        Route::get('tracking/items/{id}', TrackingController::class)->middleware('perm:lacak.view');
 
         Route::prefix('admin')->group(function () {
             Route::get('overview', OverviewController::class)->middleware('perm:admin.dashboard.view');
