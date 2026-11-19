@@ -177,10 +177,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 $request
             );
 
-            $serviceKey = (string) config('produksi.service_key', '');
-            $debugMessage = $serviceKey !== ''
-                ? str_replace($serviceKey, '[REDACTED]', $e->getMessage())
-                : $e->getMessage();
+            $secrets = array_filter([
+                (string) config('produksi.service_key', ''),
+                (string) $request->header('X-Service-Key', ''),
+            ], fn (string $secret): bool => $secret !== '');
+
+            $debugMessage = $e->getMessage();
+            foreach (array_unique($secrets) as $secret) {
+                $debugMessage = str_replace($secret, '[REDACTED]', $debugMessage);
+            }
 
             $requestId = $request->header('X-Request-Id');
             $response = response()->json([

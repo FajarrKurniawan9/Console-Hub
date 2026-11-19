@@ -4,7 +4,7 @@ use App\Models\AppLog;
 use Illuminate\Support\Facades\Route;
 
 beforeEach(function () {
-    $this->serviceKey = config('hr.service_key');
+    $this->serviceKey = (string) config('hr.service_key');
 });
 
 it('lists logs ordered by occurred_at desc with uniform format and meta.next_cursor', function () {
@@ -101,13 +101,11 @@ it('paginates logs using cursor pagination and rejects invalid cursor', function
 });
 
 it('logs server errors to app_logs without leaking secret key', function () {
-    // Trigger an unhandled error to check logging in bootstrap/app.php
     $key = $this->serviceKey;
     $requestId = 'req-trace-error-500';
 
-    // Mock Route to throw an unexpected exception
-    Route::get('/api/v1/test-fail', function () {
-        throw new RuntimeException('Unexpected test failure with secret: super-secret');
+    Route::get('/api/v1/test-fail', function () use ($key) {
+        throw new RuntimeException('Unexpected test failure with secret: '.$key);
     })->middleware(['service.key']);
 
     $response = $this->withHeader('X-Service-Key', $key)
@@ -115,13 +113,14 @@ it('logs server errors to app_logs without leaking secret key', function () {
         ->getJson('/api/v1/test-fail');
 
     $response->assertStatus(500)
-        ->assertJsonPath('error.code', 'SERVER_ERROR');
+        ->assertJsonPath('error.code', 'SERVER_ERROR')
+        ->assertHeader('X-Request-Id', $requestId);
+
+    expect((string) json_encode($response->json()))->not->toContain($key);
 
     $errorLog = AppLog::query()->where('level', 'error')->latest('id')->first();
     expect($errorLog)->not->toBeNull()
-        ->and($errorLog->request_id)->toBe($requestId);
-
-    // Ensure the key itself never appeared in context
-    $contextString = json_encode($errorLog->context);
-    expect($contextString)->not->toContain($key);
+        ->and($errorLog->request_id)->toBe($requestId)
+        ->and($errorLog->message)->not->toContain($key)
+        ->and((string) json_encode($errorLog->context))->not->toContain($key);
 });

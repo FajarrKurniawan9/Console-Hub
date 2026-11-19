@@ -38,3 +38,11 @@ it('returns 503 when the database is unreachable', function () {
         ])
         ->assertHeader('X-Request-Id');
 });
+
+it('does not emit wildcard CORS header for browser origins', function () {
+    $response = $this->withHeader('Origin', 'https://browser.example.com')
+        ->getJson('/health');
+
+    $response->assertOk()
+        ->assertHeaderMissing('Access-Control-Allow-Origin');
+});

@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\AppLog;
+
 it('rejects requests to /api/v1/people without X-Service-Key with 401 UNAUTHENTICATED', function () {
     $response = $this->getJson('/api/v1/people');
 
@@ -16,10 +18,12 @@ it('rejects requests to /api/v1/people without X-Service-Key with 401 UNAUTHENTI
         ->and(json_encode($response->json()))->not->toContain(config('hr.service_key'));
 });
 
-it('rejects requests to /api/v1/people with wrong X-Service-Key with 401 UNAUTHENTICATED', function () {
+it('rejects requests to /api/v1/people with wrong X-Service-Key with 401 UNAUTHENTICATED and never leaks key', function () {
     $wrongKey = 'wrong-secret-key-xyz';
+    $requestId = 'req-trace-wrong-key-hr';
 
     $response = $this->withHeader('X-Service-Key', $wrongKey)
+        ->withHeader('X-Request-Id', $requestId)
         ->getJson('/api/v1/people');
 
     $response->assertStatus(401)
@@ -28,10 +32,18 @@ it('rejects requests to /api/v1/people with wrong X-Service-Key with 401 UNAUTHE
                 'code' => 'UNAUTHENTICATED',
             ],
         ])
-        ->assertHeader('X-Request-Id');
+        ->assertHeader('X-Request-Id', $requestId);
 
-    expect(json_encode($response->json()))->not->toContain($wrongKey)
-        ->and(json_encode($response->json()))->not->toContain(config('hr.service_key'));
+    $body = (string) json_encode($response->json());
+    expect($body)->not->toContain($wrongKey)
+        ->and($body)->not->toContain((string) config('hr.service_key'));
+
+    $log = AppLog::query()->where('request_id', $requestId)->latest('id')->first();
+    expect($log)->not->toBeNull()
+        ->and($log->level)->toBe('warn')
+        ->and($log->message)->not->toContain($wrongKey)
+        ->and((string) json_encode($log->context))->not->toContain($wrongKey)
+        ->and((string) json_encode($log->context))->not->toContain((string) config('hr.service_key'));
 });
 
 it('always returns X-Request-Id even on 401 error', function () {
@@ -44,12 +56,14 @@ it('always returns X-Request-Id even on 401 error', function () {
         ->assertHeader('X-Request-Id', $customId);
 });
 
-it('allows request when valid X-Service-Key is supplied', function () {
-    $key = config('hr.service_key');
+it('allows request when valid X-Service-Key is supplied without CORS wildcard', function () {
+    $key = (string) config('hr.service_key');
 
     $response = $this->withHeader('X-Service-Key', $key)
+        ->withHeader('Origin', 'https://browser.example.com')
         ->getJson('/api/v1/people');
 
-    // Should not be 401
-    expect($response->status())->not->toBe(401);
+    $response->assertOk()
+        ->assertHeader('X-Request-Id')
+        ->assertHeaderMissing('Access-Control-Allow-Origin');
 });

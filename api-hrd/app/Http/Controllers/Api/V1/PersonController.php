@@ -8,6 +8,7 @@ use App\Http\Resources\PersonResource;
 use App\Models\Person;
 use App\Services\AppLogService;
 use App\Support\Cursor;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,8 +36,16 @@ class PersonController extends Controller
                 ]);
             }
 
+            $validIds = array_values(array_filter($ids, fn (string $id): bool => Str::isUuid($id)));
+            if ($validIds === []) {
+                return response()->json([
+                    'data' => [],
+                    'meta' => ['next_cursor' => null],
+                ]);
+            }
+
             $people = Person::query()
-                ->whereIn('id', $ids)
+                ->whereIn('id', $validIds)
                 ->orderByDesc('created_at')
                 ->orderByDesc('id')
                 ->get();
@@ -64,7 +73,7 @@ class PersonController extends Controller
         }
 
         if ($request->filled('q')) {
-            $q = strtolower(trim((string) $request->query('q')));
+            $q = mb_strtolower(trim((string) $request->query('q')));
             $like = '%'.addcslashes($q, '%_\\').'%';
             $query->where(function ($sub) use ($like) {
                 $sub->whereRaw('lower(name) LIKE ?', [$like])
@@ -129,7 +138,16 @@ class PersonController extends Controller
         $person->role = $validated['role'];
         $person->status = 'aktif';
         $person->version = 1;
-        $person->save();
+
+        try {
+            $person->save();
+        } catch (QueryException $e) {
+            if ($this->isUniqueConstraintViolation($e)) {
+                throw ApiException::duplicate('Personel dengan ID ini sudah terdaftar.');
+            }
+
+            throw $e;
+        }
 
         $logger->info('person.created', [
             'person_id' => $person->id,
@@ -211,13 +229,14 @@ class PersonController extends Controller
         }
 
         $expectedVersionParam = $request->query('expected_version');
-        if ($expectedVersionParam === null || ! is_numeric($expectedVersionParam) || (int) $expectedVersionParam < 1) {
+        $parsedVersion = filter_var($expectedVersionParam, FILTER_VALIDATE_INT);
+        if ($expectedVersionParam === null || $parsedVersion === false || $parsedVersion < 1) {
             throw ApiException::validation([
                 'expected_version' => ['Parameter query expected_version wajib diisi dengan integer positif.'],
             ]);
         }
 
-        $expectedVersion = (int) $expectedVersionParam;
+        $expectedVersion = (int) $parsedVersion;
 
         $person = Person::query()->find($id);
         if (! $person) {
@@ -252,5 +271,23 @@ class PersonController extends Controller
         return response()->json([
             'data' => new PersonResource($person),
         ]);
+    }
+
+    private function isUniqueConstraintViolation(QueryException $e): bool
+    {
+        $sqlState = (string) ($e->errorInfo[0] ?? $e->getCode());
+        $message = strtolower($e->getMessage());
+
+        // PostgreSQL unique_violation (23505), including people_pkey
+        if ($sqlState === '23505') {
+            return true;
+        }
+
+        // SQLite UNIQUE / PRIMARY KEY constraint violation
+        if ($sqlState === '23000' && str_contains($message, 'unique constraint failed')) {
+            return true;
+        }
+
+        return false;
     }
 }

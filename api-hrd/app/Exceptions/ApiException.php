@@ -58,7 +58,7 @@ class ApiException extends Exception
         return new self('SERVER_ERROR', $message, 500);
     }
 
-    public function render(Request $request): JsonResponse
+    public function toJsonResponse(Request $request): JsonResponse
     {
         $payload = [
             'error' => [

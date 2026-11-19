@@ -1,17 +1,16 @@
 <?php
 
+use App\Models\AppLog;
 use Illuminate\Support\Facades\RateLimiter;
 
 it('returns 429 RATE_LIMITED with envelope when rate limit is exceeded', function () {
     config(['hr.rate_limit_per_minute' => 3]);
 
-    $serviceKey = config('hr.service_key');
+    $serviceKey = (string) config('hr.service_key');
     $requestId = 'req-trace-rate-limit';
 
-    // Clear rate limiter cache for test
-    RateLimiter::clear($serviceKey);
+    RateLimiter::clear(md5('api'.$serviceKey));
 
-    // Make 3 allowed requests
     for ($i = 0; $i < 3; $i++) {
         $this->withHeader('X-Service-Key', $serviceKey)
             ->withHeader('X-Request-Id', $requestId)
@@ -19,7 +18,6 @@ it('returns 429 RATE_LIMITED with envelope when rate limit is exceeded', functio
             ->assertOk();
     }
 
-    // 4th request must be throttled
     $response = $this->withHeader('X-Service-Key', $serviceKey)
         ->withHeader('X-Request-Id', $requestId)
         ->getJson('/api/v1/people');
@@ -32,4 +30,8 @@ it('returns 429 RATE_LIMITED with envelope when rate limit is exceeded', functio
             ],
         ])
         ->assertHeader('X-Request-Id', $requestId);
+
+    $log = AppLog::query()->where('level', 'warn')->where('request_id', $requestId)->latest('id')->first();
+    expect($log)->not->toBeNull()
+        ->and($log->context['code'] ?? null)->toBe('RATE_LIMITED');
 });

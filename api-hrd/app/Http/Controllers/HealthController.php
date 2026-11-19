@@ -16,7 +16,7 @@ class HealthController extends Controller
             return response()->json([
                 'status' => 'ok',
             ]);
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Database unreachable',

@@ -34,10 +34,36 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $exceptions->render(function (ApiException $e, Request $request) {
-            return $e->render($request);
+            $logger = app(AppLogService::class);
+            $context = [
+                'code' => $e->errorCode,
+                'status' => $e->status,
+                'method' => $request->method(),
+                'path' => $request->path(),
+            ];
+
+            if ($e->status >= 500) {
+                $logger->error($e->getMessage(), $context, $request);
+            } else {
+                $logger->warn($e->getMessage(), $context, $request);
+            }
+
+            return $e->toJsonResponse($request);
         });
 
         $exceptions->render(function (ValidationException $e, Request $request) {
+            app(AppLogService::class)->warn(
+                'Data yang dikirim tidak valid.',
+                [
+                    'code' => 'VALIDATION_ERROR',
+                    'status' => 422,
+                    'method' => $request->method(),
+                    'path' => $request->path(),
+                    'fields' => array_keys($e->errors()),
+                ],
+                $request
+            );
+
             $requestId = $request->header('X-Request-Id');
             $response = response()->json([
                 'error' => [
@@ -57,6 +83,17 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (ModelNotFoundException|NotFoundHttpException $e, Request $request) {
+            app(AppLogService::class)->warn(
+                'Resource tidak ditemukan.',
+                [
+                    'code' => 'NOT_FOUND',
+                    'status' => 404,
+                    'method' => $request->method(),
+                    'path' => $request->path(),
+                ],
+                $request
+            );
+
             $requestId = $request->header('X-Request-Id');
             $response = response()->json([
                 'error' => [
@@ -74,6 +111,17 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (AuthenticationException $e, Request $request) {
+            app(AppLogService::class)->warn(
+                'Kunci layanan tidak valid atau tidak disertakan.',
+                [
+                    'code' => 'UNAUTHENTICATED',
+                    'status' => 401,
+                    'method' => $request->method(),
+                    'path' => $request->path(),
+                ],
+                $request
+            );
+
             $requestId = $request->header('X-Request-Id');
             $response = response()->json([
                 'error' => [
@@ -91,6 +139,17 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (ThrottleRequestsException|TooManyRequestsHttpException $e, Request $request) {
+            app(AppLogService::class)->warn(
+                'Terlalu banyak permintaan. Silakan coba beberapa saat lagi.',
+                [
+                    'code' => 'RATE_LIMITED',
+                    'status' => 429,
+                    'method' => $request->method(),
+                    'path' => $request->path(),
+                ],
+                $request
+            );
+
             $requestId = $request->header('X-Request-Id');
             $response = response()->json([
                 'error' => [
@@ -109,7 +168,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (Throwable $e, Request $request) {
             if ($e instanceof ApiException) {
-                return $e->render($request);
+                return $e->toJsonResponse($request);
             }
 
             app(AppLogService::class)->error(
@@ -118,11 +177,21 @@ return Application::configure(basePath: dirname(__DIR__))
                 $request
             );
 
+            $secrets = array_filter([
+                (string) config('hr.service_key', ''),
+                (string) $request->header('X-Service-Key', ''),
+            ], fn (string $secret): bool => $secret !== '');
+
+            $debugMessage = $e->getMessage();
+            foreach (array_unique($secrets) as $secret) {
+                $debugMessage = str_replace($secret, '[REDACTED]', $debugMessage);
+            }
+
             $requestId = $request->header('X-Request-Id');
             $response = response()->json([
                 'error' => [
                     'code' => 'SERVER_ERROR',
-                    'message' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan internal pada server.',
+                    'message' => config('app.debug') ? $debugMessage : 'Terjadi kesalahan internal pada server.',
                     'details' => (object) [],
                 ],
             ], 500);

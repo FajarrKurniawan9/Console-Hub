@@ -66,6 +66,10 @@ class DatabaseGuard
             return (self::$resolver)($connection);
         }
 
+        if ($connection->getDriverName() === 'sqlite') {
+            return $connection->getDatabaseName();
+        }
+
         return (string) $connection->selectOne('SELECT current_database() AS db')->db;
     }
 }

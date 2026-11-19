@@ -87,6 +87,20 @@ it('fetches multiple people by ?ids= including nonaktif records without paginati
     $ids = collect($response->json('data'))->pluck('id')->all();
     expect($ids)->toContain($p1->id, $p2->id)
         ->and($ids)->not->toContain($p3->id);
+
+    // Empty ids returns empty list
+    $this->withHeader('X-Service-Key', $this->serviceKey)
+        ->getJson('/api/v1/people?ids=')
+        ->assertOk()
+        ->assertJsonCount(0, 'data')
+        ->assertJsonPath('meta.next_cursor', null);
+
+    // Non-UUID ids are safely ignored
+    $this->withHeader('X-Service-Key', $this->serviceKey)
+        ->getJson('/api/v1/people?ids=not-a-uuid,another-bad-id')
+        ->assertOk()
+        ->assertJsonCount(0, 'data')
+        ->assertJsonPath('meta.next_cursor', null);
 });
 
 it('rejects ?ids= with more than 100 ids with 422 VALIDATION_ERROR', function () {
@@ -325,6 +339,11 @@ it('rejects DELETE without expected_version in query string with 422 VALIDATION_
     $response->assertStatus(422)
         ->assertJsonPath('error.code', 'VALIDATION_ERROR')
         ->assertJsonStructure(['error' => ['details' => ['fields' => ['expected_version']]]]);
+
+    $this->withHeader('X-Service-Key', $this->serviceKey)
+        ->deleteJson("/api/v1/people/{$person->id}?expected_version=1.5")
+        ->assertStatus(422)
+        ->assertJsonPath('error.code', 'VALIDATION_ERROR');
 });
 
 it('rejects DELETE with 409 VERSION_CONFLICT when query expected_version does not match', function () {

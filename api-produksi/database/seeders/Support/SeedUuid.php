@@ -10,12 +10,10 @@ class SeedUuid
 
     public static function slug(string $value): string
     {
-        $slug = trim($value);
-        $slug = strtolower($slug);
-        $slug = preg_replace('/\s+/', '-', (string) $slug);
-        $slug = preg_replace('/[^a-z0-9\-]/', '', (string) $slug);
+        $slug = strtolower(trim($value));
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
 
-        return (string) $slug;
+        return trim((string) $slug, '-');
     }
 
     public static function forPerson(string $name): string

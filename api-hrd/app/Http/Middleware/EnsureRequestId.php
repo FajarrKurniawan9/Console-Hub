@@ -17,6 +17,18 @@ class EnsureRequestId
         }
 
         $request->headers->set('X-Request-Id', $requestId);
+        $request->attributes->set('request_id', $requestId);
+
+        $actingUser = $request->header('X-Acting-User');
+        if (is_string($actingUser)) {
+            $actingUser = mb_substr(trim($actingUser), 0, 120);
+            if ($actingUser === '') {
+                $actingUser = null;
+            }
+        } else {
+            $actingUser = null;
+        }
+        $request->attributes->set('acting_user', $actingUser);
 
         /** @var Response $response */
         $response = $next($request);

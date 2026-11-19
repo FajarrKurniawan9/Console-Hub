@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -24,10 +25,20 @@ class Cursor
      */
     public static function paginate(Builder $query, string $column, ?string $cursor, int $limit): array
     {
-        $table = $query->getModel()->getTable();
+        $model = $query->getModel();
+        $table = $model->getTable();
 
         if ($cursor !== null && $cursor !== '') {
             [$time, $id] = self::decode($cursor, $column);
+
+            if ($model->getKeyType() === 'string') {
+                if (! is_string($id) || ! Str::isUuid($id)) {
+                    throw ApiException::validation(['cursor' => ['Kursor tidak valid.']]);
+                }
+            } elseif (! is_int($id)) {
+                throw ApiException::validation(['cursor' => ['Kursor tidak valid.']]);
+            }
+
             $driver = $query->getConnection()->getDriverName();
             $formattedTime = $driver === 'sqlite'
                 ? Carbon::parse($time)->format('Y-m-d H:i:s')

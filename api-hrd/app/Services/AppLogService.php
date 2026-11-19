@@ -22,43 +22,42 @@ class AppLogService
 
         $request ??= request();
 
-        $actor = $request instanceof Request ? $request->header('X-Acting-User') : null;
-        if (is_string($actor)) {
-            $actor = mb_substr(trim($actor), 0, 120);
-            if ($actor === '') {
-                $actor = null;
+        $actor = null;
+        if ($request instanceof Request) {
+            $rawActor = $request->attributes->get('acting_user') ?? $request->header('X-Acting-User');
+            if (is_string($rawActor)) {
+                $rawActor = mb_substr(trim($rawActor), 0, 120);
+                $actor = $rawActor === '' ? null : $rawActor;
             }
-        } else {
-            $actor = null;
         }
 
-        $requestId = $request instanceof Request ? $request->header('X-Request-Id') : null;
-        if (is_string($requestId)) {
-            $requestId = mb_substr(trim($requestId), 0, 64);
-            if ($requestId === '') {
-                $requestId = null;
+        $requestId = null;
+        if ($request instanceof Request) {
+            $rawRequestId = $request->attributes->get('request_id') ?? $request->header('X-Request-Id');
+            if (is_string($rawRequestId)) {
+                $rawRequestId = mb_substr(trim($rawRequestId), 0, 64);
+                $requestId = $rawRequestId === '' ? null : $rawRequestId;
             }
-        } else {
-            $requestId = null;
         }
 
-        $safeContext = $this->sanitizeContext($context);
+        $safeMessage = $this->scrubSecret($message, $request);
+        $safeContext = $this->sanitizeContext($context, $request);
 
         try {
             return AppLog::query()->create([
                 'occurred_at' => now()->utc(),
                 'level' => $level,
-                'message' => $message,
+                'message' => $safeMessage,
                 'actor' => $actor,
                 'request_id' => $requestId,
                 'context' => $safeContext,
             ]);
         } catch (Throwable) {
-            // Fail silently or fallback without throwing to avoid masking original exceptions
+            // Fail silently without throwing to avoid masking original exceptions
             return new AppLog([
                 'occurred_at' => now()->utc(),
                 'level' => $level,
-                'message' => $message,
+                'message' => $safeMessage,
             ]);
         }
     }
@@ -95,11 +94,25 @@ class AppLogService
         return $this->log('debug', $message, $context, $request);
     }
 
+    private function scrubSecret(string $value, ?Request $request): string
+    {
+        $secrets = array_filter([
+            (string) config('hr.service_key', ''),
+            $request instanceof Request ? (string) $request->header('X-Service-Key', '') : '',
+        ], fn (string $secret): bool => $secret !== '');
+
+        foreach (array_unique($secrets) as $secret) {
+            $value = str_replace($secret, '[REDACTED]', $value);
+        }
+
+        return $value;
+    }
+
     /**
      * @param  array<string, mixed>|null  $context
      * @return array<string, mixed>|null
      */
-    private function sanitizeContext(?array $context): ?array
+    private function sanitizeContext(?array $context, ?Request $request): ?array
     {
         if ($context === null) {
             return null;
@@ -112,7 +125,9 @@ class AppLogService
             if (in_array(strtolower((string) $key), $sensitiveKeys, true)) {
                 $sanitized[$key] = '[REDACTED]';
             } elseif (is_array($value)) {
-                $sanitized[$key] = $this->sanitizeContext($value);
+                $sanitized[$key] = $this->sanitizeContext($value, $request);
+            } elseif (is_string($value)) {
+                $sanitized[$key] = $this->scrubSecret($value, $request);
             } else {
                 $sanitized[$key] = $value;
             }
