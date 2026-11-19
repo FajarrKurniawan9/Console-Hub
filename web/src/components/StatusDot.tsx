@@ -1,12 +1,6 @@
 import clsx from 'clsx'
 import type { ConsoleStatus, LogLevel } from '../lib/api/schemas'
-import {
-  ACTIVE_STATUS,
-  CONSOLE_STATUS,
-  DOT_CLASS,
-  LOG_LEVEL,
-  type Tone,
-} from '../lib/status'
+import { ACTIVE_STATUS, CONSOLE_STATUS, DOT_CLASS, LOG_LEVEL, type Tone } from '../lib/status'
 
 /** Colour is never the only signal: a dot always comes with a word. */
 export function Dot({

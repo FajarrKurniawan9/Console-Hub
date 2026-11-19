@@ -102,8 +102,8 @@ export function ConsoleDetailPage() {
                 sejak <TimeText iso={since} />
               </>
             ) : null}
-            . Penulisan data milik sumber ini ditolak, kolom gabungan dari sumber ini tampil
-            "Tidak tersedia", dan log-nya tertinggal sampai sumber pulih.
+            . Penulisan data milik sumber ini ditolak, kolom gabungan dari sumber ini tampil "Tidak
+            tersedia", dan log-nya tertinggal sampai sumber pulih.
           </span>
         </p>
       ) : null}
@@ -115,9 +115,7 @@ export function ConsoleDetailPage() {
             <ConsoleStatusDot status={c.status} />
           </dd>
           <dt className="text-muted">Latensi terakhir</dt>
-          <dd className="font-mono">
-            {c.latency_ms !== null ? duration(c.latency_ms) : '—'}
-          </dd>
+          <dd className="font-mono">{c.latency_ms !== null ? duration(c.latency_ms) : '—'}</dd>
           <dt className="text-muted">Pemeriksaan terakhir</dt>
           <dd>{c.last_checked_at ? <TimeText iso={c.last_checked_at} /> : 'Belum pernah'}</dd>
           <dt className="text-muted">Alamat</dt>

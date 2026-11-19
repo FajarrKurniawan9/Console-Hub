@@ -8,6 +8,7 @@ import { RbacPage } from '../features/admin/rbac/RbacPage'
 import { useAuth } from '../features/auth/auth'
 import { LoginPage } from '../features/auth/LoginPage'
 import { BarangPage } from '../features/work/barang/BarangPage'
+import { LacakPage } from '../features/work/lacak/LacakPage'
 import { PersonelPage } from '../features/work/personel/PersonelPage'
 import { ProduksiPage } from '../features/work/produksi/ProduksiPage'
 import { UserHomePage } from '../features/work/UserHomePage'
@@ -45,6 +46,8 @@ export function AppRoutes() {
           {guarded('barang.view', 'barang', <BarangPage />)}
           {guarded('produksi.view', 'produksi', <ProduksiPage />)}
           {guarded('personel.view', 'personel', <PersonelPage />)}
+          {guarded('lacak.view', 'lacak', <LacakPage />)}
+          {guarded('lacak.view', 'lacak/:itemId', <LacakPage />)}
           {guarded('admin.consoles.view', 'console', <ConsolesPage />)}
           {guarded('admin.consoles.view', 'console/:id', <ConsoleDetailPage />)}
           {guarded('admin.logs.view', 'log', <LogsPage />)}

@@ -132,8 +132,7 @@ function UserRow({ user: u, roles }: { user: RbacUser; roles: RbacRole[] }) {
 function AddUser({ roles, onClose }: { roles: RbacRole[]; onClose: () => void }) {
   const create = useCreateUser()
   const error = create.error ? toApiError(create.error) : null
-  const err = (k: string) =>
-    error?.code === 'VALIDATION_ERROR' ? error.fields[k]?.[0] : undefined
+  const err = (k: string) => (error?.code === 'VALIDATION_ERROR' ? error.fields[k]?.[0] : undefined)
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
