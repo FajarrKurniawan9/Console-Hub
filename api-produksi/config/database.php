@@ -19,6 +19,8 @@ return [
 
     'default' => env('DB_CONNECTION', 'sqlite'),
 
+    'expected' => env('EXPECTED_DB', 'console_produksi'),
+
     /*
     |--------------------------------------------------------------------------
     | Database Connections
