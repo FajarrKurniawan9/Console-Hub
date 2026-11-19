@@ -36,3 +36,14 @@ it('hides the source name and url from User and shows it to Admin IT', function 
     expect(str_contains($response->getContent(), 'HR'))->toBe($technical)
         ->and($response->json('error.details.source'))->toBe($technical ? 'hr' : null);
 })->with([['user', false], ['admin_it', true]]);
+
+it('allows the deployed frontend origin in CORS and nothing else', function () {
+    $preflight = fn (string $origin) => $this->call('OPTIONS', '/api/v1/auth/login', server: [
+        'HTTP_ORIGIN' => $origin,
+        'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
+        'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' => 'authorization,content-type',
+    ]);
+
+    expect($preflight('https://console-hub-smoky.vercel.app')->headers->get('Access-Control-Allow-Origin'))->toBe('https://console-hub-smoky.vercel.app')
+        ->and($preflight('https://evil.example')->headers->get('Access-Control-Allow-Origin'))->toBeNull();
+});

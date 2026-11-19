@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://console-hub-production-43b81fd7.up.railway.app/api/:path*"
+    },
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ]
+}
