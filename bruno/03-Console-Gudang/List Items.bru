@@ -1,0 +1,30 @@
+meta {
+  name: List Items
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{gudang_url}}/api/v1/items
+  body: none
+  auth: none
+}
+
+params:query {
+  ~ids: 
+  ~status: aktif
+  ~kind: 
+  ~production_id: 
+  ~responsible_id: 
+  ~q: 
+  ~limit: 25
+  ~cursor: 
+}
+
+headers {
+  X-Service-Key: {{gudang_service_key}}
+}
+
+docs {
+  Passing `ids` (CSV UUIDs, max 100) bypasses other filters and pagination.
+}

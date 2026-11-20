@@ -1,0 +1,15 @@
+meta {
+  name: Get Log Detail
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{portal_url}}/api/v1/admin/logs/{{log_id}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  Permission: `admin.logs.view`. `{log}` is a numeric ID. Includes `raw` payload.
+}

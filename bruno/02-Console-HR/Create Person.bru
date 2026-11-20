@@ -1,0 +1,33 @@
+meta {
+  name: Create Person
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{hr_url}}/api/v1/people
+  body: json
+  auth: none
+}
+
+headers {
+  X-Service-Key: {{hr_service_key}}
+}
+
+body:json {
+  {
+    "name": "Budi Santoso",
+    "role": "Kurir"
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body?.data?.id) {
+    bru.setEnvVar("person_id", res.body.data.id);
+    bru.setEnvVar("person_version", String(res.body.data.version ?? 1));
+  }
+}
+
+docs {
+  Optional `"id": "<uuid>"` is supported for deterministic seeding.
+}

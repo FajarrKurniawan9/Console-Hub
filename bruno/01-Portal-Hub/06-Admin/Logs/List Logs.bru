@@ -1,0 +1,25 @@
+meta {
+  name: List Logs
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{portal_url}}/api/v1/admin/logs
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~console_id: 1
+  ~level: error,warn
+  ~q: 
+  ~from: 
+  ~to: 
+  ~limit: 50
+  ~cursor: 
+}
+
+docs {
+  Permission: `admin.logs.view`. `console_id` accepts CSV ints (e.g. `1,2`); `level` accepts CSV of `debug,info,warn,error`; `limit` 1-200.
+}

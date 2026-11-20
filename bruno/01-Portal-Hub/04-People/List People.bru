@@ -1,0 +1,23 @@
+meta {
+  name: List People
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{portal_url}}/api/v1/people
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~q: 
+  ~status: aktif
+  ~role: 
+  ~limit: 25
+  ~cursor: 
+}
+
+docs {
+  Permission: `personel.view`. Status options: `aktif`, `nonaktif`, `all`.
+}

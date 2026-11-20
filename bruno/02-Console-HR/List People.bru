@@ -1,0 +1,28 @@
+meta {
+  name: List People
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{hr_url}}/api/v1/people
+  body: none
+  auth: none
+}
+
+params:query {
+  ~ids: 
+  ~status: aktif
+  ~role: 
+  ~q: 
+  ~limit: 25
+  ~cursor: 
+}
+
+headers {
+  X-Service-Key: {{hr_service_key}}
+}
+
+docs {
+  Passing `ids` (CSV UUIDs, max 100) bypasses other filters and pagination.
+}

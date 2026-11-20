@@ -1,0 +1,29 @@
+meta {
+  name: List Productions
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{produksi_url}}/api/v1/productions
+  body: none
+  auth: none
+}
+
+params:query {
+  ~ids: 
+  ~status: aktif
+  ~production_type: 
+  ~courier_id: 
+  ~q: 
+  ~limit: 25
+  ~cursor: 
+}
+
+headers {
+  X-Service-Key: {{produksi_service_key}}
+}
+
+docs {
+  Passing `ids` (CSV UUIDs, max 100) bypasses other filters and pagination.
+}

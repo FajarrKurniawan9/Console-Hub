@@ -1,0 +1,33 @@
+meta {
+  name: Create Console
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{portal_url}}/api/v1/admin/consoles
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "slug": "hr-custom",
+    "name": "HR Console",
+    "base_url": "{{hr_url}}",
+    "auth_type": "api_key",
+    "service_key": "{{hr_service_key}}",
+    "is_active": true,
+    "resource": "people"
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body?.data?.id) {
+    bru.setEnvVar("console_id", String(res.body.data.id));
+  }
+}
+
+docs {
+  Permission: `admin.consoles.manage`. `slug` and `resource` (`items`|`productions`|`people`) must be unique. `service_key` min 8 chars.
+}

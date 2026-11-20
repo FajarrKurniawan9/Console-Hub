@@ -1,0 +1,21 @@
+meta {
+  name: List Logs
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{produksi_url}}/api/v1/logs
+  body: none
+  auth: none
+}
+
+params:query {
+  ~since: 
+  ~limit: 25
+  ~cursor: 
+}
+
+headers {
+  X-Service-Key: {{produksi_service_key}}
+}

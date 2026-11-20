@@ -1,0 +1,15 @@
+meta {
+  name: Overview
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{portal_url}}/api/v1/admin/overview
+  body: none
+  auth: inherit
+}
+
+docs {
+  Permission: `admin.dashboard.view`.
+}

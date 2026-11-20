@@ -1,0 +1,29 @@
+meta {
+  name: Create User
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{portal_url}}/api/v1/admin/rbac/users
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Siti Aminah",
+    "email": "siti.aminah@example.com",
+    "role_code": "user"
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body?.data?.id) {
+    bru.setEnvVar("rbac_user_id", String(res.body.data.id));
+  }
+}
+
+docs {
+  Permission: `admin.rbac.manage`. Valid `role_code`: `admin_it` or `user`. Returns generated `initial_password` once.
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Update User
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{portal_url}}/api/v1/admin/rbac/users/{{rbac_user_id}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "role_code": "user",
+    "is_active": true
+  }
+}
+
+docs {
+  Permission: `admin.rbac.manage`. Only `role_code` and `is_active` are allowed (`name`/`email` are prohibited). Self-lockout returns `409 CONFLICT`.
+}

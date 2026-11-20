@@ -1,0 +1,25 @@
+meta {
+  name: Deactivate Person
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{portal_url}}/api/v1/people/{{person_id}}?expected_version={{person_version}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  expected_version: {{person_version}}
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("person_version", String(res.body.data.version));
+  }
+}
+
+docs {
+  Permission: `personel.delete`. Returns `409 REFERENCED` if still referenced by an active item or production.
+}

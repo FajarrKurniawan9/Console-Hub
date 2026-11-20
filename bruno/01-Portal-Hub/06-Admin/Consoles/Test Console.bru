@@ -1,0 +1,15 @@
+meta {
+  name: Test Console
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{portal_url}}/api/v1/admin/consoles/{{console_id}}/test
+  body: none
+  auth: inherit
+}
+
+docs {
+  Permission: `admin.consoles.view`. Runs a live health check against the console.
+}

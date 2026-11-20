@@ -1,0 +1,23 @@
+meta {
+  name: List Items
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{portal_url}}/api/v1/items
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~q: 
+  ~status: aktif
+  ~kind: 
+  ~limit: 25
+  ~cursor: 
+}
+
+docs {
+  Permission: `barang.view`. Status options: `aktif`, `nonaktif`, `all`.
+}

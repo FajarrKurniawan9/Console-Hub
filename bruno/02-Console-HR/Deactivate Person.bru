@@ -1,0 +1,29 @@
+meta {
+  name: Deactivate Person
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{hr_url}}/api/v1/people/{{person_id}}?expected_version={{person_version}}
+  body: none
+  auth: none
+}
+
+params:query {
+  expected_version: {{person_version}}
+}
+
+headers {
+  X-Service-Key: {{hr_service_key}}
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("person_version", String(res.body.data.version));
+  }
+}
+
+docs {
+  `expected_version` MUST be sent as a query parameter.
+}

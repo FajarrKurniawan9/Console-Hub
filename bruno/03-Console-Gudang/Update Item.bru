@@ -1,0 +1,30 @@
+meta {
+  name: Update Item
+  type: http
+  seq: 9
+}
+
+patch {
+  url: {{gudang_url}}/api/v1/items/{{item_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  X-Service-Key: {{gudang_service_key}}
+}
+
+body:json {
+  {
+    "expected_version": {{item_version}},
+    "name": "Kotak Kemasan Updated",
+    "quantity": 25,
+    "unit": "pcs"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("item_version", String(res.body.data.version));
+  }
+}

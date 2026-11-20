@@ -1,0 +1,34 @@
+meta {
+  name: Create Production
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{produksi_url}}/api/v1/productions
+  body: json
+  auth: none
+}
+
+headers {
+  X-Service-Key: {{produksi_service_key}}
+}
+
+body:json {
+  {
+    "area": "Bandung",
+    "production_type": "Pengemasan",
+    "courier_id": null
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body?.data?.id) {
+    bru.setEnvVar("production_id", res.body.data.id);
+    bru.setEnvVar("production_version", String(res.body.data.version ?? 1));
+  }
+}
+
+docs {
+  Optional `"id": "<uuid>"` is supported. Active `(area, production_type)` pairs must be unique.
+}

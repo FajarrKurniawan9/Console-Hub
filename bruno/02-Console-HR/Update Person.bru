@@ -1,0 +1,29 @@
+meta {
+  name: Update Person
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{hr_url}}/api/v1/people/{{person_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  X-Service-Key: {{hr_service_key}}
+}
+
+body:json {
+  {
+    "expected_version": {{person_version}},
+    "name": "Budi Santoso Updated",
+    "role": "Kurir Senior"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("person_version", String(res.body.data.version));
+  }
+}

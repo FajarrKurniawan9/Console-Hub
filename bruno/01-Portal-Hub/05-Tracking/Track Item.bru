@@ -1,0 +1,15 @@
+meta {
+  name: Track Item
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{portal_url}}/api/v1/tracking/items/{{item_id}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  Permission: `lacak.view`. Joins item, production, responsible, and courier across all 3 consoles. `sources` field is included only for accounts with `admin.consoles.view`.
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Get Person
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{hr_url}}/api/v1/people/{{person_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Service-Key: {{hr_service_key}}
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("person_version", String(res.body.data.version));
+  }
+}

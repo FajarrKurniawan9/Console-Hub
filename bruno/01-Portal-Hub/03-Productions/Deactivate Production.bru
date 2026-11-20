@@ -1,0 +1,25 @@
+meta {
+  name: Deactivate Production
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{portal_url}}/api/v1/productions/{{production_id}}?expected_version={{production_version}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  expected_version: {{production_version}}
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("production_version", String(res.body.data.version));
+  }
+}
+
+docs {
+  Permission: `produksi.delete`. Returns `409 REFERENCED` if still used by an active item.
+}

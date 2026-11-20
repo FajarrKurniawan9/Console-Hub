@@ -1,0 +1,22 @@
+meta {
+  name: Update Console
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{portal_url}}/api/v1/admin/consoles/{{console_id}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "HR Console Updated",
+    "is_active": true
+  }
+}
+
+docs {
+  Permission: `admin.consoles.manage`. Partial update of `slug`, `name`, `base_url`, `auth_type`, `service_key`, `is_active`, `resource`.
+}

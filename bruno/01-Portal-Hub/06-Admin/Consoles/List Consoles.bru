@@ -1,0 +1,15 @@
+meta {
+  name: List Consoles
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{portal_url}}/api/v1/admin/consoles
+  body: none
+  auth: inherit
+}
+
+docs {
+  Permission: `admin.consoles.view`.
+}

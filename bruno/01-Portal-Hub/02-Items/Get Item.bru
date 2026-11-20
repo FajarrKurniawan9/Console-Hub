@@ -1,0 +1,21 @@
+meta {
+  name: Get Item
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{portal_url}}/api/v1/items/{{item_id}}
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("item_version", String(res.body.data.version));
+  }
+}
+
+docs {
+  Permission: `barang.view`. `{id}` is a UUID.
+}

@@ -1,0 +1,15 @@
+meta {
+  name: List Roles
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{portal_url}}/api/v1/admin/rbac/roles
+  body: none
+  auth: inherit
+}
+
+docs {
+  Permission: `admin.rbac.manage`.
+}

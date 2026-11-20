@@ -1,0 +1,25 @@
+meta {
+  name: Deactivate Item
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{portal_url}}/api/v1/items/{{item_id}}?expected_version={{item_version}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  expected_version: {{item_version}}
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("item_version", String(res.body.data.version));
+  }
+}
+
+docs {
+  Permission: `barang.delete`. Soft-deactivates (`status` -> `nonaktif`).
+}

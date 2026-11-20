@@ -1,0 +1,29 @@
+meta {
+  name: Deactivate Production
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{produksi_url}}/api/v1/productions/{{production_id}}?expected_version={{production_version}}
+  body: none
+  auth: none
+}
+
+params:query {
+  expected_version: {{production_version}}
+}
+
+headers {
+  X-Service-Key: {{produksi_service_key}}
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("production_version", String(res.body.data.version));
+  }
+}
+
+docs {
+  `expected_version` MUST be sent as a query parameter.
+}

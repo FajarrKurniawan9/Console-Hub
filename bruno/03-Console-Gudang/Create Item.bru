@@ -1,0 +1,37 @@
+meta {
+  name: Create Item
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{gudang_url}}/api/v1/items
+  body: json
+  auth: none
+}
+
+headers {
+  X-Service-Key: {{gudang_service_key}}
+}
+
+body:json {
+  {
+    "name": "Kotak Kemasan",
+    "kind": "kemasan",
+    "production_id": null,
+    "responsible_id": null,
+    "quantity": 10,
+    "unit": "pcs"
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body?.data?.id) {
+    bru.setEnvVar("item_id", res.body.data.id);
+    bru.setEnvVar("item_version", String(res.body.data.version ?? 1));
+  }
+}
+
+docs {
+  Optional `"id": "<uuid>"` is supported. `quantity` defaults to `0`, `unit` defaults to `"pcs"`.
+}

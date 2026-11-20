@@ -1,0 +1,21 @@
+meta {
+  name: Get Item
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{gudang_url}}/api/v1/items/{{item_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Service-Key: {{gudang_service_key}}
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("item_version", String(res.body.data.version));
+  }
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Delete Console
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{portal_url}}/api/v1/admin/consoles/{{console_id}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  Permission: `admin.consoles.manage`. Returns `204 No Content`.
+}

@@ -1,0 +1,30 @@
+meta {
+  name: Update Role Permissions
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{portal_url}}/api/v1/admin/rbac/roles/{{rbac_role_id}}/permissions
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "permissions": [
+      "barang.view",
+      "barang.create",
+      "barang.update",
+      "produksi.view",
+      "produksi.create",
+      "produksi.update",
+      "personel.view",
+      "lacak.view"
+    ]
+  }
+}
+
+docs {
+  Permission: `admin.rbac.manage`. `{role}` is a numeric role ID. `admin_it` cannot lose `admin.rbac.manage` (`409 CONFLICT`).
+}

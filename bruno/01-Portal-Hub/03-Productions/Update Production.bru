@@ -1,0 +1,29 @@
+meta {
+  name: Update Production
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{portal_url}}/api/v1/productions/{{production_id}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "expected_version": {{production_version}},
+    "area": "Bandung Barat",
+    "production_type": "Pengemasan"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.version) {
+    bru.setEnvVar("production_version", String(res.body.data.version));
+  }
+}
+
+docs {
+  Permission: `produksi.update`.
+}
