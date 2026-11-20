@@ -3,10 +3,13 @@
 namespace App\Providers;
 
 use App\Support\DatabaseGuard;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Events\ConnectionEstablished;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +27,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Defined here, not in routes/api.php: with `route:cache` the routes file is not run, and
+        // `throttle:api` would fail with "Rate limiter [api] is not defined".
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute((int) config('gudang.rate_limit_per_minute', 120))
+            ->by($request->header('X-Service-Key') ?: $request->ip()));
+
         $this->guardDatabase();
     }
 

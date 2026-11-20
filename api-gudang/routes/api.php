@@ -2,15 +2,7 @@
 
 use App\Http\Controllers\Api\V1\ItemController;
 use App\Http\Controllers\Api\V1\LogController;
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
-
-RateLimiter::for('api', function (Request $request) {
-    return Limit::perMinute((int) config('gudang.rate_limit_per_minute', 120))
-        ->by($request->header('X-Service-Key') ?: $request->ip());
-});
 
 Route::prefix('v1')
     ->middleware(['service.key', 'throttle:api'])

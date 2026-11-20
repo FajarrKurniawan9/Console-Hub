@@ -34,4 +34,12 @@ it('returns 429 RATE_LIMITED with envelope when rate limit is exceeded', functio
     $log = AppLog::query()->where('level', 'warn')->where('request_id', $requestId)->latest('id')->first();
     expect($log)->not->toBeNull()
         ->and($log->context['code'] ?? null)->toBe('RATE_LIMITED');
+
+});
+
+// The limiter is registered in AppServiceProvider, so it exists even when routes/api.php is not
+// executed (production runs with `route:cache`).
+it('defines the api limiter without loading the routes file', function () {
+    expect(RateLimiter::limiter('api'))->not->toBeNull()
+        ->and((string) file_get_contents(base_path('routes/api.php')))->not->toContain('RateLimiter::for');
 });

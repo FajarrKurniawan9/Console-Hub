@@ -41,4 +41,14 @@ class RateLimitTest extends TestCase
         $this->assertNotNull($log);
         $this->assertSame('RATE_LIMITED', $log->context['code'] ?? null);
     }
+
+    /**
+     * The limiter is registered in AppServiceProvider, so it exists even when routes/api.php is not
+     * executed (production runs with `route:cache`).
+     */
+    public function test_api_limiter_is_defined_without_loading_the_routes_file(): void
+    {
+        $this->assertNotNull(RateLimiter::limiter('api'));
+        $this->assertStringNotContainsString('RateLimiter::for', (string) file_get_contents(base_path('routes/api.php')));
+    }
 }
