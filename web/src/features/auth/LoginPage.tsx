@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { Button } from '../../components/ui/Button'
-import { Field } from '../../components/ui/Input'
+import { Field, inputClass } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { ApiError, toApiError } from '../../lib/api/client'
 import { describeError } from '../../lib/errors'
 import { useAuth } from './auth'
+import { Eye, EyeOff } from 'lucide-react'
 
 export function LoginPage() {
   const { user, login, expired } = useAuth()
@@ -13,6 +14,7 @@ export function LoginPage() {
   const location = useLocation()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<ApiError | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const from = (location.state as { from?: string } | null)?.from ?? '/'
   if (user) return <Navigate to={from} replace />
@@ -74,14 +76,36 @@ export function LoginPage() {
             autoFocus
             error={fieldError('email')}
           />
-          <Field
-            label="Sandi"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            error={fieldError('password')}
-          />
+          <div className="flex flex-col gap-1">
+            <label htmlFor="password" className="text-dense font-semibold">
+              Sandi <span className="text-muted">(wajib)</span>
+            </label>
+            <div className="relative flex items-center">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                aria-invalid={fieldError('password') ? true : undefined}
+                aria-describedby={fieldError('password') ? 'password-error' : undefined}
+                className={`${inputClass} w-full pr-9`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
+                className="absolute right-2.5 text-muted hover:text-fg focus:outline-none cursor-pointer"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {fieldError('password') ? (
+              <p id="password-error" className="text-xs text-error">
+                {fieldError('password')}
+              </p>
+            ) : null}
+          </div>
           <Button type="submit" variant="primary" disabled={pending} className="h-9">
             {pending ? <Spinner /> : null}
             {pending ? 'Memeriksa…' : 'Masuk'}
