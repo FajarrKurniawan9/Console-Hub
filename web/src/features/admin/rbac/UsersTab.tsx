@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Eye, EyeOff, Plus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../../components/EmptyState'
@@ -7,7 +7,7 @@ import { Panel } from '../../../components/PageHeader'
 import { RowsSkeleton } from '../../../components/Skeletons'
 import { ActiveStatusDot } from '../../../components/StatusDot'
 import { Button } from '../../../components/ui/Button'
-import { Field } from '../../../components/ui/Input'
+import { Field, inputClass } from '../../../components/ui/Input'
 import { Modal } from '../../../components/ui/Modal'
 import { Select, SelectField } from '../../../components/ui/Select'
 import { Spinner } from '../../../components/ui/Spinner'
@@ -131,6 +131,7 @@ function UserRow({ user: u, roles }: { user: RbacUser; roles: RbacRole[] }) {
 
 function AddUser({ roles, onClose }: { roles: RbacRole[]; onClose: () => void }) {
   const create = useCreateUser()
+  const [showPassword, setShowPassword] = useState(false)
   const error = create.error ? toApiError(create.error) : null
   const err = (k: string) => (error?.code === 'VALIDATION_ERROR' ? error.fields[k]?.[0] : undefined)
   const submit = (e: FormEvent<HTMLFormElement>) => {
@@ -166,13 +167,34 @@ function AddUser({ roles, onClose }: { roles: RbacRole[]; onClose: () => void })
       <form noValidate onSubmit={submit} className="flex flex-col gap-4">
         <Field label="Nama" name="name" required autoFocus error={err('name')} />
         <Field label="Email" name="email" type="email" required error={err('email')} />
-        <Field
-          label="Kata sandi"
-          name="password"
-          type="password"
-          placeholder="Minimal 6 karakter (kosongkan untuk sandi acak)"
-          error={err('password')}
-        />
+        <div className="flex flex-col gap-1">
+          <label htmlFor="user-password" className="text-dense font-semibold">
+            Kata sandi
+          </label>
+          <div className="relative flex items-center">
+            <input
+              id="user-password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Minimal 6 karakter (kosongkan untuk sandi acak)"
+              className={`${inputClass} w-full pr-9`}
+              aria-invalid={err('password') ? true : undefined}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
+              className="absolute right-2.5 z-10 text-muted hover:text-fg focus:outline-hidden cursor-pointer"
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          {err('password') ? (
+            <p role="alert" className="text-xs text-error">
+              {err('password')}
+            </p>
+          ) : null}
+        </div>
         <SelectField
           label="Peran"
           name="role_code"
