@@ -136,15 +136,21 @@ function AddUser({ roles, onClose }: { roles: RbacRole[]; onClose: () => void })
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
+    const password = String(f.get('password') ?? '').trim()
     create.mutate(
       {
         name: String(f.get('name') ?? '').trim(),
         email: String(f.get('email') ?? '').trim(),
         role_code: String(f.get('role_code') ?? ''),
+        ...(password ? { password } : {}),
       },
       {
         onSuccess: (u) => {
-          toast.success(`${u.name} ditambahkan`)
+          if (u.initial_password) {
+            toast.success(`${u.name} ditambahkan. Sandi: ${u.initial_password}`, { duration: 8000 })
+          } else {
+            toast.success(`${u.name} ditambahkan`)
+          }
           onClose()
         },
       },
@@ -160,6 +166,13 @@ function AddUser({ roles, onClose }: { roles: RbacRole[]; onClose: () => void })
       <form noValidate onSubmit={submit} className="flex flex-col gap-4">
         <Field label="Nama" name="name" required autoFocus error={err('name')} />
         <Field label="Email" name="email" type="email" required error={err('email')} />
+        <Field
+          label="Kata sandi"
+          name="password"
+          type="password"
+          placeholder="Minimal 6 karakter (kosongkan untuk sandi acak)"
+          error={err('password')}
+        />
         <SelectField
           label="Peran"
           name="role_code"

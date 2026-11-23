@@ -1,5 +1,5 @@
 import { Activity, Boxes, PackageCheck } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { PageHeader, Panel, Section } from '../../components/PageHeader'
 import { CardsSkeleton, RowsSkeleton } from '../../components/Skeletons'
@@ -9,15 +9,30 @@ import { KindChart } from './KindChart'
 import { useItemDashboard } from './queries'
 import { TrendChart } from './TrendChart'
 
-const RANGES = [
+const PRESET_RANGES = [
   { days: 7, label: '7 Hari' },
   { days: 14, label: '14 Hari' },
   { days: 30, label: '30 Hari' },
 ] as const
 
 export function DashboardPage() {
-  const [days, setDays] = useState<7 | 14 | 30>(7)
-  const q = useItemDashboard(days)
+  const [mode, setMode] = useState<'preset' | 'custom'>('preset')
+  const [days, setDays] = useState<number>(7)
+  const [customFrom, setCustomFrom] = useState<string>(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 6)
+    return d.toISOString().slice(0, 10)
+  })
+  const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().slice(0, 10))
+
+  const filter = useMemo(() => {
+    if (mode === 'custom') {
+      return { from: customFrom, to: customTo }
+    }
+    return { days }
+  }, [mode, customFrom, customTo, days])
+
+  const q = useItemDashboard(filter)
 
   return (
     <div className="flex flex-col gap-8">
@@ -25,17 +40,50 @@ export function DashboardPage() {
         title="Dashboard transaksi"
         meta="Ringkasan dan visualisasi tren transaksi inventaris barang."
         actions={
-          <div role="group" aria-label="Rentang waktu" className="flex items-center gap-1">
-            {RANGES.map((r) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <div role="group" aria-label="Rentang waktu" className="flex items-center gap-1">
+              {PRESET_RANGES.map((r) => (
+                <Button
+                  key={r.days}
+                  variant={mode === 'preset' && days === r.days ? 'primary' : 'secondary'}
+                  onClick={() => {
+                    setMode('preset')
+                    setDays(r.days)
+                  }}
+                  aria-pressed={mode === 'preset' && days === r.days}
+                >
+                  {r.label}
+                </Button>
+              ))}
               <Button
-                key={r.days}
-                variant={days === r.days ? 'primary' : 'secondary'}
-                onClick={() => setDays(r.days)}
-                aria-pressed={days === r.days}
+                variant={mode === 'custom' ? 'primary' : 'secondary'}
+                onClick={() => setMode('custom')}
+                aria-pressed={mode === 'custom'}
               >
-                {r.label}
+                Kustom
               </Button>
-            ))}
+            </div>
+
+            {mode === 'custom' ? (
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-muted">Dari:</span>
+                <input
+                  type="date"
+                  value={customFrom}
+                  max={customTo}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="h-8 rounded-md border border-border bg-bg px-2 text-xs text-fg focus:border-accent focus:outline-hidden"
+                />
+                <span className="text-muted">Sampai:</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  min={customFrom}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="h-8 rounded-md border border-border bg-bg px-2 text-xs text-fg focus:border-accent focus:outline-hidden"
+                />
+              </div>
+            ) : null}
           </div>
         }
       />
@@ -62,7 +110,7 @@ export function DashboardPage() {
             icon={PackageCheck}
           />
           <KpiCard
-            label={`Transaksi (${days} hari)`}
+            label={mode === 'custom' ? 'Transaksi (Kustom)' : `Transaksi (${days} hari)`}
             value={number(q.data.transactions_count)}
             detail="Aktivitas buat, ubah, dan nonaktifkan"
             icon={Activity}
@@ -75,7 +123,7 @@ export function DashboardPage() {
         title="Tren Aktivitas Barang (Harian)"
         aside={
           <span className="text-xs text-muted">
-            {days} hari terakhir
+            {mode === 'custom' ? `${customFrom} s/d ${customTo}` : `${days} hari terakhir`}
           </span>
         }
       >

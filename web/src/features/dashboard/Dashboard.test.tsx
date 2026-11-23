@@ -50,6 +50,12 @@ describe('Dashboard Transaksi', () => {
 
     await userEvent.click(btn14)
     expect(btn14).toHaveAttribute('aria-pressed', 'true')
+
+    const btnCustom = screen.getByRole('button', { name: 'Kustom' })
+    await userEvent.click(btnCustom)
+    expect(btnCustom).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('Dari:')).toBeInTheDocument()
+    expect(screen.getByText('Sampai:')).toBeInTheDocument()
   })
 
   it('shows empty message when there is no activity or item data', async () => {

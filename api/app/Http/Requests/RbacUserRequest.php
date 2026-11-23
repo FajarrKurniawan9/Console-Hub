@@ -22,6 +22,7 @@ class RbacUserRequest extends FormRequest
             'name' => [$creating ? 'required' : 'prohibited', 'string', 'min:3', 'max:100'],
             'email' => [$creating ? 'required' : 'prohibited', 'email', 'max:150', Rule::unique('users', 'email')],
             'role_code' => [$creating ? 'required' : 'sometimes', 'string', Rule::exists('roles', 'code')],
+            'password' => [$creating ? 'nullable' : 'sometimes', 'string', 'min:6', 'max:100'],
             'is_active' => [$creating ? 'prohibited' : 'sometimes', 'boolean'],
         ];
     }
@@ -38,6 +39,7 @@ class RbacUserRequest extends FormRequest
             'email.unique' => 'Email ini sudah dipakai pengguna lain.',
             'role_code.required' => 'Pilih peran.',
             'role_code.exists' => 'Pilih peran.',
+            'password.min' => 'Kata sandi minimal 6 karakter.',
         ];
     }
 }

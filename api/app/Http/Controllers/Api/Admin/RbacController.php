@@ -33,8 +33,7 @@ class RbacController extends Controller
     public function storeUser(RbacUserRequest $request): JsonResponse
     {
         $role = Role::query()->where('code', $request->validated('role_code'))->firstOrFail();
-        // Random first password, shown once to the admin who created the account.
-        $password = Str::password(16, symbols: false);
+        $password = $request->validated('password') ?: Str::password(16, symbols: false);
 
         $user = User::query()->create([
             'name' => $request->validated('name'),

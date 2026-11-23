@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
 use App\Services\Domain\RecordService;
+use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,17 +18,28 @@ class DashboardController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'days' => ['nullable', 'integer', 'in:7,14,30'],
+            'days' => ['nullable', 'integer', 'min:1', 'max:90'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
 
-        $days = (int) ($validated['days'] ?? 7);
-        $since = now()->toImmutable()->subDays($days - 1)->startOfDay();
+        if (! empty($validated['from']) && ! empty($validated['to'])) {
+            $since = Carbon::parse($validated['from'])->startOfDay()->toImmutable();
+            $until = Carbon::parse($validated['to'])->endOfDay()->toImmutable();
+            $period = CarbonPeriod::create($since->toDateString(), $until->toDateString());
+        } else {
+            $days = (int) ($validated['days'] ?? 7);
+            $since = now()->toImmutable()->subDays($days - 1)->startOfDay();
+            $until = now()->toImmutable()->endOfDay();
+            $period = CarbonPeriod::create($since->toDateString(), now()->toDateString());
+        }
 
         // 1. Activity Trend from audit_events
         $events = AuditEvent::query()
             ->where('subject_type', 'item')
             ->whereIn('action', ['item.created', 'item.updated', 'item.deactivated'])
             ->where('created_at', '>=', $since)
+            ->where('created_at', '<=', $until)
             ->get(['action', 'created_at']);
 
         $period = CarbonPeriod::create($since->toDateString(), now()->toDateString());

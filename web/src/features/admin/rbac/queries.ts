@@ -38,7 +38,7 @@ const createdUser = rbacUser.extend({ initial_password: z.string().optional() })
 export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; email: string; role_code: string }) =>
+    mutationFn: (data: { name: string; email: string; role_code: string; password?: string }) =>
       request(one(createdUser), { url: '/admin/rbac/users', method: 'POST', data }).then(
         (r) => r.data,
       ),

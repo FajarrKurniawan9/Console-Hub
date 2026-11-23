@@ -58,3 +58,16 @@ it('returns activity trend and kind distribution for permitted roles', function 
     expect($response->json('data.transactions_count'))->toBe(2);
     expect($response->json('data.activity_trend'))->toHaveCount(7);
 });
+
+it('supports custom date range via from and to parameters', function () {
+    $user = actingAsRole('user');
+    $user->role->permissions()->attach(Permission::query()->firstOrCreate(['code' => 'dashboard.view'])->id);
+
+    $from = now()->subDays(4)->toDateString();
+    $to = now()->toDateString();
+
+    $response = $this->getJson("/api/v1/dashboard/items?from={$from}&to={$to}")->assertOk();
+
+    // From $from to $to inclusive is 5 days
+    expect($response->json('data.activity_trend'))->toHaveCount(5);
+});
