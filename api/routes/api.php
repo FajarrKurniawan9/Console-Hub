@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Admin\LogController;
 use App\Http\Controllers\Api\Admin\OverviewController;
 use App\Http\Controllers\Api\Admin\RbacController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\RecordController;
 use App\Http\Controllers\Api\TrackingController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,7 @@ Route::prefix('v1')->group(function () {
         }
 
         Route::get('tracking/items/{id}', TrackingController::class)->middleware('perm:lacak.view');
+        Route::get('dashboard/items', DashboardController::class)->middleware('perm:dashboard.view');
 
         Route::prefix('admin')->group(function () {
             Route::get('overview', OverviewController::class)->middleware('perm:admin.dashboard.view');
@@ -57,6 +59,8 @@ Route::prefix('v1')->group(function () {
                 Route::post('users', [RbacController::class, 'storeUser']);
                 Route::patch('users/{user}', [RbacController::class, 'updateUser']);
                 Route::get('roles', [RbacController::class, 'roles']);
+                Route::post('roles', [RbacController::class, 'storeRole']);
+                Route::delete('roles/{role}', [RbacController::class, 'destroyRole']);
                 Route::get('permissions', [RbacController::class, 'permissions']);
                 Route::put('roles/{role}/permissions', [RbacController::class, 'updateRolePermissions']);
             });

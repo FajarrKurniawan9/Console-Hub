@@ -78,3 +78,32 @@ export function useSaveRolePermissions() {
     },
   })
 }
+
+export function useCreateRole() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; code: string; permissions?: string[] }) =>
+      request(one(rbacRole), {
+        url: '/admin/rbac/roles',
+        method: 'POST',
+        data,
+      }).then((r) => r.data),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: rbacKeys.roles })
+    },
+  })
+}
+
+export function useDeleteRole() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) =>
+      request(z.unknown(), {
+        url: `/admin/rbac/roles/${id}`,
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: rbacKeys.roles })
+    },
+  })
+}

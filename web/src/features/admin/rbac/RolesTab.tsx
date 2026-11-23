@@ -1,13 +1,16 @@
-import { CircleAlert } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { CircleAlert, Plus } from 'lucide-react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../../components/EmptyState'
 import { ErrorState } from '../../../components/ErrorState'
 import { Panel } from '../../../components/PageHeader'
 import { RowsSkeleton } from '../../../components/Skeletons'
 import { Button } from '../../../components/ui/Button'
+import { Field } from '../../../components/ui/Input'
+import { Modal } from '../../../components/ui/Modal'
 import { Spinner } from '../../../components/ui/Spinner'
 import type { RbacRole } from '../../../lib/api/schemas'
+import { toApiError } from '../../../lib/api/client'
 import { describeError } from '../../../lib/errors'
 import {
   ACTION_LABEL,
@@ -17,12 +20,18 @@ import {
   WORK_ACTIONS,
   type MatrixRow,
 } from './matrix'
-import { usePermissionList, useRbacRoles, useSaveRolePermissions } from './queries'
+import {
+  useCreateRole,
+  usePermissionList,
+  useRbacRoles,
+  useSaveRolePermissions,
+} from './queries'
 
 export function RolesTab() {
   const roles = useRbacRoles()
   const perms = usePermissionList()
   const [roleId, setRoleId] = useState<number | null>(null)
+  const [addingRole, setAddingRole] = useState(false)
   const role = roles.data?.find((r) => r.id === roleId) ?? roles.data?.[0]
 
   if (roles.isPending || perms.isPending)
@@ -52,21 +61,36 @@ export function RolesTab() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div role="tablist" aria-label="Peran" className="flex flex-wrap gap-1">
-        {roles.data.map((r) => (
-          <Button
-            key={r.id}
-            role="tab"
-            aria-selected={r.id === role.id}
-            variant={r.id === role.id ? 'primary' : 'secondary'}
-            onClick={() => setRoleId(r.id)}
-          >
-            {r.name}
-          </Button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div role="tablist" aria-label="Peran" className="flex flex-wrap gap-1">
+          {roles.data.map((r) => (
+            <Button
+              key={r.id}
+              role="tab"
+              aria-selected={r.id === role.id}
+              variant={r.id === role.id ? 'primary' : 'secondary'}
+              onClick={() => setRoleId(r.id)}
+            >
+              {r.name}
+            </Button>
+          ))}
+        </div>
+        <Button variant="secondary" onClick={() => setAddingRole(true)}>
+          <Plus size={16} strokeWidth={1.5} aria-hidden />
+          Tambah peran
+        </Button>
       </div>
       {/* key: reset the draft when switching roles or after the server answers */}
       <RoleMatrix key={`${role.id}:${role.permissions.join()}`} role={role} all={perms.data} />
+      {addingRole ? (
+        <AddRoleModal
+          onClose={() => setAddingRole(false)}
+          onCreated={(newRole) => {
+            setRoleId(newRole.id)
+            setAddingRole(false)
+          }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -225,5 +249,75 @@ function MatrixTable({
         </table>
       </div>
     </fieldset>
+  )
+}
+
+function AddRoleModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: (r: RbacRole) => void
+}) {
+  const create = useCreateRole()
+  const error = create.error ? toApiError(create.error) : null
+  const err = (k: string) => (error?.code === 'VALIDATION_ERROR' ? error.fields[k]?.[0] : undefined)
+
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const f = new FormData(e.currentTarget)
+    const name = String(f.get('name') ?? '').trim()
+    const code = String(f.get('code') ?? '').trim().toLowerCase()
+    create.mutate(
+      { name, code },
+      {
+        onSuccess: (role) => {
+          toast.success(`Peran ${role.name} berhasil dibuat`)
+          onCreated(role)
+        },
+      },
+    )
+  }
+
+  return (
+    <Modal
+      open
+      onOpenChange={(o) => !o && !create.isPending && onClose()}
+      title="Tambah peran baru"
+      description="Buat peran baru, lalu atur izin menu dan aksinya pada matriks perizinan."
+    >
+      <form noValidate onSubmit={submit} className="flex flex-col gap-4">
+        <Field
+          label="Nama Peran"
+          name="name"
+          placeholder="mis. Manajer Wilayah"
+          required
+          autoFocus
+          error={err('name')}
+        />
+        <Field
+          label="Kode Peran"
+          name="code"
+          placeholder="mis. manajer_wilayah"
+          required
+          hint="Gunakan huruf kecil, angka, atau garis bawah."
+          error={err('code')}
+        />
+        {error && error.code !== 'VALIDATION_ERROR' ? (
+          <p role="alert" className="text-dense text-error">
+            {describeError(error, true).title}: {error.message}
+          </p>
+        ) : null}
+        <div className="flex justify-end gap-2">
+          <Button onClick={onClose} disabled={create.isPending}>
+            Batal
+          </Button>
+          <Button type="submit" variant="primary" disabled={create.isPending}>
+            {create.isPending ? <Spinner /> : null}
+            {create.isPending ? 'Menyimpan…' : 'Tambah peran'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   )
 }

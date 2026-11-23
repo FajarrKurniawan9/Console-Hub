@@ -12,6 +12,7 @@ const RESOURCE_LABEL: Record<string, string> = {
   produksi: 'Produksi',
   personel: 'Personel',
   lacak: 'Lacak barang',
+  dashboard: 'Dashboard',
   'admin.dashboard': 'Ringkasan',
   'admin.consoles': 'Sumber data',
   'admin.logs': 'Log gabungan',

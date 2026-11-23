@@ -67,6 +67,7 @@ export const PERMISSIONS = [
   'personel.update',
   'personel.delete',
   'lacak.view',
+  'dashboard.view',
   'admin.dashboard.view',
   'admin.logs.view',
   'admin.consoles.view',
@@ -238,3 +239,27 @@ export const overview = z.object({
   recent_audit: z.array(auditEvent),
 })
 export type Overview = z.infer<typeof overview>
+
+export const dashboardTrendPoint = z.object({
+  date: z.string(),
+  created: z.number(),
+  updated: z.number(),
+  deactivated: z.number(),
+})
+export type DashboardTrendPoint = z.infer<typeof dashboardTrendPoint>
+
+export const dashboardKindItem = z.object({
+  kind: z.string(),
+  count: z.number(),
+  total_quantity: z.number(),
+})
+export type DashboardKindItem = z.infer<typeof dashboardKindItem>
+
+export const itemDashboardSummary = z.object({
+  total_items: z.number(),
+  total_quantity: z.number(),
+  transactions_count: z.number(),
+  activity_trend: z.array(dashboardTrendPoint),
+  kind_distribution: z.array(dashboardKindItem),
+})
+export type ItemDashboardSummary = z.infer<typeof itemDashboardSummary>

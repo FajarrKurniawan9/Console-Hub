@@ -208,4 +208,20 @@ describe('Pengguna & izin', () => {
       expect(screen.queryByRole('link', { name: 'Personel' })).not.toBeInTheDocument(),
     )
   })
+
+  it('opens modal to create a new role and saves it', async () => {
+    renderApp('/rbac?tab=peran', 'admin')
+    rbac()
+    on('POST /admin/rbac/roles', ok({ id: 3, code: 'staff_gudang', name: 'Staff Gudang', permissions: [] }))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tambah peran' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('heading', { name: 'Tambah peran baru' })).toBeInTheDocument()
+
+    await userEvent.type(within(dialog).getByLabelText(/Nama Peran/), 'Staff Gudang')
+    await userEvent.type(within(dialog).getByLabelText(/Kode Peran/), 'staff_gudang')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Tambah peran' }))
+
+    expect(await screen.findByText('Peran Staff Gudang berhasil dibuat')).toBeInTheDocument()
+  })
 })

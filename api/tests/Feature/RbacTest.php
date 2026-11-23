@@ -23,6 +23,8 @@ dataset('admin routes', [
     ['POST', '/api/v1/admin/rbac/users'],
     ['PATCH', '/api/v1/admin/rbac/users/1'],
     ['GET', '/api/v1/admin/rbac/roles'],
+    ['POST', '/api/v1/admin/rbac/roles'],
+    ['DELETE', '/api/v1/admin/rbac/roles/1'],
     ['GET', '/api/v1/admin/rbac/permissions'],
     ['PUT', '/api/v1/admin/rbac/roles/1/permissions'],
     ['GET', '/api/v1/admin/audit'],
@@ -149,4 +151,32 @@ it('keeps admin.rbac.manage on admin_it and rejects unknown permissions', functi
     assertApiError($this->putJson("/api/v1/admin/rbac/roles/{$admin->role_id}/permissions", ['permissions' => ['admin.audit.view']]), 409, 'CONFLICT');
     assertApiError($this->putJson("/api/v1/admin/rbac/roles/{$admin->role_id}/permissions", ['permissions' => ['admin.rbac.manage', 'tidak.ada']]), 422, 'VALIDATION_ERROR');
     expect($admin->role->permissions()->count())->toBe(count(Permission::ALL));
+});
+
+it('creates a custom role dynamically and audits it', function () {
+    actingAsRole('admin_it');
+
+    $response = $this->postJson('/api/v1/admin/rbac/roles', [
+        'name' => 'Koordinator Lapangan',
+        'code' => 'koordinator_lapangan',
+        'permissions' => ['barang.view', 'produksi.view'],
+    ])->assertCreated()
+        ->assertJsonPath('data.name', 'Koordinator Lapangan')
+        ->assertJsonPath('data.code', 'koordinator_lapangan')
+        ->assertJsonPath('data.permissions', ['barang.view', 'produksi.view']);
+
+    $roleId = $response->json('data.id');
+    $audit = AuditEvent::query()->where('action', 'rbac.role_created')->sole();
+    expect($audit->new_value)->toEqualCanonicalizing(['name' => 'Koordinator Lapangan', 'code' => 'koordinator_lapangan']);
+
+    // Can delete custom role without users
+    $this->deleteJson("/api/v1/admin/rbac/roles/{$roleId}")->assertNoContent();
+    expect(Role::query()->find($roleId))->toBeNull();
+});
+
+it('protects system roles from deletion', function () {
+    actingAsRole('admin_it');
+    $adminRole = Role::query()->where('code', Role::ADMIN_IT)->first();
+
+    assertApiError($this->deleteJson("/api/v1/admin/rbac/roles/{$adminRole->id}"), 409, 'CONFLICT');
 });

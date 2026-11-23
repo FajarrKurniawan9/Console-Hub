@@ -34,6 +34,7 @@ class Permission extends Model
         'personel.update' => 'Mengubah personel',
         'personel.delete' => 'Menonaktifkan personel',
         'lacak.view' => 'Melacak barang',
+        'dashboard.view' => 'Melihat dashboard grafik transaksi',
         'admin.dashboard.view' => 'Melihat ringkasan admin',
         'admin.logs.view' => 'Melihat dan menarik log gabungan',
         'admin.consoles.view' => 'Melihat dan menguji sumber data',
@@ -52,5 +53,28 @@ class Permission extends Model
         'produksi.view', 'produksi.create', 'produksi.update',
         'personel.view',
         'lacak.view',
+    ];
+
+    /** @var list<string> */
+    public const MANAJER_GUDANG_DEFAULTS = [
+        'barang.view', 'barang.create', 'barang.update', 'barang.delete',
+        'lacak.view', 'dashboard.view',
+    ];
+
+    /** @var list<string> */
+    public const STAFF_PRODUKSI_DEFAULTS = [
+        'produksi.view', 'produksi.create', 'produksi.update', 'produksi.delete',
+        'lacak.view',
+    ];
+
+    /** @var list<string> */
+    public const STAFF_HR_DEFAULTS = [
+        'personel.view', 'personel.create', 'personel.update', 'personel.delete',
+    ];
+
+    /** @var list<string> */
+    public const AUDITOR_DEFAULTS = [
+        'barang.view', 'produksi.view', 'personel.view', 'lacak.view',
+        'dashboard.view', 'admin.audit.view',
     ];
 }

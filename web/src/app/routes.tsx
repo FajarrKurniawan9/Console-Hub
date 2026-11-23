@@ -8,6 +8,7 @@ import { RbacPage } from '../features/admin/rbac/RbacPage'
 import { useAuth } from '../features/auth/auth'
 import { LoginPage } from '../features/auth/LoginPage'
 import { BarangPage } from '../features/work/barang/BarangPage'
+import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { LacakPage } from '../features/work/lacak/LacakPage'
 import { PersonelPage } from '../features/work/personel/PersonelPage'
 import { ProduksiPage } from '../features/work/produksi/ProduksiPage'
@@ -43,6 +44,7 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<Shell />}>
           <Route index element={<Home />} />
+          {guarded('dashboard.view', 'dashboard', <DashboardPage />)}
           {guarded('barang.view', 'barang', <BarangPage />)}
           {guarded('produksi.view', 'produksi', <ProduksiPage />)}
           {guarded('personel.view', 'personel', <PersonelPage />)}

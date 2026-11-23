@@ -1,8 +1,9 @@
 import {
   Boxes,
-  Factory,
   ClipboardList,
+  Factory,
   House,
+  LayoutDashboard,
   LayoutList,
   Route,
   ScrollText,
@@ -21,6 +22,7 @@ export interface NavItem {
 }
 
 export const WORK_NAV: NavItem[] = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, perm: 'dashboard.view' },
   { to: '/barang', label: 'Barang', icon: Boxes, perm: 'barang.view' },
   { to: '/produksi', label: 'Produksi', icon: Factory, perm: 'produksi.view' },
   { to: '/personel', label: 'Personel', icon: UsersRound, perm: 'personel.view' },

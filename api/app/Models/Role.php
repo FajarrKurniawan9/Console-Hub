@@ -19,6 +19,14 @@ class Role extends Model
 
     public const USER = 'user';
 
+    public const MANAJER_GUDANG = 'manajer_gudang';
+
+    public const STAFF_PRODUKSI = 'staff_produksi';
+
+    public const STAFF_HR = 'staff_hr';
+
+    public const AUDITOR = 'auditor';
+
     public $timestamps = false;
 
     /**

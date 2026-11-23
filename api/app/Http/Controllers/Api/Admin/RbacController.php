@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RbacRoleCreateRequest;
 use App\Http\Requests\RbacRolePermissionsRequest;
 use App\Http\Requests\RbacUserRequest;
 use App\Http\Resources\RbacRoleResource;
@@ -14,6 +15,7 @@ use App\Services\Audit;
 use App\Support\ApiException;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -88,6 +90,50 @@ class RbacController extends Controller
         $roles = Role::query()->with('permissions')->orderBy('id')->get();
 
         return ApiResponse::list(RbacRoleResource::collection($roles), null, $roles->count());
+    }
+
+    public function storeRole(RbacRoleCreateRequest $request): JsonResponse
+    {
+        $role = DB::transaction(function () use ($request) {
+            $role = Role::query()->create([
+                'name' => $request->validated('name'),
+                'code' => strtolower((string) $request->validated('code')),
+            ]);
+
+            if ($request->has('permissions')) {
+                $codes = array_values(array_unique($request->validated('permissions', [])));
+                $role->permissions()->sync(Permission::query()->whereIn('code', $codes)->pluck('id')->all());
+            }
+
+            return $role;
+        });
+
+        $this->audit->record('rbac.role_created', 'role', $role->code, null, [
+            'name' => $role->name,
+            'code' => $role->code,
+        ]);
+
+        return (new RbacRoleResource($role->load('permissions')))->response()->setStatusCode(201);
+    }
+
+    public function destroyRole(Role $role): Response
+    {
+        if (in_array($role->code, [Role::ADMIN_IT, Role::USER], true)) {
+            throw ApiException::conflict('Peran bawaan sistem tidak boleh dihapus.');
+        }
+
+        if ($role->users()->exists()) {
+            throw ApiException::conflict('Peran masih digunakan oleh pengguna aktif.');
+        }
+
+        $this->audit->record('rbac.role_deleted', 'role', $role->code, [
+            'name' => $role->name,
+            'code' => $role->code,
+        ]);
+
+        $role->delete();
+
+        return response()->noContent();
     }
 
     public function permissions(): JsonResponse
