@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             ConsoleSeeder::class,
             UserSeeder::class,
             DashboardSeeder::class,
+            LogSeeder::class,
         ]);
     }
 }
