@@ -5,7 +5,7 @@ import { Recaptcha } from '../../components/Recaptcha'
 import { Button } from '../../components/ui/Button'
 import { Field } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
-import { ApiError, toApiError } from '../../lib/api/client'
+import { ApiError, toApiError, tokenStore } from '../../lib/api/client'
 import { describeError } from '../../lib/errors'
 import { useAuth } from './auth'
 import { OtpInput } from './OtpInput'
@@ -25,6 +25,8 @@ export function LoginPage() {
   const [resendTimer, setResendTimer] = useState(0)
   const [otpSentNotice, setOtpSentNotice] = useState<string | null>(null)
 
+  const from = (location.state as { from?: string } | null)?.from ?? '/'
+
   // Resend countdown timer
   useEffect(() => {
     if (resendTimer <= 0) return
@@ -34,11 +36,31 @@ export function LoginPage() {
     return () => clearInterval(interval)
   }, [resendTimer])
 
+  const urlParams = new URLSearchParams(location.search)
+  const oauthErrorMsg = urlParams.get('error') ? decodeURIComponent(urlParams.get('error')!) : null
+
+  // Handle redirect from Google OAuth with token in URL query
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const tokenParam = params.get('token')
+    if (tokenParam) {
+      tokenStore.set(tokenParam)
+      navigate(from, { replace: true })
+    }
+  }, [location.search, from, navigate])
+
   // Redirect if already authenticated
-  const from = (location.state as { from?: string } | null)?.from ?? '/'
   if (user) return <Navigate to={from} replace />
 
   const fieldError = (name: string) => error?.fields[name]?.[0]
+
+  function handleGoogleLogin() {
+    const apiBase = (import.meta.env.VITE_API_URL as string | undefined) || '/api/v1'
+    const redirectUrl = apiBase.startsWith('http')
+      ? `${apiBase}/auth/google/redirect`
+      : `${window.location.origin}${apiBase}/auth/google/redirect`
+    window.location.href = redirectUrl
+  }
 
   // Step 1: Request OTP
   async function onRequestOtp(e?: FormEvent) {
@@ -87,7 +109,9 @@ export function LoginPage() {
   }
 
   let formError: string | null = null
-  if (error?.code === 'UNAUTHENTICATED') {
+  if (oauthErrorMsg) {
+    formError = oauthErrorMsg
+  } else if (error?.code === 'UNAUTHENTICATED') {
     formError = 'Kode verifikasi salah atau sudah kedaluwarsa.'
   } else if (error?.code === 'FORBIDDEN') {
     formError = error.message
@@ -178,6 +202,27 @@ export function LoginPage() {
             >
               {pending ? <Spinner /> : <Mail size={16} />}
               {pending ? 'Mengirim kode…' : 'Kirim kode verifikasi'}
+            </Button>
+
+            {/* Divider */}
+            <div className="relative my-1 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <span className="relative bg-bg px-2 text-[11px] uppercase tracking-wider text-muted">
+                atau
+              </span>
+            </div>
+
+            {/* Google OAuth Button */}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleGoogleLogin}
+              className="h-10 w-full rounded-lg font-medium hover:bg-surface"
+            >
+              <GoogleIcon className="size-4 shrink-0" />
+              Lanjutkan dengan Google
             </Button>
           </form>
         ) : (
@@ -275,5 +320,28 @@ export function LoginPage() {
         )}
       </div>
     </main>
+  )
+}
+
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        fill="#34A853"
+      />
+      <path
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+        fill="#EA4335"
+      />
+    </svg>
   )
 }
