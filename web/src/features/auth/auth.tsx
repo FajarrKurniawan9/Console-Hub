@@ -20,6 +20,7 @@ interface AuthState {
   login: (input: { email: string; password?: string }) => Promise<void>
   requestOtp: (input: { email: string; recaptcha_token?: string }) => Promise<RequestOtpResult>
   verifyOtp: (input: { email: string; otp: string }) => Promise<void>
+  exchangeGoogleCode: (code: string) => Promise<void>
   logout: () => Promise<void>
   /** Reload `me` (e.g. after the role's permissions changed) so menus follow. */
   reloadMe: () => Promise<unknown>
@@ -80,6 +81,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         url: '/auth/verify-otp',
         method: 'POST',
         data: input,
+      })
+      tokenStore.set(data.token)
+      qc.setQueryData(ME, data.user)
+      setExpired(false)
+      setToken(data.token)
+    },
+    exchangeGoogleCode: async (code: string) => {
+      const { data } = await request(one(loginResult), {
+        url: '/auth/google/exchange',
+        method: 'POST',
+        data: { code },
       })
       tokenStore.set(data.token)
       qc.setQueryData(ME, data.user)

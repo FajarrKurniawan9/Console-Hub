@@ -6,6 +6,7 @@ import { LogsPage } from '../features/admin/logs/LogsPage'
 import { OverviewPage } from '../features/admin/overview/OverviewPage'
 import { RbacPage } from '../features/admin/rbac/RbacPage'
 import { useAuth } from '../features/auth/auth'
+import { AuthGoogleCallbackPage } from '../features/auth/AuthGoogleCallbackPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { BarangPage } from '../features/work/barang/BarangPage'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
@@ -41,6 +42,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/google/callback" element={<AuthGoogleCallbackPage />} />
       <Route element={<RequireAuth />}>
         <Route element={<Shell />}>
           <Route index element={<Home />} />
