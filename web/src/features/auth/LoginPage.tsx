@@ -19,6 +19,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const [captchaError, setCaptchaError] = useState<string | null>(null)
 
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<ApiError | null>(null)
@@ -55,6 +56,9 @@ export function LoginPage() {
   if (user) return <Navigate to={from} replace />
 
   const fieldError = (name: string) => {
+    if (name === 'recaptcha_token' && captchaError) {
+      return captchaError
+    }
     if (name === 'email' && error?.code === 'NOT_FOUND') {
       return 'Email ini belum terdaftar di sistem Console Hub.'
     }
@@ -73,6 +77,12 @@ export function LoginPage() {
   async function onRequestOtp(e?: FormEvent) {
     if (e) e.preventDefault()
     if (!email.trim()) return
+
+    if (!recaptchaToken) {
+      setCaptchaError('Verifikasi reCAPTCHA wajib diselesaikan.')
+      return
+    }
+    setCaptchaError(null)
 
     setPending(true)
     setError(null)
@@ -232,7 +242,10 @@ export function LoginPage() {
               <span className="text-xs font-semibold text-fg">Verifikasi Keamanan</span>
               <Recaptcha
                 value={recaptchaToken}
-                onChange={setRecaptchaToken}
+                onChange={(token) => {
+                  setRecaptchaToken(token)
+                  if (token) setCaptchaError(null)
+                }}
                 error={fieldError('recaptcha_token')}
               />
             </div>
@@ -240,7 +253,7 @@ export function LoginPage() {
             <Button
               type="submit"
               variant="primary"
-              disabled={pending || !email.trim()}
+              disabled={pending || !email.trim() || !recaptchaToken}
               className="mt-2 h-10 w-full rounded-lg font-medium"
             >
               {pending ? <Spinner /> : <Mail size={16} />}

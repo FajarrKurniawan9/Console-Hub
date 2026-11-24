@@ -70,8 +70,9 @@ export function Recaptcha({ value, onChange, error }: RecaptchaProps) {
     }
   }, [siteKey, isScriptLoaded, onChange])
 
-  // Fallback / Developer Simulation Widget (when no Google site key is configured)
-  if (!siteKey) {
+  // Fallback / Developer Simulation Widget (when no Google site key is configured or in test mode)
+  const isTest = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test'
+  if (!siteKey || isTest) {
     const isChecked = Boolean(value)
     return (
       <div className="flex flex-col gap-1">

@@ -7,6 +7,10 @@ import { renderApp } from '../../test/utils'
 async function submitEmail(email: string) {
   renderApp('/login')
   await userEvent.type(await screen.findByLabelText(/Email/), email)
+  const captcha = screen.queryByRole('button', { name: /Verifikasi Saya bukan robot/ })
+  if (captcha) {
+    await userEvent.click(captcha)
+  }
   await userEvent.click(screen.getByRole('button', { name: /Kirim kode/ }))
 }
 
@@ -103,5 +107,18 @@ describe('LoginPage', () => {
     renderApp('/login?error=account_not_registered')
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/Email Belum Terdaftar/i)
+  })
+
+  it('keeps submit button disabled and blocks submission until reCAPTCHA is verified', async () => {
+    renderApp('/login')
+    await userEvent.type(await screen.findByLabelText(/Email/), 'test@example.com')
+
+    const submitBtn = screen.getByRole('button', { name: /Kirim kode/ })
+    expect(submitBtn).toBeDisabled()
+
+    const captcha = screen.getByRole('button', { name: /Verifikasi Saya bukan robot/ })
+    await userEvent.click(captcha)
+
+    expect(submitBtn).not.toBeDisabled()
   })
 })
