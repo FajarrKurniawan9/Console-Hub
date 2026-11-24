@@ -38,7 +38,23 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => (function () {
+            $uri = trim((string) env('GOOGLE_REDIRECT_URI', ''), "\"'");
+            $railwayDomain = env('RAILWAY_PUBLIC_DOMAIN');
+            $appUrl = rtrim((string) env('APP_URL', ''), '/');
+
+            if ($railwayDomain && ($appUrl === '' || str_contains($appUrl, 'localhost'))) {
+                $appUrl = 'https://'.$railwayDomain;
+            } elseif ($appUrl === '') {
+                $appUrl = 'http://localhost:8000';
+            }
+
+            if ($uri === '' || str_contains($uri, '${APP_URL}')) {
+                return str_replace('${APP_URL}', $appUrl, $uri ?: '${APP_URL}/api/v1/auth/google/callback');
+            }
+
+            return $uri;
+        })(),
     ],
 
     'recaptcha' => [
