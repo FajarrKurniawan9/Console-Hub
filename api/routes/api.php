@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Admin\OverviewController;
 use App\Http\Controllers\Api\Admin\RbacController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\Api\RecordController;
 use App\Http\Controllers\Api\TrackingController;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +18,11 @@ use Illuminate\Support\Facades\Route;
 */
 Route::prefix('v1')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('auth/request-otp', [AuthController::class, 'requestOtp']);
+    Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::get('auth/google/redirect', [GoogleAuthController::class, 'redirect']);
+    Route::get('auth/google/callback', [GoogleAuthController::class, 'callback']);
+    Route::post('auth/google/exchange', [GoogleAuthController::class, 'exchange']);
 
     Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);

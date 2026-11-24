@@ -41,7 +41,16 @@ it('requires a login on every admin route', function (string $method, string $ur
 })->with('admin routes');
 
 it('guards every api route except login with a permission', function () {
-    $open = ['api/v1/auth/login', 'api/v1/auth/logout', 'api/v1/auth/me'];
+    $open = [
+        'api/v1/auth/login',
+        'api/v1/auth/request-otp',
+        'api/v1/auth/verify-otp',
+        'api/v1/auth/google/redirect',
+        'api/v1/auth/google/callback',
+        'api/v1/auth/google/exchange',
+        'api/v1/auth/logout',
+        'api/v1/auth/me',
+    ];
 
     $unguarded = collect(Route::getRoutes()->getRoutes())
         ->filter(fn ($r) => str_starts_with($r->uri(), 'api/v1/') && ! in_array($r->uri(), $open, true))
