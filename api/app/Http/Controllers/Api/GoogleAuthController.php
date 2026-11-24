@@ -102,8 +102,23 @@ class GoogleAuthController extends Controller
      */
     private function frontendCallbackUrl(array $query): string
     {
-        $baseUrl = rtrim((string) config('services.frontend_url', 'http://localhost:5173'), '/');
+        $raw = (string) config('services.frontend_url', 'http://localhost:5173');
+        $candidates = array_values(array_filter(array_map('trim', explode(',', $raw))));
 
-        return $baseUrl.'/auth/google/callback?'.http_build_query($query);
+        $baseUrl = $candidates[0] ?? 'http://localhost:5173';
+
+        // Jika terdapat beberapa URL (misalnya localhost dan domain Vercel),
+        // pilih URL HTTPS jika request datang dari domain publik/bukan localhost
+        $host = request()->getHost();
+        if ($host !== 'localhost' && $host !== '127.0.0.1') {
+            foreach ($candidates as $candidate) {
+                if (str_starts_with($candidate, 'https://')) {
+                    $baseUrl = $candidate;
+                    break;
+                }
+            }
+        }
+
+        return rtrim($baseUrl, '/').'/auth/google/callback?'.http_build_query($query);
     }
 }
