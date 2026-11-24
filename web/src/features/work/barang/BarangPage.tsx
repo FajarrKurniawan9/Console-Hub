@@ -23,6 +23,7 @@ import { RowActions } from '../RowActions'
 import { RowsTable, type Column } from '../RowsTable'
 import { useDeactivate } from '../useDeactivate'
 import { useWrite } from '../useWrite'
+import { ExportAction } from '../../reports/ExportAction'
 
 const origin = (i: Item) =>
   i.production ? `${i.production.area} · ${i.production.production_type}` : null
@@ -85,14 +86,26 @@ export function BarangPage() {
           </label>
         }
         query={list}
-        primary={(writable) =>
-          can('barang.create') ? (
-            <Button variant="primary" onClick={() => setEditing('new')} disabled={!writable}>
-              <Plus size={16} strokeWidth={1.5} aria-hidden />
-              Tambah barang
-            </Button>
-          ) : null
-        }
+        primary={(writable) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportAction
+              type="barang"
+              title="Barang"
+              filterSummary={
+                url.get('q') || url.get('status') || url.get('kind')
+                  ? `Filter aktif: ${[url.get('q') && `Cari "${url.get('q')}"`, url.get('status') && `Status ${url.get('status')}`, url.get('kind') && `Jenis ${url.get('kind')}`].filter(Boolean).join(', ')}`
+                  : 'Seluruh inventaris barang'
+              }
+              filters={{ q: url.get('q'), status: url.get('status'), kind: url.get('kind') }}
+            />
+            {can('barang.create') ? (
+              <Button variant="primary" onClick={() => setEditing('new')} disabled={!writable}>
+                <Plus size={16} strokeWidth={1.5} aria-hidden />
+                Tambah barang
+              </Button>
+            ) : null}
+          </div>
+        )}
         emptyMessage="Belum ada barang. Tambahkan barang pertama untuk mulai mencatat inventaris."
       >
         {(rows, writable) => (

@@ -1,0 +1,107 @@
+- generic:
+  - generic:
+    - generic [aria-hidden]:
+      - link:
+        - /url: "#main"
+        - text: Lewati ke konten
+      - navigation:
+        - generic: Console Hub
+        - generic:
+          - generic: Admin
+          - link:
+            - /url: /
+            - generic: Ringkasan
+          - link:
+            - /url: /console
+            - generic: Sumber data
+          - link:
+            - /url: /log
+            - generic: Log gabungan
+          - link:
+            - /url: /rbac
+            - generic: Pengguna & izin
+          - link:
+            - /url: /audit
+            - generic: Audit
+        - generic:
+          - generic: Data kerja
+          - link:
+            - /url: /dashboard
+            - generic: Dashboard
+          - link:
+            - /url: /barang
+            - generic: Barang
+          - link:
+            - /url: /produksi
+            - generic: Produksi
+          - link:
+            - /url: /personel
+            - generic: Personel
+          - link:
+            - /url: /lacak
+            - generic: Lacak barang
+      - generic:
+        - banner:
+          - generic:
+            - generic [aria-hidden]: Audit
+            - generic:
+              - button
+              - button
+              - button:
+                - generic [aria-hidden]: AI
+                - generic: Admin IT
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: Audit
+                - generic: Siapa mengubah apa, di console mana
+              - generic:
+                - generic:
+                  - button:
+                    - generic: Daftar Unduhan
+                  - button:
+                    - generic: Export Data
+            - search:
+              - generic:
+                - generic: Pengguna
+                - combobox
+              - generic:
+                - generic: Console
+                - combobox
+              - generic:
+                - generic: Aksi
+                - combobox
+              - generic:
+                - generic: Dari
+                - textbox
+              - generic:
+                - generic: Sampai
+                - textbox
+            - generic:
+              - generic:
+                - paragraph: Belum ada catatan audit. Catatan muncul saat data diubah atau proses dijalankan.
+    - region "Notifications alt+T"
+  - dialog "Export Data Audit" [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - generic [ref=f1e4]:
+        - heading "Export Data Audit" [level=2] [ref=f1e5]
+        - paragraph [ref=f1e11]: Buat tiket unduhan baru. Scheduler akan memproses data ini di background antrean.
+      - button "Tutup" [active] [ref=f1e12]
+    - generic [ref=f1e17]:
+      - generic [ref=f1e18]:
+        - text: "Cakupan Data:"
+        - paragraph [ref=f1e19]: Semua catatan audit
+      - generic [ref=f1e20]:
+        - generic [ref=f1e21]: Pilih Format File
+        - combobox [ref=f1e22]:
+          - option "CSV (Comma-Separated Values)" [selected]
+          - option "Excel Spreadsheet (.xlsx)"
+          - option "JSON Raw Format"
+        - paragraph [ref=f1e23]: CSV sangat direkomendasikan untuk pembacaan spreadsheet cepat.
+      - generic [ref=f1e24]:
+        - paragraph [ref=f1e25]: "ℹ️ Mekanisme Background Scheduler:"
+        - paragraph [ref=f1e26]: Permintaan ini akan dimasukkan ke dalam antrean (Waiting List). Scheduler background akan memproses file secara bertahap dan menyediakannya untuk diunduh tanpa membebani browser Anda.
+      - generic [ref=f1e27]:
+        - button "Batal" [ref=f1e28]
+        - button "Mulai Antrean Export" [ref=f1e29]

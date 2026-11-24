@@ -1,0 +1,24 @@
+- generic [ref=e2]:
+  - main [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e10]:
+          - generic [ref=e11]: Console Hub
+          - generic [ref=e12]: Portal Multi-Console
+        - generic [ref=e13]:
+          - heading "Masuk" [level=1] [ref=e14]
+          - paragraph [ref=e15]: Masukkan email akun Anda untuk menerima kode verifikasi OTP.
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - generic [ref=e18]: Email (wajib)
+          - textbox "Email (wajib)" [active] [ref=e19]:
+            - /placeholder: nama@perusahaan.com
+        - generic [ref=e20]:
+          - generic [ref=e21]: Verifikasi Keamanan
+          - button "Verifikasi Saya bukan robot" [ref=e23] [cursor=pointer]:
+            - generic [ref=e24]: Saya bukan robot
+            - generic [ref=e27]: reCAPTCHA
+        - button "Kirim kode verifikasi" [disabled]
+        - generic [ref=e32]: atau
+        - button "Lanjutkan dengan Google" [ref=e36]
+  - region "Notifications alt+T"

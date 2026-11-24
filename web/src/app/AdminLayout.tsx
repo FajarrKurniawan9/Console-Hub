@@ -7,6 +7,7 @@ import { OfflineBar } from './OfflineBar'
 import { SkipLink } from './SkipLink'
 import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
+import { ExportQueueNavButton } from '../features/reports/ExportQueueNavButton'
 
 function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
   if (!items.length) return null
@@ -63,6 +64,7 @@ export function AdminLayout() {
               {titleFor(pathname)}
             </span>
             <div className="ml-auto flex items-center gap-1">
+              <ExportQueueNavButton />
               <ThemeToggle />
               <UserMenu />
             </div>

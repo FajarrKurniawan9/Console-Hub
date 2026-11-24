@@ -268,3 +268,33 @@ export const itemDashboardSummary = z.object({
   kind_distribution: z.array(dashboardKindItem),
 })
 export type ItemDashboardSummary = z.infer<typeof itemDashboardSummary>
+
+// ---- Reports & Export Scheduler ----
+
+export const exportStatus = z.enum(['pending', 'processing', 'completed', 'failed'])
+export type ExportStatus = z.infer<typeof exportStatus>
+
+export const reportExport = z.object({
+  id: z.number(),
+  type: z.string(), // 'audit' | 'logs' | 'barang'
+  name: z.string(),
+  status: exportStatus,
+  format: z.string().default('csv'),
+  file_url: z.string().nullable().optional(),
+  download_url: z.string().nullable().optional(),
+  error_message: z.string().nullable().optional(),
+  row_count: z.number().nullable().optional(),
+  requester_role: z.string().nullable().optional(),
+  created_at: iso,
+  completed_at: iso.nullable().optional(),
+})
+export type ReportExport = z.infer<typeof reportExport>
+
+export const reportExportEnvelope = z.object({
+  data: reportExport,
+})
+
+export const reportExportListEnvelope = z.object({
+  data: z.array(reportExport),
+})
+

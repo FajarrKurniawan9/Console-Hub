@@ -28,6 +28,7 @@ import {
 } from './queries'
 import { SyncButton } from './SyncButton'
 import { DEFAULT_RANGE, resolveRange } from './timeRange'
+import { ExportAction } from '../../reports/ExportAction'
 
 export function LogsPage() {
   const url = useUrlState()
@@ -97,14 +98,26 @@ export function LogsPage() {
             : 'Log dari semua console, terbaru di atas'
         }
         actions={
-          <SyncButton
-            consoles={consoles.data ?? []}
-            pending={sync.isPending}
-            onSync={(id) => {
-              setSyncResult(null)
-              sync.mutate(id, { onSuccess: setSyncResult })
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportAction
+              type="logs"
+              title="Log Gabungan"
+              filterSummary={
+                q || consoleIds || levels
+                  ? `Filter: ${[q && `Query "${q}"`, consoleIds && 'Console terpilih', levels && `Level ${levels}`].filter(Boolean).join(', ')}`
+                  : 'Seluruh log dalam rentang aktif'
+              }
+              filters={filters}
+            />
+            <SyncButton
+              consoles={consoles.data ?? []}
+              pending={sync.isPending}
+              onSync={(id) => {
+                setSyncResult(null)
+                sync.mutate(id, { onSuccess: setSyncResult })
+              }}
+            />
+          </div>
         }
       />
 

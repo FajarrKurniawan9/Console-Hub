@@ -8,6 +8,7 @@ import { ServiceTroubleBar } from './ServiceTroubleBar'
 import { SkipLink } from './SkipLink'
 import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
+import { ExportQueueNavButton } from '../features/reports/ExportQueueNavButton'
 
 /** User shell: roomy, top navigation, no technical banners. Sizes come from data-shell="user". */
 export function UserLayout() {
@@ -27,6 +28,7 @@ export function UserLayout() {
         <div className="mx-auto flex h-14 w-full max-w-4xl items-center gap-3 px-4">
           <span className="font-semibold">Console Hub</span>
           <div className="ml-auto flex items-center gap-1">
+            <ExportQueueNavButton />
             <ThemeToggle />
             <UserMenu />
           </div>

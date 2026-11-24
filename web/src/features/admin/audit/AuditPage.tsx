@@ -17,6 +17,7 @@ import { useConsoles } from '../consoles/queries'
 import { useRbacUsers } from '../rbac/queries'
 import { ACTIONS, changesOf, summaryOf } from './summary'
 import { useAudit } from './queries'
+import { ExportAction } from '../../reports/ExportAction'
 
 const toIso = (local: string) => (local ? new Date(local).toISOString() : null)
 
@@ -47,6 +48,14 @@ export function AuditPage() {
           total != null
             ? `${number(total)} catatan · terbaru di atas`
             : 'Siapa mengubah apa, di console mana'
+        }
+        actions={
+          <ExportAction
+            type="audit"
+            title="Audit"
+            filterSummary={filtered ? 'Menerapkan filter yang sedang dipilih' : 'Semua catatan audit'}
+            filters={filters}
+          />
         }
       />
       <div

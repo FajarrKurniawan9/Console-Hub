@@ -269,4 +269,5 @@ export function signedIn(who: keyof typeof users) {
   on('GET /items', page([kain, kardus]))
   on('GET /productions', page([tenun, pewarnaan]))
   on('GET /people', page([joko, dedi, hendra]))
+  on('GET /reports/exports', ok([]))
 }
