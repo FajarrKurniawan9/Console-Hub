@@ -6,15 +6,25 @@ import { useAuth } from '../features/auth/auth'
 export function UserMenu() {
   const { user, logout } = useAuth()
   if (!user) return null
-  const initials = user.name
-    .split(' ')
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join('')
+
+  // Tampilkan username dari email (misal: 'nabilkencana20@gmail.com' -> 'nabilkencana20')
+  // sehingga tidak duplikat dengan nama peran
+  const emailPart = user.email && user.email.includes('@') ? user.email.split('@')[0] : null
+  const username = emailPart || user.name || 'User'
+
+  const initials = username.includes(' ')
+    ? username
+        .split(' ')
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+    : username.slice(0, 2).toUpperCase()
+
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
-        aria-label={`Menu pengguna: ${user.name}`}
+        aria-label={`Menu pengguna: ${username}`}
         className="inline-flex h-control items-center gap-2 rounded-sm px-1.5 text-dense hover:bg-surface"
       >
         <span
@@ -23,12 +33,12 @@ export function UserMenu() {
         >
           {initials}
         </span>
-        <span className="hidden sm:inline">{user.name}</span>
+        <span className="hidden sm:inline">{username}</span>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="end" sideOffset={4} className={menuContent}>
           <div className="flex flex-col px-2 py-1.5">
-            <span className="font-semibold">{user.name}</span>
+            <span className="font-semibold">{username}</span>
             <span className="text-xs text-muted">{user.email}</span>
             <span className="text-xs text-muted">{user.role.name}</span>
           </div>
