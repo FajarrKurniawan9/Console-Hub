@@ -98,4 +98,10 @@ describe('LoginPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/Email Belum Terdaftar/i)
     expect(screen.getByText(/kebijakan keamanan/i)).toBeInTheDocument()
   })
+
+  it('shows unregistered warning even if only error=account_not_registered is passed', async () => {
+    renderApp('/login?error=account_not_registered')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Email Belum Terdaftar/i)
+  })
 })

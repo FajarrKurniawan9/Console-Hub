@@ -39,7 +39,12 @@ export function AuthGoogleCallbackPage() {
             err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
               ? err.message
               : 'Kode otorisasi Google tidak valid atau kedaluwarsa.'
-          navigate(`/login?error=${encodeURIComponent(msg)}`, { replace: true })
+          const errCode =
+            err && typeof err === 'object' && 'code' in err && typeof err.code === 'string'
+              ? err.code
+              : ''
+          const reasonParam = errCode === 'NOT_FOUND' ? '&reason=account_not_registered' : ''
+          navigate(`/login?error=${encodeURIComponent(msg)}${reasonParam}`, { replace: true })
         }
       })
 

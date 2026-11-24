@@ -37,7 +37,8 @@ export function LoginPage() {
   }, [resendTimer])
 
   const urlParams = new URLSearchParams(location.search)
-  const oauthErrorMsg = urlParams.get('error') ? decodeURIComponent(urlParams.get('error')!) : null
+  const rawOauthError = urlParams.get('error')
+  const oauthErrorMsg = rawOauthError ? decodeURIComponent(rawOauthError) : null
   const oauthReason = urlParams.get('reason')
 
   // Handle redirect from Google OAuth with token in URL query
@@ -117,11 +118,25 @@ export function LoginPage() {
   const isUnregistered =
     error?.code === 'NOT_FOUND' ||
     oauthReason === 'account_not_registered' ||
-    Boolean(oauthErrorMsg && oauthErrorMsg.toLowerCase().includes('belum terdaftar'))
+    rawOauthError === 'account_not_registered' ||
+    Boolean(
+      oauthErrorMsg &&
+        (oauthErrorMsg.toLowerCase().includes('belum terdaftar') ||
+          oauthErrorMsg.toLowerCase().includes('tidak terdaftar') ||
+          oauthErrorMsg.toLowerCase().includes('account_not_registered')),
+    )
 
   let formError: string | null = null
   if (oauthErrorMsg) {
-    formError = oauthErrorMsg
+    if (rawOauthError === 'account_not_registered') {
+      formError = 'Email akun Google Anda belum terdaftar di sistem. Hubungi Admin IT.'
+    } else if (rawOauthError === 'account_inactive') {
+      formError = 'Akun Anda dinonaktifkan. Hubungi Admin IT untuk mengaktifkannya.'
+    } else if (rawOauthError === 'oauth_failed') {
+      formError = 'Gagal terhubung dengan layanan Google OAuth.'
+    } else {
+      formError = oauthErrorMsg
+    }
   } else if (error?.code === 'UNAUTHENTICATED') {
     formError = 'Kode verifikasi salah atau sudah kedaluwarsa.'
   } else if (error?.code === 'FORBIDDEN') {
