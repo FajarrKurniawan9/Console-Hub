@@ -7,7 +7,7 @@ import {
   setUnauthenticatedHandler,
   tokenStore,
 } from '../../lib/api/client'
-import { authUser, loginResult, one, type AuthUser } from '../../lib/api/schemas'
+import { authUser, loginResult, one, requestOtpResult, type AuthUser, type RequestOtpResult } from '../../lib/api/schemas'
 
 interface AuthState {
   user: AuthUser | null
@@ -17,7 +17,9 @@ interface AuthState {
   retryMe: () => void
   /** The last session ended on a 401 (expired or revoked), not by logging out. */
   expired: boolean
-  login: (input: { email: string; password: string }) => Promise<void>
+  login: (input: { email: string; password?: string }) => Promise<void>
+  requestOtp: (input: { email: string; recaptcha_token?: string }) => Promise<RequestOtpResult>
+  verifyOtp: (input: { email: string; otp: string }) => Promise<void>
   logout: () => Promise<void>
   /** Reload `me` (e.g. after the role's permissions changed) so menus follow. */
   reloadMe: () => Promise<unknown>
@@ -57,6 +59,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login: async (input) => {
       const { data } = await request(one(loginResult), {
         url: '/auth/login',
+        method: 'POST',
+        data: input,
+      })
+      tokenStore.set(data.token)
+      qc.setQueryData(ME, data.user)
+      setExpired(false)
+      setToken(data.token)
+    },
+    requestOtp: async (input) => {
+      const { data } = await request(one(requestOtpResult), {
+        url: '/auth/request-otp',
+        method: 'POST',
+        data: input,
+      })
+      return data
+    },
+    verifyOtp: async (input) => {
+      const { data } = await request(one(loginResult), {
+        url: '/auth/verify-otp',
         method: 'POST',
         data: input,
       })

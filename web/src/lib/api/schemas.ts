@@ -88,6 +88,11 @@ export const authUser = z.object({
 })
 export type AuthUser = z.infer<typeof authUser>
 export const loginResult = z.object({ token: z.string(), user: authUser })
+export const requestOtpResult = z.object({
+  message: z.string().optional(),
+  expires_in: z.number().optional(),
+})
+export type RequestOtpResult = z.infer<typeof requestOtpResult>
 
 // ---- Work data (merged by the hub from three sources) ----
 
