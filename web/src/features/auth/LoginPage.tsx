@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
-import { ArrowLeft, CheckCircle2, Mail, RefreshCw, Terminal } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, CircleAlert, Mail, RefreshCw, Terminal } from 'lucide-react'
 import { Recaptcha } from '../../components/Recaptcha'
 import { Button } from '../../components/ui/Button'
 import { Field } from '../../components/ui/Input'
@@ -38,6 +38,7 @@ export function LoginPage() {
 
   const urlParams = new URLSearchParams(location.search)
   const oauthErrorMsg = urlParams.get('error') ? decodeURIComponent(urlParams.get('error')!) : null
+  const oauthReason = urlParams.get('reason')
 
   // Handle redirect from Google OAuth with token in URL query
   useEffect(() => {
@@ -52,7 +53,12 @@ export function LoginPage() {
   // Redirect if already authenticated
   if (user) return <Navigate to={from} replace />
 
-  const fieldError = (name: string) => error?.fields[name]?.[0]
+  const fieldError = (name: string) => {
+    if (name === 'email' && error?.code === 'NOT_FOUND') {
+      return 'Email ini belum terdaftar di sistem Console Hub.'
+    }
+    return error?.fields[name]?.[0]
+  }
 
   function handleGoogleLogin() {
     const apiBase = (import.meta.env.VITE_API_URL as string | undefined) || '/api/v1'
@@ -108,6 +114,11 @@ export function LoginPage() {
     }
   }
 
+  const isUnregistered =
+    error?.code === 'NOT_FOUND' ||
+    oauthReason === 'account_not_registered' ||
+    Boolean(oauthErrorMsg && oauthErrorMsg.toLowerCase().includes('belum terdaftar'))
+
   let formError: string | null = null
   if (oauthErrorMsg) {
     formError = oauthErrorMsg
@@ -159,13 +170,30 @@ export function LoginPage() {
           </div>
         ) : null}
 
-        {/* Global Error Alert */}
-        {formError ? (
+        {/* Unregistered Email Alert */}
+        {isUnregistered ? (
           <div
             role="alert"
-            className="rounded-lg border border-[var(--error)]/40 bg-[var(--error)]/10 px-3.5 py-2.5 text-xs text-[var(--error)]"
+            className="flex flex-col gap-2 rounded-xl border border-error/30 bg-error/10 p-3.5 text-xs text-error"
           >
-            {formError}
+            <div className="flex items-center gap-1.5 font-bold text-sm">
+              <CircleAlert size={17} className="shrink-0 text-error" aria-hidden />
+              <span>Email Belum Terdaftar</span>
+            </div>
+            <p className="text-fg leading-relaxed">
+              Email yang Anda gunakan belum terdaftar di sistem <strong>Console Hub</strong>. Sesuai kebijakan keamanan portal, akun baru harus didaftarkan terlebih dahulu oleh Admin IT.
+            </p>
+            <div className="rounded-lg bg-bg/90 border border-error/20 p-2 text-[11px] text-muted">
+              <span className="font-semibold text-fg">💡 Cara Mengatasi:</span> Hubungi Admin IT untuk mendaftarkan alamat email Anda.
+            </div>
+          </div>
+        ) : formError ? (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-[var(--error)]/40 bg-[var(--error)]/10 px-3.5 py-2.5 text-xs text-[var(--error)]"
+          >
+            <CircleAlert size={15} className="shrink-0 mt-0.5 text-error" aria-hidden />
+            <span>{formError}</span>
           </div>
         ) : null}
 

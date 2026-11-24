@@ -19,7 +19,7 @@ export function AuthGoogleCallbackPage() {
         account_inactive: 'Akun Anda dinonaktifkan. Hubungi Admin IT untuk mengaktifkannya.',
       }
       const msg = messages[error] ?? 'Terjadi kesalahan saat masuk dengan Google.'
-      navigate(`/login?error=${encodeURIComponent(msg)}`, { replace: true })
+      navigate(`/login?error=${encodeURIComponent(msg)}&reason=${encodeURIComponent(error)}`, { replace: true })
       return
     }
 

@@ -80,4 +80,22 @@ describe('LoginPage', () => {
     expect(await screen.findByRole('heading', { name: /Halo, Budi/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Log gabungan' })).not.toBeInTheDocument()
   })
+
+  it('shows clear prominent warning when email is not registered', async () => {
+    on(
+      'POST /auth/request-otp',
+      fail(404, 'NOT_FOUND', 'Email tidak terdaftar di sistem. Hubungi Admin IT.'),
+    )
+    await submitEmail('belumterdaftar@example.com')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Email Belum Terdaftar/i)
+    expect(screen.getByText(/hubungi Admin IT/i)).toBeInTheDocument()
+  })
+
+  it('shows unregistered warning when redirected from Google OAuth with account_not_registered', async () => {
+    renderApp('/login?error=account_not_registered&reason=account_not_registered')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Email Belum Terdaftar/i)
+    expect(screen.getByText(/kebijakan keamanan/i)).toBeInTheDocument()
+  })
 })
