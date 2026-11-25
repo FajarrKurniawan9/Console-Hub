@@ -20,7 +20,11 @@ class GoogleAuthController extends Controller
 {
     private const OAUTH_CODE_CACHE_PREFIX = 'google_oauth_code:';
 
+    public const OAUTH_SIGNUP_CACHE_PREFIX = 'google_signup:';
+
     private const OAUTH_CODE_TTL_SECONDS = 60;
+
+    private const OAUTH_SIGNUP_TTL_SECONDS = 600;
 
     public function redirect(): SymfonyRedirectResponse
     {
@@ -50,7 +54,26 @@ class GoogleAuthController extends Controller
         $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
 
         if (! $user) {
-            return redirect()->away($this->frontendCallbackUrl(['error' => 'account_not_registered']));
+            $googleName = trim((string) $googleUser->getName());
+            $googleId = trim((string) $googleUser->getId());
+            $signupCode = Str::random(64);
+
+            Cache::put(
+                self::OAUTH_SIGNUP_CACHE_PREFIX.$signupCode,
+                [
+                    'email' => $email,
+                    'name' => $googleName,
+                    'google_id' => $googleId !== '' ? $googleId : null,
+                ],
+                now()->addSeconds(self::OAUTH_SIGNUP_TTL_SECONDS),
+            );
+
+            return redirect()->away($this->frontendCallbackUrl([
+                'error' => 'account_not_registered',
+                'email' => $email,
+                'name' => $googleName,
+                'signup_token' => $signupCode,
+            ]));
         }
 
         if (! $user->is_active) {

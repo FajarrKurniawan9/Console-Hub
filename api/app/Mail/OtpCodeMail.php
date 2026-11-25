@@ -16,12 +16,17 @@ class OtpCodeMail extends Mailable
         public readonly string $otp,
         public readonly string $userName,
         public readonly int $expiresInMinutes = 5,
+        public readonly string $purpose = 'login',
     ) {}
 
     public function envelope(): Envelope
     {
+        $subject = $this->purpose === 'register'
+            ? 'Kode Verifikasi Pendaftaran — Console Hub'
+            : 'Kode Verifikasi Login — Console Hub';
+
         return new Envelope(
-            subject: 'Kode Verifikasi Login — Console Hub',
+            subject: $subject,
         );
     }
 

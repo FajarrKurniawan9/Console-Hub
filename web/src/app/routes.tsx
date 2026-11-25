@@ -8,6 +8,7 @@ import { RbacPage } from '../features/admin/rbac/RbacPage'
 import { useAuth } from '../features/auth/auth'
 import { AuthGoogleCallbackPage } from '../features/auth/AuthGoogleCallbackPage'
 import { LoginPage } from '../features/auth/LoginPage'
+import { RegisterPage } from '../features/auth/RegisterPage'
 import { BarangPage } from '../features/work/barang/BarangPage'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { LacakPage } from '../features/work/lacak/LacakPage'
@@ -42,6 +43,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/auth/google/callback" element={<AuthGoogleCallbackPage />} />
       <Route element={<RequireAuth />}>
         <Route element={<Shell />}>

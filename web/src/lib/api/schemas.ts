@@ -91,6 +91,7 @@ export const loginResult = z.object({ token: z.string(), user: authUser })
 export const requestOtpResult = z.object({
   message: z.string().optional(),
   expires_in: z.number().optional(),
+  resend_token: z.string().optional(),
 })
 export type RequestOtpResult = z.infer<typeof requestOtpResult>
 

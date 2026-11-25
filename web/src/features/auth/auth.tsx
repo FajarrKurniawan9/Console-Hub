@@ -18,8 +18,20 @@ interface AuthState {
   /** The last session ended on a 401 (expired or revoked), not by logging out. */
   expired: boolean
   login: (input: { email: string; password?: string }) => Promise<void>
-  requestOtp: (input: { email: string; recaptcha_token?: string }) => Promise<RequestOtpResult>
+  requestOtp: (input: { email: string; recaptcha_token?: string; resend_token?: string }) => Promise<RequestOtpResult>
   verifyOtp: (input: { email: string; otp: string }) => Promise<void>
+  registerRequestOtp: (input: {
+    name: string
+    email: string
+    recaptcha_token?: string
+    resend_token?: string
+  }) => Promise<RequestOtpResult>
+  registerVerify: (input: {
+    name: string
+    email: string
+    otp: string
+    signup_token?: string
+  }) => Promise<void>
   exchangeGoogleCode: (code: string) => Promise<void>
   logout: () => Promise<void>
   /** Reload `me` (e.g. after the role's permissions changed) so menus follow. */
@@ -51,6 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setForbiddenHandler(() => void qc.invalidateQueries({ queryKey: ME }))
   }, [qc])
 
+  function applySession(data: { token: string; user: AuthUser }) {
+    tokenStore.set(data.token)
+    qc.setQueryData(ME, data.user)
+    setExpired(false)
+    setToken(data.token)
+  }
+
   const value: AuthState = {
     user: token ? (me.data ?? null) : null,
     isLoading: token !== null && me.isPending,
@@ -63,10 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         data: input,
       })
-      tokenStore.set(data.token)
-      qc.setQueryData(ME, data.user)
-      setExpired(false)
-      setToken(data.token)
+      applySession(data)
     },
     requestOtp: async (input) => {
       const { data } = await request(one(requestOtpResult), {
@@ -82,10 +98,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         data: input,
       })
-      tokenStore.set(data.token)
-      qc.setQueryData(ME, data.user)
-      setExpired(false)
-      setToken(data.token)
+      applySession(data)
+    },
+    registerRequestOtp: async (input) => {
+      const { data } = await request(one(requestOtpResult), {
+        url: '/auth/register/request-otp',
+        method: 'POST',
+        data: input,
+      })
+      return data
+    },
+    registerVerify: async (input) => {
+      const { data } = await request(one(loginResult), {
+        url: '/auth/register/verify',
+        method: 'POST',
+        data: input,
+      })
+      applySession(data)
     },
     exchangeGoogleCode: async (code: string) => {
       const { data } = await request(one(loginResult), {
@@ -93,10 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         data: { code },
       })
-      tokenStore.set(data.token)
-      qc.setQueryData(ME, data.user)
-      setExpired(false)
-      setToken(data.token)
+      applySession(data)
     },
     reloadMe: () => qc.invalidateQueries({ queryKey: ME }),
     logout: async () => {

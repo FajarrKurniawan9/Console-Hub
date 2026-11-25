@@ -83,6 +83,12 @@ describe('axe (WCAG 2 A/AA, structure)', () => {
     expect(await axeViolations()).toEqual([])
   })
 
+  it('register page', async () => {
+    renderApp('/register')
+    await screen.findByRole('heading', { name: 'Daftar Akun' })
+    expect(await axeViolations()).toEqual([])
+  })
+
   it('item form (User)', async () => {
     renderApp('/barang', 'user')
     await userEvent.click(await screen.findByRole('button', { name: 'Tambah barang' }))

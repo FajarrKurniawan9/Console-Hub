@@ -20,6 +20,8 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::post('auth/request-otp', [AuthController::class, 'requestOtp']);
     Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::post('auth/register/request-otp', [AuthController::class, 'registerRequestOtp']);
+    Route::post('auth/register/verify', [AuthController::class, 'registerVerify']);
     Route::get('auth/google/redirect', [GoogleAuthController::class, 'redirect']);
     Route::get('auth/google/callback', [GoogleAuthController::class, 'callback']);
     Route::post('auth/google/exchange', [GoogleAuthController::class, 'exchange']);

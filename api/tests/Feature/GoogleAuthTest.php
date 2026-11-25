@@ -97,15 +97,39 @@ it('does not overwrite an existing google_id on subsequent Google logins', funct
     expect($user->fresh()->google_id)->toBe('existing-google-id');
 });
 
-it('rejects unregistered Google accounts without creating a user', function () {
+it('redirects unregistered Google accounts with prefilled signup details and a one-time signup token without creating a user', function () {
     $initialUserCount = User::query()->count();
 
     mockGoogleCallbackUser('google-unknown-99', 'outsider@example.com', 'Outsider');
 
-    $this->get('/api/v1/auth/google/callback')
-        ->assertRedirect('http://localhost:5173/auth/google/callback?error=account_not_registered');
+    $callback = $this->get('/api/v1/auth/google/callback');
+    $callback->assertRedirect();
+
+    $location = (string) $callback->headers->get('Location');
+    expect($location)->toStartWith('http://localhost:5173/auth/google/callback?');
+
+    parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+
+    expect($query['error'] ?? null)->toBe('account_not_registered')
+        ->and($query['email'] ?? null)->toBe('outsider@example.com')
+        ->and($query['name'] ?? null)->toBe('Outsider')
+        ->and(strlen((string) ($query['signup_token'] ?? '')))->toBe(64);
+
+    $cached = Cache::get('google_signup:'.$query['signup_token']);
+    expect($cached)->toBe([
+        'email' => 'outsider@example.com',
+        'name' => 'Outsider',
+        'google_id' => 'google-unknown-99',
+    ]);
 
     expect(User::query()->count())->toBe($initialUserCount);
+});
+
+it('redirects with account_not_registered when Google returns an empty email', function () {
+    mockGoogleCallbackUser('google-empty-email', '   ', '');
+
+    $this->get('/api/v1/auth/google/callback')
+        ->assertRedirect('http://localhost:5173/auth/google/callback?error=account_not_registered');
 });
 
 it('rejects inactive users during Google callback', function () {

@@ -13,9 +13,20 @@ export function AuthGoogleCallbackPage() {
     const error = params.get('error')
 
     if (error) {
+      if (error === 'account_not_registered') {
+        const nextParams = new URLSearchParams({ from: 'google' })
+        const email = params.get('email')
+        const name = params.get('name')
+        const signupToken = params.get('signup_token')
+        if (email) nextParams.set('email', email)
+        if (name) nextParams.set('name', name)
+        if (signupToken) nextParams.set('signup_token', signupToken)
+        navigate(`/register?${nextParams.toString()}`, { replace: true })
+        return
+      }
+
       const messages: Record<string, string> = {
         oauth_failed: 'Gagal terhubung dengan layanan Google OAuth.',
-        account_not_registered: 'Email akun Google Anda belum terdaftar di sistem. Hubungi Admin IT.',
         account_inactive: 'Akun Anda dinonaktifkan. Hubungi Admin IT untuk mengaktifkannya.',
       }
       const msg = messages[error] ?? 'Terjadi kesalahan saat masuk dengan Google.'

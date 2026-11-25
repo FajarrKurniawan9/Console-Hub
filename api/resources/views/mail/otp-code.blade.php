@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kode Verifikasi Login — Console Hub</title>
+    <title>{{ $purpose === 'register' ? 'Kode Verifikasi Pendaftaran' : 'Kode Verifikasi Login' }} — Console Hub</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#111827;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f6f8;padding:32px 16px;">
@@ -26,7 +26,9 @@
                                 Halo, <strong>{{ $userName }}</strong>
                             </p>
                             <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#4b5563;">
-                                Gunakan kode verifikasi satu kali (OTP) berikut untuk masuk ke akun Console Hub Anda:
+                                {{ $purpose === 'register'
+                                    ? 'Gunakan kode verifikasi satu kali (OTP) berikut untuk menyelesaikan pendaftaran akun Console Hub Anda:'
+                                    : 'Gunakan kode verifikasi satu kali (OTP) berikut untuk masuk ke akun Console Hub Anda:' }}
                             </p>
 
                             <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px 16px;text-align:center;margin:0 0 24px;">

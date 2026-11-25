@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { calls, fail, ok, on, signedIn, users } from '../../test/api'
@@ -85,22 +85,30 @@ describe('LoginPage', () => {
     expect(screen.queryByRole('link', { name: 'Log gabungan' })).not.toBeInTheDocument()
   })
 
-  it('shows clear prominent warning when email is not registered', async () => {
+  it('shows unregistered prompt with Sign Up link when email is not registered', async () => {
     on(
       'POST /auth/request-otp',
-      fail(404, 'NOT_FOUND', 'Email tidak terdaftar di sistem. Hubungi Admin IT.'),
+      fail(404, 'NOT_FOUND', 'Email belum terdaftar di sistem. Silakan daftar terlebih dahulu.'),
     )
     await submitEmail('belumterdaftar@example.com')
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Email Belum Terdaftar/i)
-    expect(screen.getByText(/hubungi Admin IT/i)).toBeInTheDocument()
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/Email Belum Terdaftar/i)
+    expect(within(alert).getByRole('link', { name: /Daftar Sekarang/i })).toHaveAttribute(
+      'href',
+      '/register?email=belumterdaftar%40example.com',
+    )
   })
 
-  it('shows unregistered warning when redirected from Google OAuth with account_not_registered', async () => {
+  it('shows unregistered warning with signup CTA when /login receives account_not_registered', async () => {
     renderApp('/login?error=account_not_registered&reason=account_not_registered')
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Email Belum Terdaftar/i)
-    expect(screen.getByText(/kebijakan keamanan/i)).toBeInTheDocument()
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/Email Belum Terdaftar/i)
+    expect(within(alert).getByRole('link', { name: /Daftar Sekarang/i })).toHaveAttribute(
+      'href',
+      '/register',
+    )
   })
 
   it('shows unregistered warning even if only error=account_not_registered is passed', async () => {

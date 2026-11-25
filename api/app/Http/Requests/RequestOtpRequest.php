@@ -11,11 +11,12 @@ class RequestOtpRequest extends FormRequest
      */
     public function rules(): array
     {
-        $recaptchaRule = config('services.recaptcha.enabled') ? 'required' : 'nullable';
+        $recaptchaRule = config('services.recaptcha.enabled') ? 'required_without:resend_token' : 'nullable';
 
         return [
             'email' => ['required', 'email', 'max:150'],
-            'recaptcha_token' => [$recaptchaRule, 'string'],
+            'recaptcha_token' => ['nullable', $recaptchaRule, 'string'],
+            'resend_token' => ['nullable', 'string', 'max:128'],
         ];
     }
 
@@ -28,6 +29,7 @@ class RequestOtpRequest extends FormRequest
             'email.required' => 'Email wajib diisi.',
             'email.email' => 'Format email tidak valid.',
             'recaptcha_token.required' => 'Verifikasi reCAPTCHA wajib diselesaikan.',
+            'recaptcha_token.required_without' => 'Verifikasi reCAPTCHA wajib diselesaikan.',
         ];
     }
 }

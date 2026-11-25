@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequestOtpRequest;
+use App\Http\Requests\RegisterVerifyRequest;
 use App\Http\Requests\RequestOtpRequest;
 use App\Http\Requests\VerifyOtpRequest;
 use App\Http\Resources\AuthUserResource;
 use App\Mail\OtpCodeMail;
 use App\Models\OtpCode;
+use App\Models\Role;
 use App\Models\User;
+use App\Services\Audit;
 use App\Services\AuthTokenService;
 use App\Services\RecaptchaService;
 use App\Support\ApiException;
@@ -17,10 +21,12 @@ use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
@@ -30,6 +36,10 @@ class AuthController extends Controller
     private const OTP_RATE_LIMIT_SECONDS = 60;
 
     private const OTP_MAX_ATTEMPTS = 5;
+
+    private const RESEND_TOKEN_PREFIX = 'otp_resend:';
+
+    private const RESEND_TOKEN_TTL_SECONDS = 900;
 
     public function login(LoginRequest $request, AuthTokenService $authTokens): JsonResponse
     {
@@ -50,26 +60,178 @@ class AuthController extends Controller
 
     public function requestOtp(RequestOtpRequest $request, RecaptchaService $recaptcha): JsonResponse
     {
-        $recaptchaToken = $request->string('recaptcha_token')->toString();
-
-        if (! $recaptcha->verify($recaptchaToken !== '' ? $recaptchaToken : null, $request->ip())) {
-            throw ApiException::validation(
-                ['recaptcha_token' => ['Verifikasi reCAPTCHA gagal. Silakan coba lagi.']],
-                'Verifikasi reCAPTCHA gagal. Silakan coba lagi.',
-            );
-        }
-
         $email = strtolower(trim($request->string('email')->toString()));
+
+        $this->assertRecaptchaOrResend(
+            'login',
+            $email,
+            $request->string('recaptcha_token')->toString(),
+            $request->string('resend_token')->toString(),
+            $request->ip(),
+            $recaptcha,
+        );
+
         $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
 
         if (! $user) {
-            throw new ApiException(404, 'NOT_FOUND', 'Email tidak terdaftar di sistem. Hubungi Admin IT.');
+            throw new ApiException(404, 'NOT_FOUND', 'Email belum terdaftar di sistem. Silakan daftar terlebih dahulu.');
         }
 
         if (! $user->is_active) {
             throw new ApiException(403, 'FORBIDDEN', 'Akun Anda dinonaktifkan. Hubungi Admin IT untuk mengaktifkannya.');
         }
 
+        return $this->issueAndSendOtpResponse($email, $user->name, 'login');
+    }
+
+    public function verifyOtp(VerifyOtpRequest $request, AuthTokenService $authTokens): JsonResponse
+    {
+        $email = strtolower(trim($request->string('email')->toString()));
+        $otp = $request->string('otp')->toString();
+
+        $this->consumeOtpOrFail($email, $otp);
+
+        $user = User::query()->with('role')->whereRaw('LOWER(email) = ?', [$email])->first();
+
+        if (! $user) {
+            throw new ApiException(404, 'NOT_FOUND', 'Email belum terdaftar di sistem. Silakan daftar terlebih dahulu.');
+        }
+
+        if (! $user->is_active) {
+            throw new ApiException(403, 'FORBIDDEN', 'Akun Anda dinonaktifkan. Hubungi Admin IT untuk mengaktifkannya.');
+        }
+
+        Cache::forget(self::RESEND_TOKEN_PREFIX."login:{$email}");
+
+        return response()->json($authTokens->issue($user, 'otp'));
+    }
+
+    public function registerRequestOtp(RegisterRequestOtpRequest $request, RecaptchaService $recaptcha): JsonResponse
+    {
+        $email = strtolower(trim($request->string('email')->toString()));
+        $name = trim($request->string('name')->toString());
+
+        $this->assertRecaptchaOrResend(
+            'register',
+            $email,
+            $request->string('recaptcha_token')->toString(),
+            $request->string('resend_token')->toString(),
+            $request->ip(),
+            $recaptcha,
+        );
+
+        if (User::query()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            throw ApiException::validation(
+                ['email' => ['Email ini sudah terdaftar. Silakan masuk melalui halaman login.']],
+                'Email ini sudah terdaftar. Silakan masuk melalui halaman login.',
+            );
+        }
+
+        return $this->issueAndSendOtpResponse($email, $name, 'register');
+    }
+
+    public function registerVerify(RegisterVerifyRequest $request, AuthTokenService $authTokens, Audit $audit): JsonResponse
+    {
+        $name = trim($request->string('name')->toString());
+        $email = strtolower(trim($request->string('email')->toString()));
+        $otp = $request->string('otp')->toString();
+        $signupToken = trim($request->string('signup_token')->toString());
+
+        if (User::query()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            throw ApiException::validation(
+                ['email' => ['Email ini sudah terdaftar. Silakan masuk melalui halaman login.']],
+                'Email ini sudah terdaftar. Silakan masuk melalui halaman login.',
+            );
+        }
+
+        $role = Role::query()->where('code', Role::USER)->firstOrFail();
+
+        $this->consumeOtpOrFail($email, $otp);
+
+        $googleId = $signupToken !== '' ? $this->resolveGoogleSignupId($signupToken, $email) : null;
+
+        $user = DB::transaction(function () use ($name, $email, $googleId, $role): User {
+            if (User::query()->whereRaw('LOWER(email) = ?', [$email])->lockForUpdate()->exists()) {
+                throw ApiException::validation(
+                    ['email' => ['Email ini sudah terdaftar. Silakan masuk melalui halaman login.']],
+                    'Email ini sudah terdaftar. Silakan masuk melalui halaman login.',
+                );
+            }
+
+            return User::query()->create([
+                'name' => $name,
+                'email' => $email,
+                'password' => null,
+                'google_id' => $googleId,
+                'role_id' => $role->id,
+                'is_active' => true,
+            ]);
+        });
+
+        Cache::forget(self::RESEND_TOKEN_PREFIX."register:{$email}");
+
+        $method = $googleId !== null ? 'register_google' : 'register_otp';
+
+        $audit->record(
+            'auth.register',
+            'user',
+            (string) $user->id,
+            new: [
+                'email' => $user->email,
+                'name' => $user->name,
+                'role' => $role->code,
+                'method' => $method,
+            ],
+            userId: $user->id,
+        );
+
+        return response()->json($authTokens->issue($user, $method), 201);
+    }
+
+    public function logout(Request $request): Response
+    {
+        $token = $request->user()?->currentAccessToken();
+
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
+
+        return response()->noContent();
+    }
+
+    public function me(Request $request): AuthUserResource
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        return new AuthUserResource($user->load('role'));
+    }
+
+    private function assertRecaptchaOrResend(
+        string $purpose,
+        string $email,
+        string $recaptchaToken,
+        string $resendToken,
+        ?string $ip,
+        RecaptchaService $recaptcha,
+    ): void {
+        if ($resendToken !== '') {
+            $cachedToken = Cache::get(self::RESEND_TOKEN_PREFIX."{$purpose}:{$email}");
+            if (is_string($cachedToken) && $cachedToken !== '' && hash_equals($cachedToken, $resendToken)) {
+                return;
+            }
+        }
+
+        if (! $recaptcha->verify($recaptchaToken !== '' ? $recaptchaToken : null, $ip)) {
+            throw ApiException::validation(
+                ['recaptcha_token' => ['Verifikasi reCAPTCHA gagal. Silakan coba lagi.']],
+                'Verifikasi reCAPTCHA gagal. Silakan coba lagi.',
+            );
+        }
+    }
+
+    private function issueAndSendOtpResponse(string $email, string $recipientName, string $purpose): JsonResponse
+    {
         $rateLimitKey = 'otp-request:'.$email;
 
         if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
@@ -100,25 +262,39 @@ class AuthController extends Controller
             ]);
         });
 
-        Mail::to($user->email)->send(new OtpCodeMail($otp, $user->name));
+        Mail::to($email)->send(new OtpCodeMail(
+            $otp,
+            $recipientName,
+            (int) (self::OTP_TTL_SECONDS / 60),
+            $purpose,
+        ));
 
         RateLimiter::hit($rateLimitKey, self::OTP_RATE_LIMIT_SECONDS);
 
+        $resendToken = Str::random(48);
+        Cache::put(
+            self::RESEND_TOKEN_PREFIX."{$purpose}:{$email}",
+            $resendToken,
+            now()->addSeconds(self::RESEND_TOKEN_TTL_SECONDS),
+        );
+
+        $message = $purpose === 'register'
+            ? 'Kode verifikasi pendaftaran telah dikirim ke email Anda.'
+            : 'Kode OTP telah dikirim ke email Anda.';
+
         return response()->json([
             'data' => [
-                'message' => 'Kode OTP telah dikirim ke email Anda.',
+                'message' => $message,
                 'expires_in' => self::OTP_TTL_SECONDS,
+                'resend_token' => $resendToken,
             ],
-            'message' => 'Kode OTP telah dikirim ke email Anda.',
+            'message' => $message,
             'expires_in' => self::OTP_TTL_SECONDS,
         ]);
     }
 
-    public function verifyOtp(VerifyOtpRequest $request, AuthTokenService $authTokens): JsonResponse
+    private function consumeOtpOrFail(string $email, string $otp): void
     {
-        $email = strtolower(trim($request->string('email')->toString()));
-        $otp = $request->string('otp')->toString();
-
         $status = DB::transaction(function () use ($email, $otp): string {
             $otpRecord = OtpCode::query()
                 ->where('email', $email)
@@ -177,36 +353,27 @@ class AuthController extends Controller
                 'Kode OTP tidak valid.',
             );
         }
-
-        $user = User::query()->with('role')->whereRaw('LOWER(email) = ?', [$email])->first();
-
-        if (! $user) {
-            throw new ApiException(404, 'NOT_FOUND', 'Email tidak terdaftar di sistem. Hubungi Admin IT.');
-        }
-
-        if (! $user->is_active) {
-            throw new ApiException(403, 'FORBIDDEN', 'Akun Anda dinonaktifkan. Hubungi Admin IT untuk mengaktifkannya.');
-        }
-
-        return response()->json($authTokens->issue($user, 'otp'));
     }
 
-    public function logout(Request $request): Response
+    private function resolveGoogleSignupId(string $signupToken, string $email): ?string
     {
-        $token = $request->user()?->currentAccessToken();
+        $cached = Cache::pull(GoogleAuthController::OAUTH_SIGNUP_CACHE_PREFIX.$signupToken);
 
-        if ($token instanceof PersonalAccessToken) {
-            $token->delete();
+        if (! is_array($cached)) {
+            return null;
         }
 
-        return response()->noContent();
-    }
+        $cachedEmail = isset($cached['email']) && is_string($cached['email']) ? strtolower(trim($cached['email'])) : '';
+        $googleId = isset($cached['google_id']) && is_string($cached['google_id']) ? trim($cached['google_id']) : '';
 
-    public function me(Request $request): AuthUserResource
-    {
-        /** @var User $user */
-        $user = $request->user();
+        if ($cachedEmail !== $email || $googleId === '') {
+            return null;
+        }
 
-        return new AuthUserResource($user->load('role'));
+        if (User::query()->where('google_id', $googleId)->exists()) {
+            return null;
+        }
+
+        return $googleId;
     }
 }
