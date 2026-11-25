@@ -95,6 +95,52 @@ describe('Log gabungan', () => {
     expect(within(box).getByText(/gagal\. Tidak dapat dihubungi/)).toBeInTheDocument()
     expect(within(box).getAllByText(/berhasil/)).toHaveLength(2)
   })
+
+  it('does not falsely show "log baru" when higher DB IDs sit below rows[0]', async () => {
+    renderApp('/log', 'admin')
+    on('GET /admin/consoles', page(sources()))
+    on(
+      'GET /admin/logs',
+      page([
+        { ...log(9, 'info', 'produksi'), occurred_at: '2026-11-19T05:00:00Z' },
+        { ...log(16, 'info', 'hr'), occurred_at: '2026-11-19T04:00:00Z' },
+        { ...log(20, 'warn', 'gudang'), occurred_at: '2026-11-19T03:00:00Z' },
+      ]),
+    )
+
+    expect(await screen.findAllByRole('row', { name: /Buka log/ })).toHaveLength(3)
+    await waitFor(() => {
+      expect(calls.filter((c) => c.url === '/admin/logs').length).toBeGreaterThanOrEqual(2)
+    })
+    expect(screen.queryByRole('button', { name: /log baru/i })).not.toBeInTheDocument()
+  })
+
+  it('shows "N log baru" after new logs arrive, reloads rows on click, and hides the button', async () => {
+    let currentLogs = [{ ...log(9, 'info', 'produksi'), occurred_at: '2026-11-19T05:00:00Z' }]
+    renderApp('/log', 'admin')
+    on('GET /admin/consoles', page(sources()))
+    on('GET /admin/logs', () => page(currentLogs))
+    on('POST /admin/logs/sync', () => {
+      currentLogs = [
+        { ...log(10, 'warn', 'hr'), occurred_at: '2026-11-19T06:00:00Z' },
+        { ...log(9, 'info', 'produksi'), occurred_at: '2026-11-19T05:00:00Z' },
+        { ...log(11, 'error', 'gudang'), occurred_at: '2026-11-19T04:00:00Z' },
+      ]
+      return ok([{ console: { slug: 'hr', name: 'HR' }, status: 'ok', inserted: 2, error: null }], 202)
+    })
+
+    expect(await screen.findAllByRole('row', { name: /Buka log/ })).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: /Tarik sekarang/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Semua console' }))
+
+    const newBtn = await screen.findByRole('button', { name: /2 log baru/i })
+    await userEvent.click(newBtn)
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('row', { name: /Buka log/ })).toHaveLength(3)
+      expect(screen.queryByRole('button', { name: /log baru/i })).not.toBeInTheDocument()
+    })
+  })
 })
 
 describe('Audit', () => {

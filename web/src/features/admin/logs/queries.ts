@@ -38,17 +38,20 @@ export function useLogs(f: LogFilters) {
 /**
  * Poll the newest matching rows to count how many arrived since the list was loaded.
  * Cheap (limit=50) and does not touch the visible list.
+ *
+ * Counts by row ID membership rather than `id > rows[0].id` because multi-console sync
+ * inserts rows out of `occurred_at` order, so higher DB IDs can legitimately sit below `rows[0]`.
  */
-export function useNewLogCount(f: LogFilters, newestId: number | undefined) {
+export function useNewLogCount(f: LogFilters, loadedIds: ReadonlySet<number> | undefined) {
   const q = useQuery({
     queryKey: logKeys.head(f),
     queryFn: () =>
       request(many(logEntry), { url: '/admin/logs', params: params({ ...f, limit: PAGE }) }),
-    enabled: newestId !== undefined,
+    enabled: loadedIds !== undefined,
     refetchInterval: 10_000,
   })
-  if (newestId === undefined || !q.data) return 0
-  return q.data.data.filter((l) => l.id > newestId).length
+  if (loadedIds === undefined || !q.data) return 0
+  return q.data.data.filter((l) => !loadedIds.has(l.id)).length
 }
 
 export function useLog(id: number | null) {

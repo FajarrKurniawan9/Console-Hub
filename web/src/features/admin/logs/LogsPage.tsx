@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { type InfiniteData, useQueryClient } from '@tanstack/react-query'
 import { ArrowUp, CircleAlert, CircleCheck } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ConsoleChip } from '../../../components/ConsoleChip'
@@ -14,7 +14,7 @@ import { Table, Td, Th, Tr } from '../../../components/ui/Table'
 import { Tooltip } from '../../../components/ui/Tooltip'
 import { describeError } from '../../../lib/errors'
 import { number, shortTime } from '../../../lib/format'
-import type { LogSyncResult } from '../../../lib/api/schemas'
+import type { LogEntry, LogSyncResult, Page } from '../../../lib/api/schemas'
 import { useUrlState } from '../../../lib/useUrlState'
 import { downSince, useConsoles } from '../consoles/queries'
 import { LogDetail } from './LogDetail'
@@ -57,7 +57,11 @@ export function LogsPage() {
   const logs = useLogs(filters)
   const rows = useMemo(() => logs.data?.pages.flatMap((p) => p.data) ?? [], [logs.data])
   const total = logs.data?.pages[0]?.meta.total
-  const newCount = useNewLogCount(filters, logs.isSuccess ? (rows[0]?.id ?? 0) : undefined)
+  const loadedIds = useMemo(
+    () => (logs.isSuccess ? new Set(rows.map((l) => l.id)) : undefined),
+    [logs.isSuccess, rows],
+  )
+  const newCount = useNewLogCount(filters, loadedIds)
   const [selected, setSelected] = useState<number | null>(null)
 
   const sync = useSyncLogs()
@@ -83,9 +87,15 @@ export function LogsPage() {
   )
 
   // Reload from the first page: refetching all pages with old cursors could leave gaps.
-  const showNew = () => {
-    void qc.resetQueries({ queryKey: logKeys.list(filters) })
+  const showNew = async () => {
     window.scrollTo({ top: 0 })
+    await qc.resetQueries({ queryKey: logKeys.list(filters) })
+    const firstPage = qc.getQueryData<InfiniteData<Page<LogEntry>>>(logKeys.list(filters))?.pages[0]
+    if (firstPage) {
+      qc.setQueryData(logKeys.head(filters), firstPage)
+    } else {
+      void qc.invalidateQueries({ queryKey: logKeys.head(filters) })
+    }
   }
 
   return (
@@ -156,7 +166,7 @@ export function LogsPage() {
       {newCount > 0 ? (
         <button
           type="button"
-          onClick={showNew}
+          onClick={() => void showNew()}
           className="sticky top-14 z-20 mx-auto inline-flex items-center gap-1.5 rounded-full border border-accent bg-bg px-3 py-1 text-dense font-semibold text-accent shadow-pop"
         >
           <ArrowUp size={14} strokeWidth={1.5} aria-hidden />
