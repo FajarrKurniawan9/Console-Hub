@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://console-hub-production-43b81fd7.up.railway.app/api/:path*"
+      "destination": "https://console-hub-production-7345f1ee.up.railway.app/api/:path*"
     },
     { "source": "/((?!assets/).*)", "destination": "/index.html" }
   ]

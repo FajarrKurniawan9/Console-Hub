@@ -3,10 +3,10 @@ import { Download, FileSpreadsheet } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
-import { Select, SelectField } from '../../components/ui/Select'
+import { SelectField } from '../../components/ui/Select'
 import { Spinner } from '../../components/ui/Spinner'
 import { ApiError } from '../../lib/api/client'
-import { useCreateExport } from './queries'
+import { EXPORT_FORMATS, useCreateExport, type ExportFormat, type ExportType } from './queries'
 
 export function ExportModal({
   open,
@@ -19,14 +19,15 @@ export function ExportModal({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  type: 'audit' | 'logs' | 'barang'
+  type: ExportType
   title: string
   filterSummary?: string
   filters?: unknown
   onSuccess?: () => void
 }) {
-  const [format, setFormat] = useState<'csv' | 'xlsx' | 'json'>('csv')
+  const [format, setFormat] = useState<ExportFormat>('csv')
   const createExport = useCreateExport()
+  const activeOption = EXPORT_FORMATS.find((item) => item.value === format) ?? EXPORT_FORMATS[0]
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -67,18 +68,16 @@ export function ExportModal({
 
         <SelectField
           label="Pilih Format File"
-          id="export-format"
-          hint="CSV sangat direkomendasikan untuk pembacaan spreadsheet cepat."
+          name="export-format"
+          value={format}
+          onChange={(e) => setFormat(e.target.value as ExportFormat)}
+          hint={activeOption.hint}
         >
-          <Select
-            id="export-format"
-            value={format}
-            onChange={(e) => setFormat(e.target.value as 'csv' | 'xlsx' | 'json')}
-          >
-            <option value="csv">CSV (Comma-Separated Values)</option>
-            <option value="xlsx">Excel Spreadsheet (.xlsx)</option>
-            <option value="json">JSON Raw Format</option>
-          </Select>
+          {EXPORT_FORMATS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
         </SelectField>
 
         <div className="rounded-md bg-accent/5 p-3 text-xs text-muted border border-accent/10">

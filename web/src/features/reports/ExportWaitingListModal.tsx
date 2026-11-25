@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Clock,
   Download,
+  FileCode,
   FileSpreadsheet,
   FileText,
   Loader2,
@@ -132,6 +133,8 @@ export function ExportWaitingListModal({
                       <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent">
                         {item.format === 'csv' || item.format === 'xlsx' ? (
                           <FileSpreadsheet size={16} />
+                        ) : item.format === 'json' ? (
+                          <FileCode size={16} />
                         ) : (
                           <FileText size={16} />
                         )}

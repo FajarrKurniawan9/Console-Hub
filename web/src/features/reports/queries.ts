@@ -15,7 +15,36 @@ export const reportKeys = {
 }
 
 export type ExportType = 'audit' | 'logs' | 'barang'
-export type ExportFormat = 'csv' | 'xlsx' | 'json'
+
+export const EXPORT_FORMATS = [
+  {
+    value: 'csv',
+    label: 'CSV (Comma-Separated Values)',
+    hint: 'Paling cepat dan ringan untuk olah data mentah di Excel / Google Sheets.',
+  },
+  {
+    value: 'xlsx',
+    label: 'Excel Spreadsheet (.xlsx)',
+    hint: 'Workbook Excel siap pakai dengan header dan kolom rapi.',
+  },
+  {
+    value: 'pdf',
+    label: 'PDF Document (.pdf)',
+    hint: 'Cocok untuk laporan resmi siap cetak dan arsip audit.',
+  },
+  {
+    value: 'docx',
+    label: 'Word Document (.docx)',
+    hint: 'Cocok jika dokumen laporan masih perlu diedit atau diberi catatan.',
+  },
+  {
+    value: 'json',
+    label: 'JSON Raw Format (.json)',
+    hint: 'Format data mentah terstruktur untuk kebutuhan integrasi teknis.',
+  },
+] as const
+
+export type ExportFormat = (typeof EXPORT_FORMATS)[number]['value']
 
 export const EXPORT_PERMISSIONS: Record<ExportType, Permission> = {
   audit: 'admin.audit.view',

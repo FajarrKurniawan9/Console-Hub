@@ -152,6 +152,43 @@ describe('ExportWaitingListModal', () => {
     expect(screen.getAllByRole('button', { name: /Unduh/i })).toHaveLength(1)
   })
 
+  it('shows Unduh PDF and Unduh DOCX buttons for completed PDF and DOCX exports', async () => {
+    on(
+      'GET /reports/exports',
+      ok([
+        {
+          id: 201,
+          type: 'audit',
+          name: 'Laporan Audit (PDF)',
+          status: 'completed',
+          format: 'pdf',
+          download_url: '/reports/exports/201/download',
+          row_count: 15,
+          is_mine: true,
+          created_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+        },
+        {
+          id: 202,
+          type: 'barang',
+          name: 'Laporan Barang (DOCX)',
+          status: 'completed',
+          format: 'docx',
+          download_url: '/reports/exports/202/download',
+          row_count: 8,
+          is_mine: true,
+          created_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+        },
+      ]),
+    )
+
+    wrap(<ExportWaitingListModal open={true} onOpenChange={vi.fn()} />)
+
+    expect(await screen.findByRole('button', { name: /Unduh PDF/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Unduh DOCX/i })).toBeInTheDocument()
+  })
+
   it('shows an error alert instead of falling back to localStorage when backend fails', async () => {
     localStorage.setItem('ch.mock_reports_exports', JSON.stringify(sampleItems))
     on('GET /reports/exports', fail(500, 'SERVER_ERROR', 'Server gagal'))
@@ -249,5 +286,50 @@ describe('ExportModal', () => {
     })
     expect(onSuccess).not.toHaveBeenCalled()
     expect(onOpenChange).not.toHaveBeenCalledWith(false)
+  })
+
+  it.each([
+    ['pdf', 'Laporan Audit (PDF)'],
+    ['docx', 'Laporan Audit (DOCX)'],
+  ] as const)('submits %s format to backend /reports/export', async (format, expectedName) => {
+    on(
+      'POST /reports/export',
+      ok(
+        {
+          id: 300,
+          type: 'audit',
+          name: expectedName,
+          status: 'pending',
+          format,
+          is_mine: true,
+          queue_position: 1,
+          created_at: new Date().toISOString(),
+        },
+        202,
+      ),
+    )
+
+    const onSuccess = vi.fn()
+    const onOpenChange = vi.fn()
+
+    wrap(
+      <ExportModal
+        open={true}
+        onOpenChange={onOpenChange}
+        type="audit"
+        title="Audit"
+        onSuccess={onSuccess}
+      />,
+    )
+
+    await userEvent.selectOptions(screen.getByLabelText(/Pilih Format File/i), format)
+    await userEvent.click(screen.getByRole('button', { name: /Mulai Antrean Export/i }))
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalled()
+    })
+
+    const post = calls.find((c) => c.method === 'POST' && c.url === '/reports/export')
+    expect(post?.body).toMatchObject({ type: 'audit', format, name: expectedName })
   })
 })
