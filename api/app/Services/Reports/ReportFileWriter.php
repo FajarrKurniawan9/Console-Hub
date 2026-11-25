@@ -2,11 +2,9 @@
 
 namespace App\Services\Reports;
 
+use Generator;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
-use OpenSpout\Common\Entity\Row;
-use OpenSpout\Common\Entity\Style\Style;
-use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 use RuntimeException;
 
 class ReportFileWriter
@@ -17,6 +15,8 @@ class ReportFileWriter
         'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'json' => 'application/json; charset=UTF-8',
     ];
+
+    public function __construct(private XlsxWorkbookWriter $xlsx = new XlsxWorkbookWriter) {}
 
     public static function mimeTypeFor(string $format): string
     {
@@ -135,27 +135,10 @@ class ReportFileWriter
             throw new RuntimeException('Gagal membuat file sementara untuk XLSX.');
         }
 
-        $writer = new XlsxWriter;
-        $count = 0;
-
         try {
-            $writer->openToFile($tmpPath);
-            $writer->addRow(Row::fromValuesWithStyle(array_values($columns), new Style(fontBold: true)));
-
             $keys = array_keys($columns);
-
-            foreach ($rows as $row) {
-                $values = [];
-
-                foreach ($keys as $key) {
-                    $values[] = $this->sanitizeCell($row[$key] ?? null);
-                }
-
-                $writer->addRow(Row::fromValues($values));
-                $count++;
-            }
-
-            $writer->close();
+            $sanitizedRows = $this->sanitizedRows($keys, $rows);
+            $count = $this->xlsx->writeToFile($tmpPath, array_values($columns), $sanitizedRows);
 
             $stream = fopen($tmpPath, 'rb');
 
@@ -171,8 +154,25 @@ class ReportFileWriter
 
             return $count;
         } finally {
-            $writer->close();
             @unlink($tmpPath);
+        }
+    }
+
+    /**
+     * @param  list<string>  $keys
+     * @param  iterable<array<string, scalar|null>>  $rows
+     * @return Generator<int, list<bool|float|int|string|null>>
+     */
+    private function sanitizedRows(array $keys, iterable $rows): Generator
+    {
+        foreach ($rows as $row) {
+            $values = [];
+
+            foreach ($keys as $key) {
+                $values[] = $this->sanitizeCell($row[$key] ?? null);
+            }
+
+            yield $values;
         }
     }
 

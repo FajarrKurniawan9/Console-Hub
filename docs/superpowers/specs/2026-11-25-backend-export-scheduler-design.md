@@ -39,7 +39,7 @@ Indexes:
 
 ### 3.2 Storage & Dependencies
 - Disk: `local` (`storage/app/private/exports/{Y}/{m}/export-{id}-{type}.{ext}`), private and never publicly served.
-- Dependency: `openspout/openspout` in `api/composer.json` for streaming real `.xlsx` files.
+- Dependency: pure-PHP OOXML writer (`App\Services\Reports\XlsxWorkbookWriter`, zero extra PHP extensions like `ext-zip` required so Railway Docker PHP images build cleanly).
 - CORS: add `Content-Disposition` to `exposed_headers` in `api/config/cors.php`.
 
 ### 3.3 API Endpoints (`/api/v1`, middleware `auth:sanctum`, `active`)
