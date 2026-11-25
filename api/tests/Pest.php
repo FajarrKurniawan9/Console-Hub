@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Console;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -77,6 +79,26 @@ function actingAsRole(string $role = 'user'): User
     Sanctum::actingAs($user);
 
     return $user;
+}
+
+/**
+ * Create a user with an explicit custom role and permission code set.
+ *
+ * @param  list<string>  $permissionCodes
+ */
+function createUserWithPermissions(string $name, string $roleCode, array $permissionCodes): User
+{
+    $role = Role::query()->firstOrCreate(['code' => $roleCode], ['name' => ucfirst(str_replace('_', ' ', $roleCode))]);
+    $ids = collect($permissionCodes)->map(fn (string $code) => Permission::query()->firstOrCreate(
+        ['code' => $code],
+        ['description' => Permission::ALL[$code] ?? $code],
+    )->id);
+    $role->permissions()->sync($ids->all());
+
+    return User::factory()->create([
+        'name' => $name,
+        'role_id' => $role->id,
+    ]);
 }
 
 /**

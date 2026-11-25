@@ -4,9 +4,7 @@ use App\Jobs\ProcessReportExport;
 use App\Models\AuditEvent;
 use App\Models\Console;
 use App\Models\LogEntry;
-use App\Models\Permission;
 use App\Models\ReportExport;
-use App\Models\Role;
 use App\Models\User;
 use App\Services\Audit;
 use App\Services\Reports\ReportExportProcessor;
@@ -20,21 +18,6 @@ beforeEach(function () {
     Storage::fake('local');
     fakeSources();
 });
-
-function createUserWithPermissions(string $name, string $roleCode, array $permissionCodes): User
-{
-    $role = Role::query()->firstOrCreate(['code' => $roleCode], ['name' => ucfirst(str_replace('_', ' ', $roleCode))]);
-    $ids = collect($permissionCodes)->map(fn (string $code) => Permission::query()->firstOrCreate(
-        ['code' => $code],
-        ['description' => Permission::ALL[$code] ?? $code],
-    )->id);
-    $role->permissions()->sync($ids->all());
-
-    return User::factory()->create([
-        'name' => $name,
-        'role_id' => $role->id,
-    ]);
-}
 
 it('queues a pending export ticket, records audit, and dispatches job to exports queue', function () {
     Queue::fake();

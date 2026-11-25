@@ -50,6 +50,7 @@ Route::prefix('v1')->group(function () {
             ->group(function () {
                 Route::get('exports', 'index');
                 Route::post('export', 'store');
+                Route::post('exports/{export}/cancel', 'cancel')->whereNumber('export');
                 Route::get('exports/{export}/download', 'download')->whereNumber('export');
             });
 

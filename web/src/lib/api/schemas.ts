@@ -272,8 +272,18 @@ export type ItemDashboardSummary = z.infer<typeof itemDashboardSummary>
 
 // ---- Reports & Export Scheduler ----
 
-export const exportStatus = z.enum(['pending', 'processing', 'completed', 'failed'])
+export const exportStatus = z.enum([
+  'scheduled',
+  'pending',
+  'processing',
+  'completed',
+  'failed',
+  'cancelled',
+])
 export type ExportStatus = z.infer<typeof exportStatus>
+
+export const exportScheduleType = z.enum(['immediate', 'once', 'recurring'])
+export type ExportScheduleType = z.infer<typeof exportScheduleType>
 
 export const reportExport = z.object({
   id: z.number(),
@@ -281,6 +291,12 @@ export const reportExport = z.object({
   name: z.string(),
   status: exportStatus,
   format: z.string().default('csv'),
+  schedule_type: exportScheduleType.optional(),
+  cron_expression: z.string().nullable().optional(),
+  timezone: z.string().nullable().optional(),
+  scheduled_at: iso.nullable().optional(),
+  cancelled_at: iso.nullable().optional(),
+  parent_export_id: z.number().nullable().optional(),
   file_url: z.string().nullable().optional(),
   download_url: z.string().nullable().optional(),
   error_message: z.string().nullable().optional(),

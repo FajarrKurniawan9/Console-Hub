@@ -22,6 +22,7 @@ class ReportsPrune extends Command
         $deletedRecords = 0;
 
         ReportExport::query()
+            ->whereNotIn('status', ReportExport::NON_PRUNABLE_STATUSES)
             ->where('created_at', '<', $cutoff)
             ->orderBy('id')
             ->chunkById(100, function ($exports) use (&$deletedFiles, &$deletedRecords): void {

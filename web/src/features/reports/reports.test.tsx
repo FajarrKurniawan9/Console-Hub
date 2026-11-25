@@ -189,6 +189,49 @@ describe('ExportWaitingListModal', () => {
     expect(screen.getByRole('button', { name: /Unduh DOCX/i })).toBeInTheDocument()
   })
 
+  it('parses and displays scheduled and cancelled exports without CONTRACT_MISMATCH', async () => {
+    on(
+      'GET /reports/exports',
+      ok([
+        {
+          id: 301,
+          type: 'barang',
+          name: 'Stok Harian (XLSX)',
+          status: 'scheduled',
+          format: 'xlsx',
+          schedule_type: 'recurring',
+          cron_expression: '0 8 * * *',
+          timezone: 'Asia/Jakarta',
+          scheduled_at: '2026-11-26T01:00:00Z',
+          is_mine: true,
+          queue_position: null,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 302,
+          type: 'audit',
+          name: 'Audit Batal (PDF)',
+          status: 'cancelled',
+          format: 'pdf',
+          schedule_type: 'once',
+          cancelled_at: new Date().toISOString(),
+          is_mine: true,
+          queue_position: null,
+          created_at: new Date().toISOString(),
+        },
+      ]),
+    )
+
+    wrap(<ExportWaitingListModal open={true} onOpenChange={vi.fn()} />)
+
+    expect(await screen.findByText('Stok Harian (XLSX)')).toBeInTheDocument()
+    expect(screen.getByText('Terjadwal')).toBeInTheDocument()
+    expect(screen.getByText(/0 8 \* \* \*/)).toBeInTheDocument()
+    expect(screen.getByText('Audit Batal (PDF)')).toBeInTheDocument()
+    expect(screen.getByText('Dibatalkan')).toBeInTheDocument()
+    expect(screen.queryByText('Gagal')).not.toBeInTheDocument()
+  })
+
   it('shows an error alert instead of falling back to localStorage when backend fails', async () => {
     localStorage.setItem('ch.mock_reports_exports', JSON.stringify(sampleItems))
     on('GET /reports/exports', fail(500, 'SERVER_ERROR', 'Server gagal'))

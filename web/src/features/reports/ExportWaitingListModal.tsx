@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import {
   AlertCircle,
+  Ban,
+  CalendarClock,
   CheckCircle2,
   Clock,
   Download,
@@ -160,7 +162,12 @@ export function ExportWaitingListModal({
 
                     {/* Status Badge */}
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      {item.status === 'pending' ? (
+                      {item.status === 'scheduled' ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] font-medium text-indigo-600 border border-indigo-500/20">
+                          <CalendarClock size={11} />
+                          Terjadwal
+                        </span>
+                      ) : item.status === 'pending' ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 border border-amber-500/20">
                           <Clock size={11} className="animate-pulse" />
                           Waiting List
@@ -174,6 +181,11 @@ export function ExportWaitingListModal({
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[11px] font-medium text-green-600 border border-green-500/20">
                           <CheckCircle2 size={11} />
                           Siap Diunduh
+                        </span>
+                      ) : item.status === 'cancelled' ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted border border-border">
+                          <Ban size={11} />
+                          Dibatalkan
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-error/10 px-2 py-0.5 text-[11px] font-medium text-error border border-error/20">
@@ -193,7 +205,19 @@ export function ExportWaitingListModal({
 
                   {/* Status description or download action */}
                   <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[11px]">
-                    {item.status === 'pending' ? (
+                    {item.status === 'scheduled' ? (
+                      <span className="text-muted flex items-center gap-1">
+                        <CalendarClock size={11} aria-hidden />
+                        {item.scheduled_at ? (
+                          <>
+                            Dijadwalkan <TimeText iso={item.scheduled_at} />
+                            {item.cron_expression ? ` (${item.cron_expression})` : ''}
+                          </>
+                        ) : (
+                          'Menunggu jadwal eksekusi...'
+                        )}
+                      </span>
+                    ) : item.status === 'pending' ? (
                       <span className="text-muted flex items-center gap-1">
                         <span className="size-1 rounded-full bg-amber-500" />
                         {isMine
@@ -230,6 +254,10 @@ export function ExportWaitingListModal({
                           </Button>
                         ) : null}
                       </div>
+                    ) : item.status === 'cancelled' ? (
+                      <span className="text-muted">
+                        {item.error_message || 'Permintaan ekspor telah dibatalkan.'}
+                      </span>
                     ) : (
                       <span className="text-error">
                         {item.error_message || 'Terjadi kesalahan saat memproses ekspor.'}

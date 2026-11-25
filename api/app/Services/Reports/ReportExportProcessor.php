@@ -3,7 +3,9 @@
 namespace App\Services\Reports;
 
 use App\Connectors\Exceptions\ConsoleException;
+use App\Jobs\ProcessReportExport;
 use App\Models\ReportExport;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -17,7 +19,62 @@ class ReportExportProcessor
     public function __construct(
         private ReportDataExtractor $extractor,
         private ReportFileWriter $writer,
+        private ReportScheduleResolver $scheduleResolver = new ReportScheduleResolver,
+        private ReportExportCanceller $canceller = new ReportExportCanceller,
     ) {}
+
+    /**
+     * Promote due one-time schedules to `pending` and spawn child runs for due recurring schedules.
+     */
+    public function processDueScheduled(int $limit = 50): int
+    {
+        $nowIso = now()->utc()->toIso8601String();
+
+        $due = ReportExport::query()
+            ->with('user.role.permissions')
+            ->where('status', ReportExport::STATUS_SCHEDULED)
+            ->whereNotNull('scheduled_at')
+            ->where('scheduled_at', '<=', $nowIso)
+            ->orderBy('scheduled_at')
+            ->orderBy('id')
+            ->limit($limit)
+            ->get();
+
+        $triggered = 0;
+
+        foreach ($due as $export) {
+            if (! $export->user->is_active || ! $export->user->hasPermission(ReportExport::permissionFor($export->type))) {
+                $this->canceller->cancel($export, 'Jadwal dibatalkan otomatis karena akun atau izin tidak lagi aktif.');
+
+                continue;
+            }
+
+            if ($export->schedule_type === ReportExport::SCHEDULE_RECURRING) {
+                $childId = $this->triggerRecurring($export->id);
+                if ($childId !== null) {
+                    ProcessReportExport::dispatch($childId)->onQueue('exports');
+                    $triggered++;
+                }
+
+                continue;
+            }
+
+            $promoted = ReportExport::query()
+                ->whereKey($export->id)
+                ->where('status', ReportExport::STATUS_SCHEDULED)
+                ->where('scheduled_at', '<=', $nowIso)
+                ->update([
+                    'status' => ReportExport::STATUS_PENDING,
+                ]);
+
+            if ($promoted > 0) {
+                ProcessReportExport::dispatch($export->id)->onQueue('exports');
+                $triggered++;
+            }
+        }
+
+        return $triggered;
+    }
 
     /**
      * Atomically claim a pending export ticket and generate its output file.
@@ -126,5 +183,51 @@ class ReportExportProcessor
                 'error_message' => 'Proses ekspor melebihi batas waktu. Silakan buat ulang tiket ekspor.',
                 'completed_at' => now(),
             ]);
+    }
+
+    private function triggerRecurring(int $parentId): ?int
+    {
+        return DB::transaction(function () use ($parentId): ?int {
+            $parent = ReportExport::query()
+                ->whereKey($parentId)
+                ->lockForUpdate()
+                ->first();
+
+            if (
+                $parent === null
+                || $parent->status !== ReportExport::STATUS_SCHEDULED
+                || $parent->schedule_type !== ReportExport::SCHEDULE_RECURRING
+                || $parent->cron_expression === null
+                || $parent->scheduled_at === null
+                || $parent->scheduled_at->isFuture()
+            ) {
+                return null;
+            }
+
+            $nextRun = $this->scheduleResolver->nextRunFromCron(
+                $parent->cron_expression,
+                $parent->timezone ?: ReportScheduleResolver::DEFAULT_TIMEZONE,
+                now(),
+            );
+
+            $child = ReportExport::query()->create([
+                'user_id' => $parent->user_id,
+                'parent_export_id' => $parent->id,
+                'requester_role' => $parent->requester_role,
+                'type' => $parent->type,
+                'name' => $parent->name,
+                'format' => $parent->format,
+                'status' => ReportExport::STATUS_PENDING,
+                'schedule_type' => ReportExport::SCHEDULE_IMMEDIATE,
+                'timezone' => $parent->timezone,
+                'filters' => $parent->filters,
+            ]);
+
+            $parent->update([
+                'scheduled_at' => $nextRun,
+            ]);
+
+            return $child->id;
+        });
     }
 }

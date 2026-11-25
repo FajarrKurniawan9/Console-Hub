@@ -9,8 +9,10 @@ use App\Jobs\ProcessReportExport;
 use App\Models\ReportExport;
 use App\Models\User;
 use App\Services\Audit;
+use App\Services\Reports\ReportExportCanceller;
 use App\Services\Reports\ReportExportProcessor;
 use App\Services\Reports\ReportFileWriter;
+use App\Services\Reports\ReportScheduleResolver;
 use App\Support\ApiException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,34 +22,50 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class ReportExportController extends Controller
 {
     /**
-     * Shared active waiting list (FIFO across all users) followed by the authenticated user's own history.
+     * Shared active waiting list (FIFO across all users), own scheduled exports, and own finished history.
+     * Supports optional `?status=active|scheduled|history`.
      */
     public function index(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
+        $filter = is_string($request->query('status')) ? trim($request->query('status')) : '';
 
-        $active = ReportExport::query()
-            ->with('user:id,name')
-            ->whereIn('status', ReportExport::ACTIVE_STATUSES)
-            ->orderByRaw("CASE WHEN status = 'processing' THEN 0 ELSE 1 END ASC")
-            ->orderBy('id')
-            ->get();
+        $active = ($filter === '' || $filter === 'active')
+            ? ReportExport::query()
+                ->with('user:id,name')
+                ->whereIn('status', ReportExport::ACTIVE_STATUSES)
+                ->orderByRaw("CASE WHEN status = 'processing' THEN 0 ELSE 1 END ASC")
+                ->orderBy('id')
+                ->get()
+            : collect();
 
         $positions = [];
         foreach ($active->values() as $index => $item) {
             $positions[$item->id] = $index + 1;
         }
 
-        $history = ReportExport::query()
-            ->with('user:id,name')
-            ->where('user_id', $user->id)
-            ->whereNotIn('status', ReportExport::ACTIVE_STATUSES)
-            ->orderByDesc('id')
-            ->limit(50)
-            ->get();
+        $scheduled = ($filter === '' || $filter === 'scheduled')
+            ? ReportExport::query()
+                ->with('user:id,name')
+                ->where('user_id', $user->id)
+                ->where('status', ReportExport::STATUS_SCHEDULED)
+                ->orderBy('scheduled_at')
+                ->orderBy('id')
+                ->get()
+            : collect();
 
-        $combined = $active->concat($history)->all();
+        $history = ($filter === '' || $filter === 'history')
+            ? ReportExport::query()
+                ->with('user:id,name')
+                ->where('user_id', $user->id)
+                ->whereNotIn('status', [...ReportExport::ACTIVE_STATUSES, ReportExport::STATUS_SCHEDULED])
+                ->orderByDesc('id')
+                ->limit(50)
+                ->get()
+            : collect();
+
+        $combined = $active->concat($scheduled)->concat($history)->all();
 
         return response()->json([
             'data' => ReportExportResource::many($combined, $positions),
@@ -55,9 +73,9 @@ class ReportExportController extends Controller
     }
 
     /**
-     * Queue a new export ticket on the `exports` queue.
+     * Queue a new immediate export ticket or persist a scheduled/recurring export.
      */
-    public function store(ReportExportStoreRequest $request, Audit $audit): JsonResponse
+    public function store(ReportExportStoreRequest $request, Audit $audit, ReportScheduleResolver $scheduleResolver): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -77,23 +95,41 @@ class ReportExportController extends Controller
         $name = $rawName !== '' ? $rawName : ReportExport::defaultNameFor($type, $format);
         $filters = is_array($validated['filters'] ?? null) ? $validated['filters'] : null;
 
+        $schedule = $scheduleResolver->resolve($validated);
+        $isScheduled = $schedule['schedule_type'] !== ReportExport::SCHEDULE_IMMEDIATE;
+
         $export = ReportExport::query()->create([
             'user_id' => $user->id,
             'requester_role' => $user->role->code,
             'type' => $type,
             'name' => $name,
             'format' => $format,
-            'status' => ReportExport::STATUS_PENDING,
+            'status' => $isScheduled ? ReportExport::STATUS_SCHEDULED : ReportExport::STATUS_PENDING,
+            'schedule_type' => $schedule['schedule_type'],
+            'cron_expression' => $schedule['cron_expression'],
+            'timezone' => $schedule['timezone'],
+            'scheduled_at' => $schedule['scheduled_at'],
             'filters' => $filters,
         ]);
 
-        $audit->record('report.export_requested', 'report_export', (string) $export->id, null, [
-            'type' => $type,
-            'format' => $format,
-            'name' => $name,
-        ]);
+        if ($isScheduled) {
+            $audit->record('report.export_scheduled', 'report_export', (string) $export->id, null, [
+                'type' => $type,
+                'format' => $format,
+                'name' => $name,
+                'schedule_type' => $schedule['schedule_type'],
+                'cron_expression' => $schedule['cron_expression'],
+                'scheduled_at' => $schedule['scheduled_at']?->utc()->toIso8601ZuluString(),
+            ]);
+        } else {
+            $audit->record('report.export_requested', 'report_export', (string) $export->id, null, [
+                'type' => $type,
+                'format' => $format,
+                'name' => $name,
+            ]);
 
-        ProcessReportExport::dispatch($export->id)->onQueue('exports');
+            ProcessReportExport::dispatch($export->id)->onQueue('exports');
+        }
 
         $export->refresh()->load('user:id,name');
         $position = $export->isActive() ? $this->positionFor($export->id) : null;
@@ -101,6 +137,35 @@ class ReportExportController extends Controller
         return response()->json([
             'data' => new ReportExportResource($export, $position),
         ], 202);
+    }
+
+    /**
+     * Cancel a `scheduled` or `pending` export ticket owned by the authenticated user and purge queued jobs.
+     */
+    public function cancel(Request $request, ReportExport $export, ReportExportCanceller $canceller, Audit $audit): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if ($export->user_id !== $user->id || ! $user->hasPermission(ReportExport::permissionFor($export->type))) {
+            throw new ApiException(403, 'FORBIDDEN', 'Akses ditolak.');
+        }
+
+        if (! $canceller->cancel($export)) {
+            throw new ApiException(409, 'CONFLICT', 'Tiket ekspor tidak dapat dibatalkan karena sudah diproses atau selesai.');
+        }
+
+        $audit->record('report.export_cancelled', 'report_export', (string) $export->id, null, [
+            'type' => $export->type,
+            'format' => $export->format,
+            'schedule_type' => $export->schedule_type,
+        ]);
+
+        $export->refresh()->load('user:id,name');
+
+        return response()->json([
+            'data' => new ReportExportResource($export),
+        ]);
     }
 
     /**
