@@ -6,10 +6,11 @@ use RuntimeException;
 
 /**
  * Pure-PHP OOXML (.xlsx) workbook writer requiring zero optional PHP extensions (no ext-zip or ext-xmlwriter).
- * Uses standard PHP crc32 + optional zlib gzdeflate (falls back to ZIP STORE method 0 if zlib is unavailable).
  */
 class XlsxWorkbookWriter
 {
+    public function __construct(private PureZipWriter $zip = new PureZipWriter) {}
+
     /**
      * Build an .xlsx workbook and write it to the given destination file path, returning the data row count.
      *
@@ -32,16 +33,14 @@ class XlsxWorkbookWriter
                 throw new RuntimeException('Gagal membaca worksheet XML sementara.');
             }
 
-            $entries = [
+            $this->zip->write($outputPath, [
                 '[Content_Types].xml' => $this->contentTypesXml(),
                 '_rels/.rels' => $this->rootRelsXml(),
                 'xl/workbook.xml' => $this->workbookXml($sheetName),
                 'xl/_rels/workbook.xml.rels' => $this->workbookRelsXml(),
                 'xl/styles.xml' => $this->stylesXml(),
                 'xl/worksheets/sheet1.xml' => $sheetXml,
-            ];
-
-            $this->writeZipArchive($outputPath, $entries);
+            ]);
 
             return $rowCount;
         } finally {
@@ -141,105 +140,6 @@ class XlsxWorkbookWriter
         $clean = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $value) ?? $value;
 
         return htmlspecialchars($clean, ENT_XML1 | ENT_QUOTES, 'UTF-8');
-    }
-
-    /**
-     * @param  array<string, string>  $entries  archive path => raw uncompressed content
-     */
-    private function writeZipArchive(string $outputPath, array $entries): void
-    {
-        $handle = fopen($outputPath, 'wb');
-
-        if ($handle === false) {
-            throw new RuntimeException('Gagal membuka file output XLSX.');
-        }
-
-        $canDeflate = function_exists('gzdeflate');
-        $dosTime = 0;
-        $dosDate = (46 << 9) | (1 << 5) | 1; // 2026-01-01
-        $centralDir = '';
-        $offset = 0;
-        $entryCount = 0;
-
-        try {
-            foreach ($entries as $name => $content) {
-                $uncompressedSize = strlen($content);
-                $crc = crc32($content);
-
-                if ($canDeflate) {
-                    $compressed = gzdeflate($content, 6);
-                    if ($compressed === false) {
-                        throw new RuntimeException("Gagal mengompresi entri XLSX: {$name}");
-                    }
-                    $method = 8;
-                } else {
-                    $compressed = $content;
-                    $method = 0;
-                }
-
-                $compressedSize = strlen($compressed);
-                $nameLength = strlen($name);
-
-                $localHeader = pack(
-                    'VvvvvvVVVvv',
-                    0x04034B50,
-                    20,
-                    0x0800,
-                    $method,
-                    $dosTime,
-                    $dosDate,
-                    $crc,
-                    $compressedSize,
-                    $uncompressedSize,
-                    $nameLength,
-                    0,
-                ).$name;
-
-                fwrite($handle, $localHeader);
-                fwrite($handle, $compressed);
-
-                $centralDir .= pack(
-                    'VvvvvvvVVVvvvvvVV',
-                    0x02014B50,
-                    20,
-                    20,
-                    0x0800,
-                    $method,
-                    $dosTime,
-                    $dosDate,
-                    $crc,
-                    $compressedSize,
-                    $uncompressedSize,
-                    $nameLength,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    $offset,
-                ).$name;
-
-                $offset += strlen($localHeader) + $compressedSize;
-                $entryCount++;
-            }
-
-            $endOfCentralDir = pack(
-                'VvvvvVVv',
-                0x06054B50,
-                0,
-                0,
-                $entryCount,
-                $entryCount,
-                strlen($centralDir),
-                $offset,
-                0,
-            );
-
-            fwrite($handle, $centralDir);
-            fwrite($handle, $endOfCentralDir);
-        } finally {
-            fclose($handle);
-        }
     }
 
     private function contentTypesXml(): string

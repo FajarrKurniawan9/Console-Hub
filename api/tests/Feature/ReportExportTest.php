@@ -73,7 +73,7 @@ it('enforces RBAC permissions per export type and validates input', function () 
     assertApiError($this->postJson('/api/v1/reports/export', ['type' => 'logs', 'format' => 'csv']), 403, 'FORBIDDEN');
     $this->postJson('/api/v1/reports/export', ['type' => 'barang', 'format' => 'csv'])->assertStatus(202);
 
-    assertApiError($this->postJson('/api/v1/reports/export', ['type' => 'unknown', 'format' => 'pdf']), 422, 'VALIDATION_ERROR');
+    assertApiError($this->postJson('/api/v1/reports/export', ['type' => 'unknown', 'format' => 'xml']), 422, 'VALIDATION_ERROR');
 
     $auditor = createUserWithPermissions('Dewi Lestari', 'auditor', ['admin.audit.view']);
     Sanctum::actingAs($auditor);
@@ -362,4 +362,71 @@ it('prunes expired export files and records via reports:prune command', function
         ->and(Storage::disk('local')->exists($oldPath))->toBeFalse()
         ->and(ReportExport::query()->find($freshId))->not->toBeNull()
         ->and(Storage::disk('local')->exists($freshPath))->toBeTrue();
+});
+
+it('exports audit and barang data to PDF and DOCX through the queue and download endpoints', function () {
+    Queue::fake();
+    $admin = actingAsRole('admin_it');
+    $admin->update(['name' => 'Rina Wulandari']);
+
+    app(Audit::class)->record('item.created', 'item', 'i-99', null, ['console' => 'gudang', 'name' => 'Kain Sutra']);
+    FakeSources::add('items', [
+        'name' => 'Kain Sutra',
+        'kind' => 'kain',
+        'production_id' => null,
+        'responsible_id' => null,
+        'quantity' => 55,
+        'unit' => 'roll',
+    ]);
+
+    // Queue & process PDF export
+    $pdfId = $this->postJson('/api/v1/reports/export', [
+        'type' => 'audit',
+        'format' => 'pdf',
+        'name' => 'Laporan Audit Bulanan',
+        'filters' => ['action' => 'item.created'],
+    ])->assertStatus(202)
+        ->assertJsonPath('data.format', 'pdf')
+        ->json('data.id');
+
+    expect(app(ReportExportProcessor::class)->claimAndProcess($pdfId))->toBeTrue();
+
+    $pdfDownload = $this->get("/api/v1/reports/exports/{$pdfId}/download")->assertOk();
+    expect($pdfDownload->headers->get('content-type'))->toContain('application/pdf')
+        ->and($pdfDownload->headers->get('content-disposition'))->toContain('.pdf');
+
+    $pdfBytes = $pdfDownload->streamedContent();
+    expect(str_starts_with($pdfBytes, '%PDF-1.4'))->toBeTrue()
+        ->and($pdfBytes)->toContain('Laporan Audit Bulanan')
+        ->and($pdfBytes)->toContain('item.created');
+
+    // Queue & process DOCX export
+    $docxId = $this->postJson('/api/v1/reports/export', [
+        'type' => 'barang',
+        'format' => 'docx',
+        'name' => 'Laporan Inventaris',
+        'filters' => ['kind' => 'kain'],
+    ])->assertStatus(202)
+        ->assertJsonPath('data.format', 'docx')
+        ->json('data.id');
+
+    expect(app(ReportExportProcessor::class)->claimAndProcess($docxId))->toBeTrue();
+
+    $docxDownload = $this->get("/api/v1/reports/exports/{$docxId}/download")->assertOk();
+    expect($docxDownload->headers->get('content-type'))->toContain('application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        ->and($docxDownload->headers->get('content-disposition'))->toContain('.docx');
+
+    $docxBytes = $docxDownload->streamedContent();
+    expect(str_starts_with($docxBytes, 'PK'))->toBeTrue();
+
+    $tmp = tempnam(sys_get_temp_dir(), 'docx_feat_');
+    file_put_contents($tmp, $docxBytes);
+    $zip = new ZipArchive;
+    expect($zip->open($tmp, ZipArchive::CHECKCONS))->toBeTrue();
+    $docXml = (string) $zip->getFromName('word/document.xml');
+    $zip->close();
+    @unlink($tmp);
+
+    expect($docXml)->toContain('Laporan Inventaris')
+        ->and($docXml)->toContain('Kain Sutra');
 });

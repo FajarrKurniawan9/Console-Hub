@@ -14,9 +14,15 @@ class ReportFileWriter
         'csv' => 'text/csv; charset=UTF-8',
         'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'json' => 'application/json; charset=UTF-8',
+        'pdf' => 'application/pdf',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
 
-    public function __construct(private XlsxWorkbookWriter $xlsx = new XlsxWorkbookWriter) {}
+    public function __construct(
+        private XlsxWorkbookWriter $xlsx = new XlsxWorkbookWriter,
+        private DocxReportWriter $docx = new DocxReportWriter,
+        private PdfReportWriter $pdf = new PdfReportWriter,
+    ) {}
 
     public static function mimeTypeFor(string $format): string
     {
@@ -24,17 +30,19 @@ class ReportFileWriter
     }
 
     /**
-     * Write rows to storage in CSV, XLSX, or JSON format and return the row count.
+     * Write rows to storage in CSV, XLSX, JSON, PDF, or DOCX format and return the row count.
      *
      * @param  array<string, string>  $columns  key => header label
      * @param  iterable<array<string, scalar|null>>  $rows
      */
-    public function write(string $disk, string $path, string $format, array $columns, iterable $rows): int
+    public function write(string $disk, string $path, string $format, array $columns, iterable $rows, string $title = 'Laporan'): int
     {
         return match ($format) {
             'csv' => $this->writeCsv($disk, $path, $columns, $rows),
-            'xlsx' => $this->writeXlsx($disk, $path, $columns, $rows),
+            'xlsx' => $this->writeTempBacked($disk, $path, 'ch_xlsx_', fn (string $tmp) => $this->xlsx->writeToFile($tmp, array_values($columns), $this->sanitizedRows(array_keys($columns), $rows))),
             'json' => $this->writeJson($disk, $path, $columns, $rows),
+            'pdf' => $this->writeTempBacked($disk, $path, 'ch_pdf_', fn (string $tmp) => $this->pdf->writeToFile($tmp, $title, array_values($columns), $this->plainRows(array_keys($columns), $rows))),
+            'docx' => $this->writeTempBacked($disk, $path, 'ch_docx_', fn (string $tmp) => $this->docx->writeToFile($tmp, $title, array_values($columns), $this->plainRows(array_keys($columns), $rows))),
             default => throw new InvalidArgumentException("Format ekspor tidak didukung: {$format}"),
         };
     }
@@ -124,26 +132,22 @@ class ReportFileWriter
     }
 
     /**
-     * @param  array<string, string>  $columns
-     * @param  iterable<array<string, scalar|null>>  $rows
+     * @param  callable(string): int  $builder
      */
-    private function writeXlsx(string $disk, string $path, array $columns, iterable $rows): int
+    private function writeTempBacked(string $disk, string $path, string $prefix, callable $builder): int
     {
-        $tmpPath = tempnam(sys_get_temp_dir(), 'ch_xlsx_');
+        $tmpPath = tempnam(sys_get_temp_dir(), $prefix);
 
         if ($tmpPath === false) {
-            throw new RuntimeException('Gagal membuat file sementara untuk XLSX.');
+            throw new RuntimeException('Gagal membuat file sementara ekspor.');
         }
 
         try {
-            $keys = array_keys($columns);
-            $sanitizedRows = $this->sanitizedRows($keys, $rows);
-            $count = $this->xlsx->writeToFile($tmpPath, array_values($columns), $sanitizedRows);
-
+            $count = $builder($tmpPath);
             $stream = fopen($tmpPath, 'rb');
 
             if ($stream === false) {
-                throw new RuntimeException('Gagal membaca file XLSX sementara.');
+                throw new RuntimeException('Gagal membaca file sementara ekspor.');
             }
 
             try {
@@ -170,6 +174,24 @@ class ReportFileWriter
 
             foreach ($keys as $key) {
                 $values[] = $this->sanitizeCell($row[$key] ?? null);
+            }
+
+            yield $values;
+        }
+    }
+
+    /**
+     * @param  list<string>  $keys
+     * @param  iterable<array<string, scalar|null>>  $rows
+     * @return Generator<int, list<bool|float|int|string|null>>
+     */
+    private function plainRows(array $keys, iterable $rows): Generator
+    {
+        foreach ($rows as $row) {
+            $values = [];
+
+            foreach ($keys as $key) {
+                $values[] = $row[$key] ?? null;
             }
 
             yield $values;

@@ -55,7 +55,7 @@ class ReportExportProcessor
         try {
             $columns = $this->extractor->columnsFor($export->type);
             $rows = $this->extractor->extract($export->type, $export->filters ?? []);
-            $rowCount = $this->writer->write(self::DISK, $path, $export->format, $columns, $rows);
+            $rowCount = $this->writer->write(self::DISK, $path, $export->format, $columns, $rows, $export->name);
 
             $export->update([
                 'status' => ReportExport::STATUS_COMPLETED,

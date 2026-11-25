@@ -23,7 +23,7 @@ Columns:
 - `requester_role` (`string(60)`, nullable)
 - `type` (`string(32)`) — `'audit' | 'logs' | 'barang'`
 - `name` (`string(160)`)
-- `format` (`string(16)`) — `'csv' | 'xlsx' | 'json'`
+- `format` (`string(16)`) — `'csv' | 'xlsx' | 'json' | 'pdf' | 'docx'`
 - `status` (`string(20)`, default `'pending'`) — `'pending' | 'processing' | 'completed' | 'failed'`
 - `filters` (`jsonb`, nullable)
 - `file_path` (`string(255)`, nullable) — internal private disk path (never exposed directly)
@@ -39,7 +39,7 @@ Indexes:
 
 ### 3.2 Storage & Dependencies
 - Disk: `local` (`storage/app/private/exports/{Y}/{m}/export-{id}-{type}.{ext}`), private and never publicly served.
-- Dependency: pure-PHP OOXML writer (`App\Services\Reports\XlsxWorkbookWriter`, zero extra PHP extensions like `ext-zip` required so Railway Docker PHP images build cleanly).
+- Dependency: pure-PHP writers (`PureZipWriter`, `XlsxWorkbookWriter`, `DocxReportWriter`, `PdfReportWriter` — zero extra PHP extensions like `ext-zip` or `ext-gd` required so Railway Docker PHP images build cleanly).
 - CORS: add `Content-Disposition` to `exposed_headers` in `api/config/cors.php`.
 
 ### 3.3 API Endpoints (`/api/v1`, middleware `auth:sanctum`, `active`)

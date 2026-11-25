@@ -104,3 +104,91 @@ it('writes valid pure-PHP XLSX workbooks with strict ZIP integrity and well-form
         ->and($sheetXml)->toContain('&apos;=SUM(1,2)')
         ->and($sheetDom->textContent)->toContain("'=SUM(1,2)");
 });
+
+it('writes valid pure-PHP DOCX documents with strict ZIP integrity and well-formed WordprocessingML', function () {
+    Storage::fake('local');
+
+    $writer = new ReportFileWriter;
+    $count = $writer->write(
+        'local',
+        'exports/test.docx',
+        'docx',
+        ['id' => 'ID', 'name' => 'Nama & Deskripsi', 'qty' => 'Jumlah'],
+        [
+            ['id' => 'i-1', 'name' => "Kain <Linen> & \"Katun\"\x00", 'qty' => 80],
+            ['id' => 'i-2', 'name' => 'Besi Hollow', 'qty' => 12],
+        ],
+        'Laporan Stok Gudang',
+    );
+
+    expect($count)->toBe(2);
+
+    $binary = (string) Storage::disk('local')->get('exports/test.docx');
+    expect(str_starts_with($binary, 'PK'))->toBeTrue();
+
+    $tmp = tempnam(sys_get_temp_dir(), 'docx_unit_');
+    file_put_contents($tmp, $binary);
+
+    $zip = new ZipArchive;
+    expect($zip->open($tmp, ZipArchive::CHECKCONS))->toBeTrue();
+
+    foreach ([
+        '[Content_Types].xml',
+        '_rels/.rels',
+        'word/document.xml',
+        'word/_rels/document.xml.rels',
+        'word/styles.xml',
+    ] as $part) {
+        $xml = $zip->getFromName($part);
+        expect($xml)->toBeString()->not->toBeEmpty();
+        $dom = new DOMDocument;
+        expect($dom->loadXML((string) $xml))->toBeTrue();
+    }
+
+    $docXml = (string) $zip->getFromName('word/document.xml');
+    $zip->close();
+    @unlink($tmp);
+
+    $docDom = new DOMDocument;
+    expect($docDom->loadXML($docXml))->toBeTrue();
+    expect($docXml)->toContain('Laporan Stok Gudang')
+        ->and($docXml)->toContain('Nama &amp; Deskripsi')
+        ->and($docXml)->toContain('Kain &lt;Linen&gt; &amp; &quot;Katun&quot;')
+        ->and($docDom->textContent)->toContain('Besi Hollow')
+        ->and($docDom->textContent)->toContain('80');
+});
+
+it('writes valid multi-page pure-PHP PDF 1.4 tabular reports with xref and page numbers', function () {
+    Storage::fake('local');
+
+    $rows = [];
+    for ($i = 1; $i <= 45; $i++) {
+        $rows[] = [
+            'id' => "item-{$i}",
+            'name' => "Barang (Uji) #{$i} — Batch \\A",
+            'qty' => $i * 10,
+        ];
+    }
+
+    $writer = new ReportFileWriter;
+    $count = $writer->write(
+        'local',
+        'exports/test.pdf',
+        'pdf',
+        ['id' => 'ID', 'name' => 'Nama Barang', 'qty' => 'Jumlah'],
+        $rows,
+        'Laporan Barang (PDF)',
+    );
+
+    expect($count)->toBe(45);
+
+    $binary = (string) Storage::disk('local')->get('exports/test.pdf');
+    expect(str_starts_with($binary, '%PDF-1.4'))->toBeTrue()
+        ->and(str_contains($binary, 'xref'))->toBeTrue()
+        ->and(str_contains($binary, 'trailer'))->toBeTrue()
+        ->and(str_contains($binary, '%%EOF'))->toBeTrue()
+        ->and(str_contains($binary, 'Laporan Barang \\(PDF\\)'))->toBeTrue()
+        ->and(str_contains($binary, 'Barang \\(Uji\\) #1'))->toBeTrue()
+        ->and(str_contains($binary, 'Barang \\(Uji\\) #45'))->toBeTrue()
+        ->and(str_contains($binary, 'Halaman 2 /'))->toBeTrue();
+});

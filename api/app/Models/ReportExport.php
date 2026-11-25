@@ -69,7 +69,7 @@ class ReportExport extends Model
     ];
 
     /** @var list<string> */
-    public const FORMATS = ['csv', 'xlsx', 'json'];
+    public const FORMATS = ['csv', 'xlsx', 'json', 'pdf', 'docx'];
 
     /** @var array<string, string> */
     public const TYPE_PERMISSIONS = [
