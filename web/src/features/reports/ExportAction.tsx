@@ -23,7 +23,7 @@ export function ExportAction({
   const [openExport, setOpenExport] = useState(false)
   const [openQueue, setOpenQueue] = useState(false)
 
-  const exportsQuery = useReportExports()
+  const exportsQuery = useReportExports(allowed)
   const activeCount =
     exportsQuery.data?.filter((e) => e.status === 'pending' || e.status === 'processing').length ?? 0
 

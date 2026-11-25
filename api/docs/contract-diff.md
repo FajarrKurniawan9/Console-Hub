@@ -62,3 +62,11 @@ Kept `consolehub_test` (renaming a database is the Cloud role's job).
 
 1. `GET /items/kinds` is USULAN in the API contract and not in `schemas.ts`; the hub does not expose it.
 2. **API contract gap (USULAN added to the contract):** `hub:seed-demo` writes through the hub with uuid v5 ids, but the contract's `POST` bodies have no `id`. Proposal: optional `id` on `POST` (implemented in `tools/console-stub`); the hub strips `id` from user requests. Needs Kak Jo and the three API builders to agree.
+
+## Reports & Export Scheduler (added 2026-11-25)
+
+- `GET /api/v1/reports/exports` (`perm:admin.audit.view,admin.logs.view,barang.view`): returns `{ data: ReportExport[] }`, combining the global FIFO active waiting list (`pending`/`processing` across users, with `queue_position`, `requester_name`, `is_mine`) followed by the authenticated user's own completed/failed history (max 50). Active tickets belonging to other users never expose `download_url`, `error_message`, `row_count`, or `completed_at`.
+- `POST /api/v1/reports/export`: enforces per-type permission (`audit` -> `admin.audit.view`, `logs` -> `admin.logs.view`, `barang` -> `barang.view`), creates a `pending` ticket in `report_exports`, audits `report.export_requested`, dispatches `ProcessReportExport` to queue `exports`, and returns `202 Accepted` (`{ data: ReportExport }`).
+- `GET /api/v1/reports/exports/{export}/download`: owner-only + per-type permission (`403`), `409 CONFLICT` if not completed, `404 NOT_FOUND` if expired/missing; streams CSV (UTF-8 BOM + formula protection), XLSX (OpenSpout), or JSON with `Content-Disposition: attachment` (exposed via CORS).
+- Background runtime commands: `php artisan queue:work --queue=exports,default` and `php artisan schedule:work` (schedules `reports:process` every minute and `reports:prune` daily).
+

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\Api\RecordController;
+use App\Http\Controllers\Api\ReportExportController;
 use App\Http\Controllers\Api\TrackingController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,15 @@ Route::prefix('v1')->group(function () {
 
         Route::get('tracking/items/{id}', TrackingController::class)->middleware('perm:lacak.view');
         Route::get('dashboard/items', DashboardController::class)->middleware('perm:dashboard.view');
+
+        Route::prefix('reports')
+            ->middleware('perm:admin.audit.view,admin.logs.view,barang.view')
+            ->controller(ReportExportController::class)
+            ->group(function () {
+                Route::get('exports', 'index');
+                Route::post('export', 'store');
+                Route::get('exports/{export}/download', 'download')->whereNumber('export');
+            });
 
         Route::prefix('admin')->group(function () {
             Route::get('overview', OverviewController::class)->middleware('perm:admin.dashboard.view');

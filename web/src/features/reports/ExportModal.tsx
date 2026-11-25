@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Select, SelectField } from '../../components/ui/Select'
 import { Spinner } from '../../components/ui/Spinner'
+import { ApiError } from '../../lib/api/client'
 import { useCreateExport } from './queries'
 
 export function ExportModal({
@@ -39,8 +40,8 @@ export function ExportModal({
       toast.success('Tiket ekspor berhasil dibuat! Masuk ke antrean waiting list.')
       onOpenChange(false)
       onSuccess?.()
-    } catch {
-      toast.error('Gagal membuat tiket ekspor.')
+    } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal membuat tiket ekspor.')
     }
   }
 

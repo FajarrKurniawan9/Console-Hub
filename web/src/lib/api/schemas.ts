@@ -286,6 +286,9 @@ export const reportExport = z.object({
   error_message: z.string().nullable().optional(),
   row_count: z.number().nullable().optional(),
   requester_role: z.string().nullable().optional(),
+  requester_name: z.string().nullable().optional(),
+  is_mine: z.boolean().optional(),
+  queue_position: z.number().nullable().optional(),
   created_at: iso,
   completed_at: iso.nullable().optional(),
 })

@@ -17,6 +17,7 @@ class HubDbCheck extends Command
     private const PORTAL_TABLES = [
         'roles', 'permissions', 'role_permissions', 'users', 'consoles',
         'console_health_checks', 'log_sync_state', 'log_entries', 'audit_events',
+        'otp_codes', 'report_exports',
         'migrations', 'personal_access_tokens', 'jobs', 'job_batches', 'failed_jobs', 'cache', 'cache_locks', 'sessions',
     ];
 

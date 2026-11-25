@@ -1,14 +1,19 @@
 import { useState } from 'react'
 import { Inbox } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
-import { useReportExports } from './queries'
+import { useAuth } from '../auth/auth'
 import { ExportWaitingListModal } from './ExportWaitingListModal'
+import { canAccessExportQueue, useReportExports } from './queries'
 
 export function ExportQueueNavButton() {
+  const { user } = useAuth()
+  const allowed = canAccessExportQueue(user)
   const [open, setOpen] = useState(false)
-  const exportsQuery = useReportExports()
+  const exportsQuery = useReportExports(allowed)
   const activeCount =
     exportsQuery.data?.filter((e) => e.status === 'pending' || e.status === 'processing').length ?? 0
+
+  if (!allowed) return null
 
   return (
     <>
