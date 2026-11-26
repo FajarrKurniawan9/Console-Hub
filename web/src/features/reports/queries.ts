@@ -153,13 +153,23 @@ export function useReportExports(enabled = true, watchScheduled = false) {
       })
       return res.data
     },
-    // Auto-poll every 2.5s while any queue ticket is active; poll every 10s when modal watches scheduled items.
+    // Auto-poll every 2.5s while any queue ticket is active; poll gently for scheduled items.
     refetchInterval: (query) => {
       const data = query.state.data
       if (!data) return false
       const hasActive = data.some((e) => e.status === 'pending' || e.status === 'processing')
       if (hasActive) return 2500
-      if (watchScheduled && data.some((e) => e.status === 'scheduled')) return 10_000
+      const scheduled = data.filter((e) => e.status === 'scheduled')
+      if (scheduled.length > 0) {
+        if (watchScheduled) return 10_000
+        const nowMs = Date.now()
+        const dueSoon = scheduled.some((e) => {
+          if (!e.scheduled_at) return false
+          const dueMs = Date.parse(e.scheduled_at)
+          return !Number.isNaN(dueMs) && dueMs - nowMs <= 120_000
+        })
+        return dueSoon ? 10_000 : 30_000
+      }
       return false
     },
   })

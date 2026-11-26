@@ -21,6 +21,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { ApiError } from '../../lib/api/client'
 import type { ReportExport } from '../../lib/api/schemas'
 import { number } from '../../lib/format'
+import { useRegisterExportModalOpen } from './notifications'
 import {
   describeSchedule,
   downloadExportFile,
@@ -40,6 +41,7 @@ export function ExportWaitingListModal({
   const exportsQuery = useReportExports(open, open)
   const cancelExport = useCancelExport()
   const items = exportsQuery.data ?? []
+  useRegisterExportModalOpen(open, exportsQuery.data)
 
   const activeItems = items.filter((e) => e.status === 'pending' || e.status === 'processing')
   const scheduledItems = items.filter((e) => e.status === 'scheduled')

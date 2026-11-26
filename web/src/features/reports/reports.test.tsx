@@ -1,12 +1,30 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { toast } from 'sonner'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { tokenStore } from '../../lib/api/client'
 import type { ReportExport } from '../../lib/api/schemas'
-import { calls, fail, ok, on } from '../../test/api'
+import { calls, fail, ok, on, signedIn } from '../../test/api'
+import { AuthProvider } from '../auth/auth'
+import { ExportAction } from './ExportAction'
 import { ExportModal } from './ExportModal'
+import { ExportQueueNavButton } from './ExportQueueNavButton'
 import { ExportWaitingListModal } from './ExportWaitingListModal'
-import { canAccessExportQueue, canExportType, downloadExportFile, normalizeDownloadUrl } from './queries'
+import { resetExportNotifications } from './notifications'
+import {
+  canAccessExportQueue,
+  canExportType,
+  downloadExportFile,
+  normalizeDownloadUrl,
+  reportKeys,
+} from './queries'
+
+afterEach(() => {
+  resetExportNotifications()
+  localStorage.clear()
+  vi.restoreAllMocks()
+})
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({
@@ -586,6 +604,76 @@ describe('ExportModal', () => {
       type: 'audit',
       format: 'pdf',
       cron_expression: '30 7 * * 1-5',
+    })
+  })
+})
+
+describe('Export completion notifications & green ready dot', () => {
+  it('shows green dot on both top-bar and Daftar Unduhan buttons + fires single toast when export completes, and clears when opened', async () => {
+    tokenStore.set('test-token-admin')
+    signedIn('admin')
+    const toastSuccess = vi.spyOn(toast, 'success')
+
+    let currentExports: ReportExport[] = [
+      {
+        id: 601,
+        type: 'audit',
+        name: 'Laporan Audit (PDF)',
+        status: 'pending',
+        format: 'pdf',
+        is_mine: true,
+        queue_position: 1,
+        created_at: new Date().toISOString(),
+      },
+    ]
+    on('GET /reports/exports', () => ok(currentExports))
+
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    render(
+      <QueryClientProvider client={qc}>
+        <AuthProvider>
+          <ExportQueueNavButton />
+          <ExportAction type="audit" title="Audit" />
+        </AuthProvider>
+      </QueryClientProvider>,
+    )
+
+    expect(await screen.findByRole('button', { name: /Daftar Unduhan/i })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getAllByText('1')).toHaveLength(2)
+    })
+    expect(screen.queryAllByTestId('export-ready-dot')).toHaveLength(0)
+
+    currentExports = [
+      {
+        ...currentExports[0]!,
+        status: 'completed',
+        download_url: '/reports/exports/601/download',
+        row_count: 12,
+        queue_position: null,
+        completed_at: new Date().toISOString(),
+      },
+    ]
+
+    await act(async () => {
+      await qc.invalidateQueries({ queryKey: reportKeys.all })
+    })
+
+    const dots = await screen.findAllByTestId('export-ready-dot')
+    expect(dots).toHaveLength(2)
+    for (const dot of dots) {
+      expect(dot).toHaveClass('bg-ok')
+    }
+    expect(toastSuccess).toHaveBeenCalledTimes(1)
+    expect(toastSuccess).toHaveBeenCalledWith('Laporan Audit (PDF) selesai diproses dan siap diunduh!')
+
+    await userEvent.click(screen.getByRole('button', { name: /Daftar Unduhan/i }))
+
+    await waitFor(() => {
+      expect(screen.queryAllByTestId('export-ready-dot')).toHaveLength(0)
     })
   })
 })
