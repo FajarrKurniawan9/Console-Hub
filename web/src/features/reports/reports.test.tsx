@@ -232,6 +232,73 @@ describe('ExportWaitingListModal', () => {
     expect(screen.queryByText('Gagal')).not.toBeInTheDocument()
   })
 
+  it('filters by category tabs and cancels own pending/scheduled export via backend API', async () => {
+    const items: ReportExport[] = [
+      {
+        id: 401,
+        type: 'barang',
+        name: 'Antrean Orang Lain',
+        status: 'pending',
+        format: 'csv',
+        is_mine: false,
+        queue_position: 1,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 402,
+        type: 'audit',
+        name: 'Audit Terjadwal Besok',
+        status: 'scheduled',
+        format: 'pdf',
+        schedule_type: 'once',
+        scheduled_at: '2030-01-15T01:00:00Z',
+        is_mine: true,
+        queue_position: null,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 403,
+        type: 'logs',
+        name: 'Log Selesai',
+        status: 'completed',
+        format: 'xlsx',
+        download_url: '/reports/exports/403/download',
+        row_count: 10,
+        is_mine: true,
+        created_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+      },
+    ]
+    on('GET /reports/exports', ok(items))
+    on(
+      'POST /reports/exports/402/cancel',
+      ok({
+        ...items[1],
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+      }),
+    )
+
+    wrap(<ExportWaitingListModal open={true} onOpenChange={vi.fn()} />)
+
+    expect(await screen.findByText('Audit Terjadwal Besok')).toBeInTheDocument()
+    // Cancel button must only appear for own scheduled/pending export (id 402), not other user's pending (id 401)
+    expect(screen.getAllByRole('button', { name: /Batalkan/i })).toHaveLength(1)
+
+    await userEvent.click(screen.getByRole('button', { name: /Terjadwal/i }))
+    expect(screen.getByText('Audit Terjadwal Besok')).toBeInTheDocument()
+    expect(screen.queryByText('Antrean Orang Lain')).not.toBeInTheDocument()
+    expect(screen.queryByText('Log Selesai')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Batalkan/i }))
+
+    await waitFor(() => {
+      expect(
+        calls.some((c) => c.method === 'POST' && c.url === '/reports/exports/402/cancel'),
+      ).toBe(true)
+    })
+  })
+
   it('shows an error alert instead of falling back to localStorage when backend fails', async () => {
     localStorage.setItem('ch.mock_reports_exports', JSON.stringify(sampleItems))
     on('GET /reports/exports', fail(500, 'SERVER_ERROR', 'Server gagal'))
@@ -374,5 +441,149 @@ describe('ExportModal', () => {
 
     const post = calls.find((c) => c.method === 'POST' && c.url === '/reports/export')
     expect(post?.body).toMatchObject({ type: 'audit', format, name: expectedName })
+  })
+
+  it('schedules a one-time future export and rejects past timestamps client-side', async () => {
+    on(
+      'POST /reports/export',
+      ok(
+        {
+          id: 501,
+          type: 'barang',
+          name: 'Stok Besok Pagi',
+          status: 'scheduled',
+          format: 'xlsx',
+          schedule_type: 'once',
+          scheduled_at: '2030-01-15T01:00:00Z',
+          timezone: 'Asia/Jakarta',
+          is_mine: true,
+          created_at: new Date().toISOString(),
+        },
+        202,
+      ),
+    )
+
+    const onSuccess = vi.fn()
+    wrap(
+      <ExportModal
+        open={true}
+        onOpenChange={vi.fn()}
+        type="barang"
+        title="Barang"
+        onSuccess={onSuccess}
+      />,
+    )
+
+    await userEvent.selectOptions(screen.getByLabelText(/Pilih Format File/i), 'xlsx')
+    await userEvent.selectOptions(screen.getByLabelText(/Waktu Eksekusi/i), 'once')
+
+    const dateInput = screen.getByLabelText(/Tanggal & Waktu Eksekusi/i)
+    await userEvent.clear(dateInput)
+    await userEvent.type(dateInput, '2020-01-01T08:00')
+    await userEvent.click(screen.getByRole('button', { name: /Simpan Jadwal Export/i }))
+
+    expect(await screen.findByText(/harus di masa depan/i)).toBeInTheDocument()
+    expect(calls.some((c) => c.method === 'POST' && c.url === '/reports/export')).toBe(false)
+
+    await userEvent.clear(dateInput)
+    await userEvent.type(dateInput, '2030-01-15T08:00')
+    const nameInput = screen.getByLabelText(/Nama Laporan/i)
+    await userEvent.type(nameInput, 'Stok Besok Pagi')
+    await userEvent.click(screen.getByRole('button', { name: /Simpan Jadwal Export/i }))
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalled()
+    })
+
+    const post = calls.find((c) => c.method === 'POST' && c.url === '/reports/export')
+    expect(post?.body).toMatchObject({
+      type: 'barang',
+      format: 'xlsx',
+      name: 'Stok Besok Pagi',
+      scheduled_at: new Date('2030-01-15T08:00').toISOString(),
+    })
+    expect((post?.body as Record<string, unknown>).cron_expression).toBeUndefined()
+    expect((post?.body as Record<string, unknown>).schedule_preset).toBeUndefined()
+  })
+
+  it('schedules a recurring preset export (weekly) and custom 5-field cron export', async () => {
+    on(
+      'POST /reports/export',
+      ok(
+        {
+          id: 502,
+          type: 'audit',
+          name: 'Laporan Audit (PDF)',
+          status: 'scheduled',
+          format: 'pdf',
+          schedule_type: 'recurring',
+          cron_expression: '30 9 * * 3',
+          timezone: 'Asia/Jakarta',
+          scheduled_at: '2030-01-16T02:30:00Z',
+          is_mine: true,
+          created_at: new Date().toISOString(),
+        },
+        202,
+      ),
+    )
+
+    const onSuccess = vi.fn()
+    wrap(
+      <ExportModal
+        open={true}
+        onOpenChange={vi.fn()}
+        type="audit"
+        title="Audit"
+        onSuccess={onSuccess}
+      />,
+    )
+
+    await userEvent.selectOptions(screen.getByLabelText(/Pilih Format File/i), 'pdf')
+    await userEvent.selectOptions(screen.getByLabelText(/Waktu Eksekusi/i), 'recurring')
+    await userEvent.selectOptions(screen.getByLabelText(/Pola Pengulangan/i), 'weekly')
+
+    const timeInput = screen.getByLabelText(/Jam Eksekusi/i)
+    await userEvent.clear(timeInput)
+    await userEvent.type(timeInput, '09:30')
+    await userEvent.selectOptions(screen.getByLabelText(/^Hari$/i), '3')
+    await userEvent.click(screen.getByRole('button', { name: /Simpan Jadwal Export/i }))
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledTimes(1)
+    })
+
+    const weeklyPost = calls.find((c) => c.method === 'POST' && c.url === '/reports/export')
+    expect(weeklyPost?.body).toMatchObject({
+      type: 'audit',
+      format: 'pdf',
+      schedule_preset: 'weekly',
+      schedule_time: '09:30',
+      schedule_day_of_week: 3,
+    })
+
+    // Test custom cron validation & submit
+    await userEvent.selectOptions(screen.getByLabelText(/Waktu Eksekusi/i), 'recurring')
+    await userEvent.selectOptions(screen.getByLabelText(/Pola Pengulangan/i), 'cron')
+
+    const cronInput = screen.getByLabelText(/Ekspresi Cron/i)
+    await userEvent.clear(cronInput)
+    await userEvent.type(cronInput, '0 8')
+    await userEvent.click(screen.getByRole('button', { name: /Simpan Jadwal Export/i }))
+    expect(await screen.findByText(/Ekspresi cron 5-field tidak valid/i)).toBeInTheDocument()
+
+    await userEvent.clear(cronInput)
+    await userEvent.type(cronInput, '30 7 * * 1-5')
+    await userEvent.click(screen.getByRole('button', { name: /Simpan Jadwal Export/i }))
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledTimes(2)
+    })
+
+    const postCalls = calls.filter((c) => c.method === 'POST' && c.url === '/reports/export')
+    expect(postCalls[1]?.body).toMatchObject({
+      type: 'audit',
+      format: 'pdf',
+      cron_expression: '30 7 * * 1-5',
+    })
   })
 })

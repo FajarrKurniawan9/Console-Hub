@@ -21,7 +21,14 @@ import { Spinner } from '../../components/ui/Spinner'
 import { ApiError } from '../../lib/api/client'
 import type { ReportExport } from '../../lib/api/schemas'
 import { number } from '../../lib/format'
-import { downloadExportFile, useReportExports } from './queries'
+import {
+  describeSchedule,
+  downloadExportFile,
+  useCancelExport,
+  useReportExports,
+} from './queries'
+
+type QueueFilter = 'all' | 'active' | 'scheduled' | 'history'
 
 export function ExportWaitingListModal({
   open,
@@ -30,10 +37,36 @@ export function ExportWaitingListModal({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const exportsQuery = useReportExports(open)
+  const exportsQuery = useReportExports(open, open)
+  const cancelExport = useCancelExport()
   const items = exportsQuery.data ?? []
-  const hasActive = items.some((e) => e.status === 'pending' || e.status === 'processing')
+
+  const activeItems = items.filter((e) => e.status === 'pending' || e.status === 'processing')
+  const scheduledItems = items.filter((e) => e.status === 'scheduled')
+  const historyItems = items.filter(
+    (e) => e.status === 'completed' || e.status === 'failed' || e.status === 'cancelled',
+  )
+
+  const hasActive = activeItems.length > 0
+  const [filter, setFilter] = useState<QueueFilter>('all')
   const [downloadingId, setDownloadingId] = useState<number | null>(null)
+  const [cancellingId, setCancellingId] = useState<number | null>(null)
+
+  const visibleItems =
+    filter === 'active'
+      ? activeItems
+      : filter === 'scheduled'
+        ? scheduledItems
+        : filter === 'history'
+          ? historyItems
+          : items
+
+  const tabs: { id: QueueFilter; label: string; count: number }[] = [
+    { id: 'all', label: 'Semua', count: items.length },
+    { id: 'active', label: 'Antrean', count: activeItems.length },
+    { id: 'scheduled', label: 'Terjadwal', count: scheduledItems.length },
+    { id: 'history', label: 'Riwayat', count: historyItems.length },
+  ]
 
   async function handleDownload(item: ReportExport) {
     setDownloadingId(item.id)
@@ -43,6 +76,21 @@ export function ExportWaitingListModal({
       toast.error(err instanceof ApiError ? err.message : 'Gagal mengunduh file ekspor.')
     } finally {
       setDownloadingId(null)
+    }
+  }
+
+  async function handleCancel(item: ReportExport) {
+    setCancellingId(item.id)
+    try {
+      await cancelExport.mutateAsync(item.id)
+      toast.success(
+        item.status === 'scheduled' ? 'Jadwal ekspor dibatalkan.' : 'Tiket ekspor dibatalkan.',
+      )
+    } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal membatalkan ekspor.')
+      void exportsQuery.refetch()
+    } finally {
+      setCancellingId(null)
     }
   }
 
@@ -61,12 +109,13 @@ export function ExportWaitingListModal({
           ) : null}
         </div>
       }
-      description="Antrean aktif diproses bergiliran (FIFO) oleh backend Queue & Scheduler. Riwayat selesai dan tombol unduh bersifat privat untuk masing-masing pemohon."
+      description="Antrean aktif diproses bergiliran (FIFO) oleh backend Queue & Scheduler. Jadwal otomatis dan riwayat selesai bersifat privat untuk masing-masing pemohon."
     >
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between text-xs text-muted pb-1 border-b">
           <span>
-            {items.length} item antrean ·{' '}
+            {items.length} item
+            {scheduledItems.length > 0 ? ` (${scheduledItems.length} terjadwal)` : ''} ·{' '}
             {hasActive ? 'Memperbarui otomatis tiap 2,5 dtk' : 'Terbaru di atas'}
           </span>
           <button
@@ -83,6 +132,31 @@ export function ExportWaitingListModal({
             Segarkan
           </button>
         </div>
+
+        {items.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter status ekspor">
+            {tabs.map((tab) => {
+              const selected = filter === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setFilter(tab.id)}
+                  className={
+                    selected
+                      ? 'inline-flex items-center gap-1 rounded-full border border-accent bg-accent/10 px-2.5 py-0.5 text-[11px] font-semibold text-accent'
+                      : 'inline-flex items-center gap-1 rounded-full border border-border bg-bg px-2.5 py-0.5 text-[11px] text-muted hover:text-fg'
+                  }
+                >
+                  <span>
+                    {tab.label} ({tab.count})
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
 
         {exportsQuery.isPending ? (
           <div className="flex flex-col items-center justify-center py-8 text-center text-muted">
@@ -119,11 +193,18 @@ export function ExportWaitingListModal({
               Gunakan tombol &quot;Export Data&quot; di halaman Audit, Log, atau Barang untuk membuat tiket baru.
             </p>
           </div>
+        ) : visibleItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center text-muted">
+            <p className="text-xs">Tidak ada item pada kategori ini.</p>
+          </div>
         ) : (
           <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
-            {items.map((item) => {
+            {visibleItems.map((item) => {
               const isMine = item.is_mine !== false
               const isActive = item.status === 'pending' || item.status === 'processing'
+              const isCancellable =
+                isMine && (item.status === 'scheduled' || item.status === 'pending')
+              const recurringSummary = describeSchedule(item)
 
               return (
                 <div
@@ -154,7 +235,8 @@ export function ExportWaitingListModal({
                         </div>
                         <span className="text-[11px] text-muted">
                           Format: <span className="uppercase font-mono">{item.format}</span>
-                          {item.requester_name ? <> · {item.requester_name}</> : null} · Dibuat{' '}
+                          {item.requester_name ? <> · {item.requester_name}</> : null}
+                          {item.parent_export_id != null ? <> · Jadwal otomatis</> : null} · Dibuat{' '}
                           <TimeText iso={item.created_at} />
                         </span>
                       </div>
@@ -203,27 +285,55 @@ export function ExportWaitingListModal({
                     </div>
                   </div>
 
-                  {/* Status description or download action */}
-                  <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[11px]">
+                  {/* Status description or action */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-[11px]">
                     {item.status === 'scheduled' ? (
-                      <span className="text-muted flex items-center gap-1">
-                        <CalendarClock size={11} aria-hidden />
-                        {item.scheduled_at ? (
-                          <>
-                            Dijadwalkan <TimeText iso={item.scheduled_at} />
-                            {item.cron_expression ? ` (${item.cron_expression})` : ''}
-                          </>
-                        ) : (
-                          'Menunggu jadwal eksekusi...'
-                        )}
-                      </span>
+                      <>
+                        <span className="text-muted flex items-center gap-1 flex-wrap min-w-0">
+                          <CalendarClock size={11} className="shrink-0" aria-hidden />
+                          {recurringSummary ? <span>{recurringSummary} ·</span> : null}
+                          {item.scheduled_at ? (
+                            <>
+                              {recurringSummary ? 'Berikutnya ' : 'Dijadwalkan '}
+                              <TimeText iso={item.scheduled_at} />
+                              {item.cron_expression ? ` (${item.cron_expression})` : ''}
+                            </>
+                          ) : (
+                            'Menunggu jadwal eksekusi...'
+                          )}
+                        </span>
+                        {isCancellable ? (
+                          <Button
+                            variant="secondary"
+                            onClick={() => void handleCancel(item)}
+                            disabled={cancellingId === item.id}
+                            className="h-7 text-xs px-2.5 shrink-0"
+                          >
+                            {cancellingId === item.id ? <Spinner /> : <Ban size={12} aria-hidden />}
+                            Batalkan
+                          </Button>
+                        ) : null}
+                      </>
                     ) : item.status === 'pending' ? (
-                      <span className="text-muted flex items-center gap-1">
-                        <span className="size-1 rounded-full bg-amber-500" />
-                        {isMine
-                          ? 'Menunggu giliran antrean scheduler...'
-                          : 'Sedang menunggu giliran di antrean bersama...'}
-                      </span>
+                      <>
+                        <span className="text-muted flex items-center gap-1">
+                          <span className="size-1 rounded-full bg-amber-500" />
+                          {isMine
+                            ? 'Menunggu giliran antrean scheduler...'
+                            : 'Sedang menunggu giliran di antrean bersama...'}
+                        </span>
+                        {isCancellable ? (
+                          <Button
+                            variant="secondary"
+                            onClick={() => void handleCancel(item)}
+                            disabled={cancellingId === item.id}
+                            className="h-7 text-xs px-2.5 shrink-0"
+                          >
+                            {cancellingId === item.id ? <Spinner /> : <Ban size={12} aria-hidden />}
+                            Batalkan
+                          </Button>
+                        ) : null}
+                      </>
                     ) : item.status === 'processing' ? (
                       <span className="text-blue-600 flex items-center gap-1 font-medium">
                         <span className="size-1 rounded-full bg-blue-500 animate-ping" />
@@ -232,7 +342,7 @@ export function ExportWaitingListModal({
                           : 'Sedang diproses oleh background worker...'}
                       </span>
                     ) : item.status === 'completed' ? (
-                      <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center justify-between w-full gap-2">
                         <span className="text-muted text-[11px]">
                           {item.row_count != null
                             ? `${number(item.row_count)} baris · Siap disimpan`
@@ -243,7 +353,7 @@ export function ExportWaitingListModal({
                             variant="primary"
                             onClick={() => void handleDownload(item)}
                             disabled={downloadingId === item.id}
-                            className="h-7 text-xs px-2.5"
+                            className="h-7 text-xs px-2.5 shrink-0"
                           >
                             {downloadingId === item.id ? (
                               <Spinner />
@@ -256,7 +366,14 @@ export function ExportWaitingListModal({
                       </div>
                     ) : item.status === 'cancelled' ? (
                       <span className="text-muted">
-                        {item.error_message || 'Permintaan ekspor telah dibatalkan.'}
+                        {item.error_message ||
+                          (item.cancelled_at ? (
+                            <>
+                              Dibatalkan pada <TimeText iso={item.cancelled_at} />
+                            </>
+                          ) : (
+                            'Permintaan ekspor telah dibatalkan.'
+                          ))}
                       </span>
                     ) : (
                       <span className="text-error">

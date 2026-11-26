@@ -64,14 +64,85 @@ export function canAccessExportQueue(user: AuthUser | null): boolean {
   return Object.values(EXPORT_PERMISSIONS).some((perm) => user.permissions.includes(perm))
 }
 
+export type ExportScheduleMode = 'immediate' | 'once' | 'recurring'
+export type SchedulePreset = 'daily' | 'weekly' | 'monthly'
+
+export const SCHEDULE_PRESETS = [
+  { value: 'daily', label: 'Setiap Hari (Harian)' },
+  { value: 'weekly', label: 'Setiap Minggu (Mingguan)' },
+  { value: 'monthly', label: 'Setiap Bulan (Bulanan)' },
+] as const
+
+export const SCHEDULE_WEEKDAYS = [
+  { value: 1, label: 'Senin' },
+  { value: 2, label: 'Selasa' },
+  { value: 3, label: 'Rabu' },
+  { value: 4, label: 'Kamis' },
+  { value: 5, label: 'Jumat' },
+  { value: 6, label: 'Sabtu' },
+  { value: 0, label: 'Minggu' },
+] as const
+
+export function defaultExportTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta'
+  } catch {
+    return 'Asia/Jakarta'
+  }
+}
+
+export function toLocalDateTimeInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+export function defaultTomorrowMorningInput(now = new Date()): string {
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 8, 0, 0, 0)
+  return toLocalDateTimeInputValue(next)
+}
+
+export function describeSchedule(
+  item: Pick<ReportExport, 'schedule_type' | 'cron_expression' | 'timezone'>,
+): string | null {
+  if (item.schedule_type !== 'recurring' || !item.cron_expression) return null
+  const [min, hour, dom, month, dow, extra] = item.cron_expression.trim().split(/\s+/)
+  if (!min || !hour || !dom || !month || !dow || extra) {
+    return `Rutin (${item.cron_expression})`
+  }
+  const hhmm =
+    /^\d+$/.test(hour) && /^\d+$/.test(min)
+      ? `${hour.padStart(2, '0')}:${min.padStart(2, '0')}`
+      : null
+  const tz = item.timezone || 'Asia/Jakarta'
+
+  if (hhmm && dom === '*' && month === '*' && dow === '*') {
+    return `Setiap hari pukul ${hhmm} (${tz})`
+  }
+  if (hhmm && dom === '*' && month === '*' && /^[0-6]$/.test(dow)) {
+    const day = SCHEDULE_WEEKDAYS.find((d) => String(d.value) === dow)?.label ?? `hari #${dow}`
+    return `Setiap ${day} pukul ${hhmm} (${tz})`
+  }
+  if (hhmm && /^\d+$/.test(dom) && month === '*' && dow === '*') {
+    return `Setiap tanggal ${dom} pukul ${hhmm} (${tz})`
+  }
+  return `Jadwal cron (${tz})`
+}
+
 export type CreateExportInput = {
   type: ExportType
   format?: ExportFormat
   name?: string
   filters?: unknown
+  scheduled_at?: string
+  cron_expression?: string
+  schedule_preset?: SchedulePreset
+  schedule_time?: string
+  schedule_day_of_week?: number
+  schedule_day_of_month?: number
+  timezone?: string
 }
 
-export function useReportExports(enabled = true) {
+export function useReportExports(enabled = true, watchScheduled = false) {
   return useQuery({
     queryKey: reportKeys.all,
     enabled,
@@ -82,12 +153,14 @@ export function useReportExports(enabled = true) {
       })
       return res.data
     },
-    // Auto-poll every 2.5 seconds while any ticket in the shared waiting list is active.
+    // Auto-poll every 2.5s while any queue ticket is active; poll every 10s when modal watches scheduled items.
     refetchInterval: (query) => {
       const data = query.state.data
       if (!data) return false
       const hasActive = data.some((e) => e.status === 'pending' || e.status === 'processing')
-      return hasActive ? 2500 : false
+      if (hasActive) return 2500
+      if (watchScheduled && data.some((e) => e.status === 'scheduled')) return 10_000
+      return false
     },
   })
 }
@@ -101,6 +174,23 @@ export function useCreateExport() {
         method: 'POST',
         url: '/reports/export',
         data: input,
+      })
+      return res.data
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: reportKeys.all })
+    },
+  })
+}
+
+export function useCancelExport() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (exportId: number): Promise<ReportExport> => {
+      const res = await request(reportExportEnvelope, {
+        method: 'POST',
+        url: `/reports/exports/${exportId}/cancel`,
       })
       return res.data
     },
