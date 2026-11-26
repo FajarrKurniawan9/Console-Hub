@@ -1,0 +1,33 @@
+meta {
+  name: Create Role
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{portal_url}}/api/v1/admin/rbac/roles
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Supervisor Gudang",
+    "code": "supervisor_gudang",
+    "permissions": [
+      "barang.view",
+      "lacak.view",
+      "dashboard.view"
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body?.data?.id) {
+    bru.setEnvVar("rbac_role_id", String(res.body.data.id));
+  }
+}
+
+docs {
+  Permission: `admin.rbac.manage`. `code` must be unique lowercase (`^[a-z0-9_-]+$`, 2-40 chars). Automatically stores `data.id` in `rbac_role_id`.
+}

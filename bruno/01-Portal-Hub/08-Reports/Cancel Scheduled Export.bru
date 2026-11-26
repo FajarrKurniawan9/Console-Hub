@@ -1,0 +1,24 @@
+meta {
+  name: Cancel Scheduled Export
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{portal_url}}/api/v1/reports/exports/{{scheduled_export_id}}/cancel
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("returns 200 with cancelled status", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.data.status).to.equal("cancelled");
+  });
+}
+
+docs {
+  Owner-only + requires matching export type permission (`403 FORBIDDEN` otherwise).
+  Cancels a `scheduled` (one-time or recurring) export using `scheduled_export_id`, purges any queued jobs, and cancels pending child runs.
+  Returns `409 CONFLICT` if already `processing`, `completed`, `failed`, or `cancelled`.
+}

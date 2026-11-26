@@ -1,0 +1,46 @@
+meta {
+  name: Schedule Export (Cron Every Minute)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{portal_url}}/api/v1/reports/export
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "type": "audit",
+    "format": "json",
+    "name": "Test Cron Audit (Tiap Menit)",
+    "cron_expression": "* * * * *",
+    "timezone": "Asia/Jakarta",
+    "filters": {}
+  }
+}
+
+script:post-response {
+  if (res.status === 202 && res.body?.data?.id) {
+    bru.setEnvVar("scheduled_export_id", String(res.body.data.id));
+  }
+}
+
+tests {
+  test("returns 202 with recurring cron schedule", function () {
+    expect(res.getStatus()).to.equal(202);
+    expect(res.body.data.status).to.equal("scheduled");
+    expect(res.body.data.schedule_type).to.equal("recurring");
+    expect(res.body.data.cron_expression).to.equal("* * * * *");
+  });
+}
+
+docs {
+  Creates a recurring cron export (`* * * * *` = every minute) specifically for live testing the scheduler (`reports:process`).
+  1. Ensure `php artisan schedule:work` and `php artisan queue:work --queue=exports,default` are running (or trigger manually via `php artisan reports:process`).
+  2. Wait ~1 minute, then check **List Scheduled Exports** (`scheduled_at` advances) and **List Export History** (a child run with `parent_export_id` appears as `completed`).
+  3. Run **Download Export** to inspect the generated file.
+  4. IMPORTANT: Run **Cancel Scheduled Export** after testing so `* * * * *` stops spawning new exports every minute.
+  Automatically stores `data.id` in `scheduled_export_id`.
+}

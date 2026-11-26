@@ -1,0 +1,24 @@
+meta {
+  name: Download Export
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{portal_url}}/api/v1/reports/exports/{{download_export_id}}/download
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("returns 200 file stream", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Owner-only + requires matching export type permission (`403 FORBIDDEN` for other users, including Admin IT).
+  Streams the completed export file (`csv`, `xlsx`, `json`, `pdf`, or `docx`) as an attachment.
+  Returns `409 CONFLICT` if status is not `completed`, or `404 NOT_FOUND` if the file was pruned/expired.
+  `download_export_id` is auto-populated by **List Exports**, **List Export History**, or **Create Export (Immediate)**.
+}

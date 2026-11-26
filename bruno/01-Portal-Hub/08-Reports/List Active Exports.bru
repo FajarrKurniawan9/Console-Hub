@@ -1,0 +1,20 @@
+meta {
+  name: List Active Exports
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{portal_url}}/api/v1/reports/exports?status=active
+  body: none
+  auth: inherit
+}
+
+params:query {
+  status: active
+}
+
+docs {
+  Returns only the shared FIFO active waiting list (`pending` and `processing` across users) with `queue_position`.
+  Use this to monitor queue processing while `php artisan queue:work --queue=exports,default` or `php artisan reports:process` runs.
+}

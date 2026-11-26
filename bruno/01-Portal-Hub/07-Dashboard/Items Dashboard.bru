@@ -1,0 +1,23 @@
+meta {
+  name: Items Dashboard
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{portal_url}}/api/v1/dashboard/items
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~days: 7
+  ~from: 
+  ~to: 
+}
+
+docs {
+  Permission: `dashboard.view`.
+  Query options: `days` (`1`-`90`, default `7`) OR explicit date range `from` & `to` (`YYYY-MM-DD`, `to >= from`).
+  Returns item totals, audit activity trend (`created`, `updated`, `deactivated`), and `kind_distribution`.
+}

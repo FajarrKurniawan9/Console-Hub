@@ -1,0 +1,46 @@
+meta {
+  name: Create Export (Immediate)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{portal_url}}/api/v1/reports/export
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "type": "audit",
+    "format": "csv",
+    "name": "Laporan Audit (Immediate)",
+    "filters": {}
+  }
+}
+
+script:post-response {
+  if (res.status === 202 && res.body?.data?.id) {
+    bru.setEnvVar("export_id", String(res.body.data.id));
+    bru.setEnvVar("download_export_id", String(res.body.data.id));
+  }
+}
+
+tests {
+  test("returns 202 with pending immediate export", function () {
+    expect(res.getStatus()).to.equal(202);
+    expect(res.body.data.status).to.equal("pending");
+    expect(res.body.data.schedule_type).to.equal("immediate");
+  });
+}
+
+docs {
+  Queues an immediate export job on queue `exports` (also picked up by `reports:process` cron fallback).
+  - `type`: `audit` (`admin.audit.view`), `logs` (`admin.logs.view`), or `barang` (`barang.view`)
+  - `format`: `csv` (default) | `xlsx` | `json` | `pdf` | `docx`
+  - `filters`:
+    - `audit`: `{ "user_id", "console_id", "action", "from", "to" }`
+    - `logs`: `{ "console_id": ["1"], "level": ["error", "warn"], "q", "from", "to" }`
+    - `barang`: `{ "q", "status": "aktif|nonaktif|all", "kind" }`
+  Automatically stores `data.id` in `export_id` and `download_export_id`.
+}

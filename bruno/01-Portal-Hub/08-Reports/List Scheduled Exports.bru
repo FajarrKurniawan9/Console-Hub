@@ -1,0 +1,30 @@
+meta {
+  name: List Scheduled Exports
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{portal_url}}/api/v1/reports/exports?status=scheduled
+  body: none
+  auth: inherit
+}
+
+params:query {
+  status: scheduled
+}
+
+script:post-response {
+  if (res.status === 200 && Array.isArray(res.body?.data) && res.body.data.length > 0) {
+    const current = String(bru.getEnvVar("scheduled_export_id") ?? "");
+    const stillExists = res.body.data.some((row) => String(row.id) === current);
+    if (!stillExists) {
+      bru.setEnvVar("scheduled_export_id", String(res.body.data[0].id));
+    }
+  }
+}
+
+docs {
+  Returns your own `scheduled` exports (one-time and recurring cron), ordered by `scheduled_at ASC`.
+  For recurring cron schedules, re-run this after 1 minute to confirm `scheduled_at` advanced to the next run time.
+}

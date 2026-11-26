@@ -25,5 +25,5 @@ script:post-response {
 }
 
 docs {
-  Permission: `admin.rbac.manage`. Valid `role_code`: `admin_it` or `user`. Returns generated `initial_password` once.
+  Permission: `admin.rbac.manage`. Valid `role_code`: `admin_it`, `manajer_gudang`, `staff_produksi`, `staff_hr`, `auditor`, `user`, or any custom role. Optional `"password"` (min 6 chars); if omitted, returns generated `initial_password` once.
 }

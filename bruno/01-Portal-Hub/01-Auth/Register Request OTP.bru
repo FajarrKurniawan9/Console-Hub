@@ -1,0 +1,31 @@
+meta {
+  name: Register Request OTP
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{portal_url}}/api/v1/auth/register/request-otp
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "{{register_name}}",
+    "email": "{{register_email}}",
+    "recaptcha_token": "{{recaptcha_token}}",
+    "resend_token": "{{register_resend_token}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.resend_token) {
+    bru.setEnvVar("register_resend_token", res.body.data.resend_token);
+  }
+}
+
+docs {
+  Sends a 6-digit registration verification OTP to an unregistered email (rate limit 1 req / 60s).
+  Automatically stores `data.resend_token` in `register_resend_token`.
+}

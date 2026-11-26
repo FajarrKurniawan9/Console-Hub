@@ -1,0 +1,16 @@
+meta {
+  name: Delete Role
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{portal_url}}/api/v1/admin/rbac/roles/{{rbac_role_id}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  Permission: `admin.rbac.manage`. Returns `204 No Content`.
+  Built-in roles (`admin_it`, `user`) and roles still assigned to active users return `409 CONFLICT`.
+}

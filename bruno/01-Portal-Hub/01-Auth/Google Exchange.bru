@@ -1,0 +1,27 @@
+meta {
+  name: Google Exchange
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{portal_url}}/api/v1/auth/google/exchange
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "code": "{{google_oauth_code}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.token) {
+    bru.setEnvVar("portal_token", res.body.data.token);
+  }
+}
+
+docs {
+  Exchanges the one-time `code` from `/api/v1/auth/google/callback` redirect (60s TTL) for a Sanctum Bearer token. Automatically stores `data.token` in `portal_token`.
+}

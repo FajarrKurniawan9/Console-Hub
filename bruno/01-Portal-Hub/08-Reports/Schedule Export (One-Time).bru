@@ -1,0 +1,52 @@
+meta {
+  name: Schedule Export (One-Time)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{portal_url}}/api/v1/reports/export
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "type": "barang",
+    "format": "xlsx",
+    "name": "Laporan Barang Terjadwal (Sekali)",
+    "scheduled_at": "{{scheduled_at_auto}}",
+    "timezone": "Asia/Jakarta",
+    "filters": {
+      "status": "aktif"
+    }
+  }
+}
+
+script:pre-request {
+  const future = new Date(Date.now() + 2 * 60 * 1000);
+  bru.setVar("scheduled_at_auto", future.toISOString().replace(/\.\d{3}Z$/, "Z"));
+}
+
+script:post-response {
+  if (res.status === 202 && res.body?.data?.id) {
+    bru.setEnvVar("scheduled_export_id", String(res.body.data.id));
+  }
+}
+
+tests {
+  test("returns 202 with one-time scheduled export", function () {
+    expect(res.getStatus()).to.equal(202);
+    expect(res.body.data.status).to.equal("scheduled");
+    expect(res.body.data.schedule_type).to.equal("once");
+    expect(res.body.data.cron_expression).to.equal(null);
+  });
+}
+
+docs {
+  Schedules a one-time export (`schedule_type: once`).
+  Pre-request script automatically sets `scheduled_at_auto` to 2 minutes in the future (UTC ISO-8601) so validation always passes.
+  When due, `reports:process` promotes this same ticket from `scheduled` -> `pending` -> `completed`.
+  Mutually exclusive with `cron_expression` and `schedule_preset`.
+  Automatically stores `data.id` in `scheduled_export_id`.
+}

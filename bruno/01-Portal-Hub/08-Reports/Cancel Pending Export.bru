@@ -1,0 +1,24 @@
+meta {
+  name: Cancel Pending Export
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{portal_url}}/api/v1/reports/exports/{{export_id}}/cancel
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("returns 200 with cancelled status", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.data.status).to.equal("cancelled");
+  });
+}
+
+docs {
+  Owner-only + requires matching export type permission.
+  Cancels a `pending` immediate export (`export_id`) and removes its unreserved job from the `jobs` table (`queue = exports`).
+  Returns `409 CONFLICT` if the worker already started or completed processing it.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: Request OTP
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{portal_url}}/api/v1/auth/request-otp
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{login_email}}",
+    "recaptcha_token": "{{recaptcha_token}}",
+    "resend_token": "{{otp_resend_token}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && res.body?.data?.resend_token) {
+    bru.setEnvVar("otp_resend_token", res.body.data.resend_token);
+  }
+}
+
+docs {
+  Sends a 6-digit login OTP to a registered email (TTL 300s, rate limit 1 req / 60s).
+  If `RECAPTCHA_ENABLED=false` in `api/.env`, `recaptcha_token` may be left empty.
+  Automatically stores `data.resend_token` in `otp_resend_token` so resending bypasses reCAPTCHA.
+}

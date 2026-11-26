@@ -1,0 +1,30 @@
+meta {
+  name: List Export History
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{portal_url}}/api/v1/reports/exports?status=history
+  body: none
+  auth: inherit
+}
+
+params:query {
+  status: history
+}
+
+script:post-response {
+  if (res.status === 200 && Array.isArray(res.body?.data)) {
+    const latestCompleted = res.body.data.find((row) => row.is_mine && row.status === "completed");
+    if (latestCompleted?.id) {
+      bru.setEnvVar("download_export_id", String(latestCompleted.id));
+    }
+  }
+}
+
+docs {
+  Returns your own finished exports (`completed`, `failed`, `cancelled`, max 50), newest first.
+  Child runs spawned by a recurring cron job appear here with `parent_export_id` pointing to your scheduled export ID.
+  Automatically stores the newest completed export ID in `download_export_id`.
+}

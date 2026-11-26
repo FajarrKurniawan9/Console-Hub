@@ -1,0 +1,54 @@
+meta {
+  name: Schedule Export (Preset)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{portal_url}}/api/v1/reports/export
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "type": "logs",
+    "format": "pdf",
+    "name": "Laporan Log Harian (Preset)",
+    "schedule_preset": "daily",
+    "schedule_time": "08:00",
+    "timezone": "Asia/Jakarta",
+    "filters": {
+      "level": [
+        "error",
+        "warn"
+      ]
+    }
+  }
+}
+
+script:post-response {
+  if (res.status === 202 && res.body?.data?.id) {
+    bru.setEnvVar("scheduled_export_id", String(res.body.data.id));
+  }
+}
+
+tests {
+  test("returns 202 with preset resolved to cron expression", function () {
+    expect(res.getStatus()).to.equal(202);
+    expect(res.body.data.status).to.equal("scheduled");
+    expect(res.body.data.schedule_type).to.equal("recurring");
+    expect(res.body.data.cron_expression).to.equal("0 8 * * *");
+  });
+}
+
+docs {
+  Creates a recurring export using human-friendly presets:
+  - `schedule_preset`: `daily` | `weekly` | `monthly`
+  - `schedule_time`: `HH:MM` (default `08:00`)
+  - `schedule_day_of_week`: `0`-`6` (for `weekly`, default `1` = Monday)
+  - `schedule_day_of_month`: `1`-`28` (for `monthly`, default `1`)
+  - `timezone`: IANA timezone (default `Asia/Jakarta`)
+  Mutually exclusive with `scheduled_at` and `cron_expression`.
+  Automatically stores `data.id` in `scheduled_export_id`.
+}

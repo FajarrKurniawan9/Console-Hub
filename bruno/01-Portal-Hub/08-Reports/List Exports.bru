@@ -1,0 +1,31 @@
+meta {
+  name: List Exports
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{portal_url}}/api/v1/reports/exports
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~status: 
+}
+
+script:post-response {
+  if (res.status === 200 && Array.isArray(res.body?.data)) {
+    const latestCompleted = res.body.data.find((row) => row.is_mine && row.status === "completed");
+    if (latestCompleted?.id) {
+      bru.setEnvVar("download_export_id", String(latestCompleted.id));
+    }
+  }
+}
+
+docs {
+  Requires at least one of: `admin.audit.view`, `admin.logs.view`, `barang.view`.
+  Returns combined list: (1) global FIFO active waiting list (`pending`/`processing`), (2) own `scheduled` exports, and (3) own finished history (`completed`/`failed`/`cancelled`, max 50).
+  Optional `status` query: `active` | `scheduled` | `history`.
+  Automatically stores your newest completed export ID in `download_export_id`.
+}
