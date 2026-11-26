@@ -283,7 +283,9 @@ describe('ExportWaitingListModal', () => {
 
     expect(await screen.findByText('Audit Terjadwal Besok')).toBeInTheDocument()
     // Cancel button must only appear for own scheduled/pending export (id 402), not other user's pending (id 401)
-    expect(screen.getAllByRole('button', { name: /Batalkan/i })).toHaveLength(1)
+    const cancelBtns = screen.getAllByRole('button', { name: /Batalkan/i })
+    expect(cancelBtns).toHaveLength(1)
+    expect(cancelBtns[0]).toHaveClass('border-error', 'text-error')
 
     await userEvent.click(screen.getByRole('button', { name: /Terjadwal/i }))
     expect(screen.getByText('Audit Terjadwal Besok')).toBeInTheDocument()

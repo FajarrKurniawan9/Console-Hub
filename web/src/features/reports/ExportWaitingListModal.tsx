@@ -205,6 +205,17 @@ export function ExportWaitingListModal({
               const isCancellable =
                 isMine && (item.status === 'scheduled' || item.status === 'pending')
               const recurringSummary = describeSchedule(item)
+              const cancelButton = isCancellable ? (
+                <Button
+                  variant="danger"
+                  onClick={() => void handleCancel(item)}
+                  disabled={cancellingId === item.id}
+                  className="h-7 text-xs px-2.5 shrink-0 bg-error/10 hover:bg-error/15"
+                >
+                  {cancellingId === item.id ? <Spinner /> : <Ban size={12} aria-hidden />}
+                  Batalkan
+                </Button>
+              ) : null
 
               return (
                 <div
@@ -302,17 +313,7 @@ export function ExportWaitingListModal({
                             'Menunggu jadwal eksekusi...'
                           )}
                         </span>
-                        {isCancellable ? (
-                          <Button
-                            variant="secondary"
-                            onClick={() => void handleCancel(item)}
-                            disabled={cancellingId === item.id}
-                            className="h-7 text-xs px-2.5 shrink-0"
-                          >
-                            {cancellingId === item.id ? <Spinner /> : <Ban size={12} aria-hidden />}
-                            Batalkan
-                          </Button>
-                        ) : null}
+                        {cancelButton}
                       </>
                     ) : item.status === 'pending' ? (
                       <>
@@ -322,17 +323,7 @@ export function ExportWaitingListModal({
                             ? 'Menunggu giliran antrean scheduler...'
                             : 'Sedang menunggu giliran di antrean bersama...'}
                         </span>
-                        {isCancellable ? (
-                          <Button
-                            variant="secondary"
-                            onClick={() => void handleCancel(item)}
-                            disabled={cancellingId === item.id}
-                            className="h-7 text-xs px-2.5 shrink-0"
-                          >
-                            {cancellingId === item.id ? <Spinner /> : <Ban size={12} aria-hidden />}
-                            Batalkan
-                          </Button>
-                        ) : null}
+                        {cancelButton}
                       </>
                     ) : item.status === 'processing' ? (
                       <span className="text-blue-600 flex items-center gap-1 font-medium">
