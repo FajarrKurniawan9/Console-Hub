@@ -17,6 +17,7 @@ export const ACTIONS: Record<string, string> = {
   'logs.synced': 'Log ditarik',
   'auth.login': 'Masuk',
   'auth.register': 'Daftar akun',
+  'auth.profile_updated': 'Profil diubah',
 }
 
 type Change = { old: unknown; new: unknown }

@@ -1,20 +1,19 @@
-import { LogOut } from 'lucide-react'
+import { LogOut, UserRound } from 'lucide-react'
 import { DropdownMenu } from 'radix-ui'
+import { useNavigate } from 'react-router'
 import { menuContent, menuItem } from '../components/ui/menu'
 import { useAuth } from '../features/auth/auth'
 
 export function UserMenu() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   if (!user) return null
 
-  // Tampilkan username dari email (misal: 'nabilkencana20@gmail.com' -> 'nabilkencana20')
-  // sehingga tidak duplikat dengan nama peran
-  const emailPart = user.email && user.email.includes('@') ? user.email.split('@')[0] : null
-  const username = emailPart || user.name || 'User'
+  const username = user.name.trim() || 'User'
 
   const initials = username.includes(' ')
     ? username
-        .split(' ')
+        .split(/\s+/)
         .map((p) => p[0])
         .slice(0, 2)
         .join('')
@@ -39,9 +38,13 @@ export function UserMenu() {
         <DropdownMenu.Content align="end" sideOffset={4} className={menuContent}>
           <div className="flex flex-col px-2 py-1.5">
             <span className="font-semibold">{username}</span>
-            <span className="text-xs text-muted">{user.email}</span>
             <span className="text-xs text-muted">{user.role.name}</span>
           </div>
+          <DropdownMenu.Separator className="my-1 h-px bg-border" />
+          <DropdownMenu.Item className={menuItem} onSelect={() => void navigate('/profile')}>
+            <UserRound size={16} strokeWidth={1.5} aria-hidden />
+            Profile
+          </DropdownMenu.Item>
           <DropdownMenu.Separator className="my-1 h-px bg-border" />
           <DropdownMenu.Item className={menuItem} onSelect={() => void logout()}>
             <LogOut size={16} strokeWidth={1.5} aria-hidden />

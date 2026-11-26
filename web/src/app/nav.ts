@@ -42,5 +42,6 @@ export const USER_HOME: Omit<NavItem, 'perm'> = { to: '/', label: 'Beranda', ico
 export function titleFor(pathname: string) {
   const all = [...ADMIN_NAV, ...WORK_NAV]
   if (pathname === '/') return 'Ringkasan'
+  if (pathname === '/profile') return 'Profil'
   return all.find((n) => n.to !== '/' && pathname.startsWith(n.to))?.label ?? 'Console Hub'
 }

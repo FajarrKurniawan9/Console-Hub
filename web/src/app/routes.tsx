@@ -8,6 +8,7 @@ import { RbacPage } from '../features/admin/rbac/RbacPage'
 import { useAuth } from '../features/auth/auth'
 import { AuthGoogleCallbackPage } from '../features/auth/AuthGoogleCallbackPage'
 import { LoginPage } from '../features/auth/LoginPage'
+import { ProfilePage } from '../features/auth/ProfilePage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { BarangPage } from '../features/work/barang/BarangPage'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
@@ -48,6 +49,7 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<Shell />}>
           <Route index element={<Home />} />
+          <Route path="profile" element={<ProfilePage />} />
           {guarded('dashboard.view', 'dashboard', <DashboardPage />)}
           {guarded('barang.view', 'barang', <BarangPage />)}
           {guarded('produksi.view', 'produksi', <ProduksiPage />)}

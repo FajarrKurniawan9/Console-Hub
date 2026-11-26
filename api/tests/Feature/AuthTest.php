@@ -100,3 +100,62 @@ it('echoes or creates an X-Request-Id on every response', function () {
     $this->postJson('/api/v1/auth/login', [], ['X-Request-Id' => 'req-12345678'])->assertHeader('X-Request-Id', 'req-12345678');
     expect($this->getJson('/api/v1/auth/me')->headers->get('X-Request-Id'))->toMatch('/^[0-9a-f-]{36}$/');
 });
+
+it('allows an authenticated active user to update their username via profile endpoint and records audit', function () {
+    $user = User::factory()->create(['name' => 'Budi Lama']);
+    $token = $user->createToken('t')->plainTextToken;
+
+    $response = $this->withToken($token)->patchJson('/api/v1/auth/profile', [
+        'name' => '  nabilkencana20  ',
+        'email' => 'hacker@example.com',
+        'is_active' => false,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.id', $user->id)
+        ->assertJsonPath('data.name', 'nabilkencana20')
+        ->assertJsonPath('data.email', $user->email)
+        ->assertJsonPath('data.role.code', 'user');
+
+    $user->refresh();
+    expect($user->name)->toBe('nabilkencana20')
+        ->and($user->email)->not->toBe('hacker@example.com')
+        ->and($user->is_active)->toBeTrue();
+
+    $audit = AuditEvent::query()->where('action', 'auth.profile_updated')->where('user_id', $user->id)->sole();
+    expect($audit->old_value)->toBe(['name' => 'Budi Lama'])
+        ->and($audit->new_value)->toBe(['name' => 'nabilkencana20']);
+});
+
+it('does not record redundant audit when submitted username is unchanged', function () {
+    $user = User::factory()->create(['name' => 'Sama Saja']);
+    $token = $user->createToken('t')->plainTextToken;
+
+    $this->withToken($token)->patchJson('/api/v1/auth/profile', ['name' => 'Sama Saja'])
+        ->assertOk()
+        ->assertJsonPath('data.name', 'Sama Saja');
+
+    expect(AuditEvent::query()->where('action', 'auth.profile_updated')->count())->toBe(0);
+});
+
+it('validates username length and refuses unauthenticated or inactive users on profile update', function () {
+    assertApiError($this->patchJson('/api/v1/auth/profile', ['name' => 'Baru']), 401, 'UNAUTHENTICATED');
+
+    $user = User::factory()->create(['name' => 'Budi Awal']);
+    $token = $user->createToken('t')->plainTextToken;
+
+    $short = $this->withToken($token)->patchJson('/api/v1/auth/profile', ['name' => '  ab  ']);
+    assertApiError($short, 422, 'VALIDATION_ERROR');
+    $short->assertJsonStructure(['error' => ['details' => ['fields' => ['name']]]]);
+
+    $blank = $this->withToken($token)->patchJson('/api/v1/auth/profile', ['name' => '   ']);
+    assertApiError($blank, 422, 'VALIDATION_ERROR');
+});
+
+it('refuses a deactivated user on profile update', function () {
+    $user = User::factory()->create(['name' => 'Budi Awal']);
+    $token = $user->createToken('t')->plainTextToken;
+    $user->update(['is_active' => false]);
+
+    assertApiError($this->withToken($token)->patchJson('/api/v1/auth/profile', ['name' => 'Valid Baru']), 401, 'UNAUTHENTICATED');
+});

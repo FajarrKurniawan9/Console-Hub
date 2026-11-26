@@ -33,6 +33,7 @@ interface AuthState {
     signup_token?: string
   }) => Promise<void>
   exchangeGoogleCode: (code: string) => Promise<void>
+  updateProfile: (input: { name: string }) => Promise<AuthUser>
   logout: () => Promise<void>
   /** Reload `me` (e.g. after the role's permissions changed) so menus follow. */
   reloadMe: () => Promise<unknown>
@@ -123,6 +124,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: { code },
       })
       applySession(data)
+    },
+    updateProfile: async (input) => {
+      const { data } = await request(one(authUser), {
+        url: '/auth/profile',
+        method: 'PATCH',
+        data: input,
+      })
+      qc.setQueryData(ME, data)
+      return data
     },
     reloadMe: () => qc.invalidateQueries({ queryKey: ME }),
     logout: async () => {

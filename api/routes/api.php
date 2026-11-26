@@ -30,6 +30,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
+        Route::patch('auth/profile', [AuthController::class, 'updateProfile']);
 
         foreach (['items' => 'barang', 'productions' => 'produksi', 'people' => 'personel'] as $resource => $perm) {
             Route::prefix($resource)->controller(RecordController::class)->group(function () use ($resource, $perm) {

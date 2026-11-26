@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { calls, fail, on, page, sources } from '../test/api'
 import { renderApp } from '../test/utils'
@@ -42,6 +43,17 @@ describe('shells and guards', () => {
     renderApp('/barang', 'user')
     on('GET /auth/me', fail(401, 'UNAUTHENTICATED'))
     expect(await screen.findByRole('heading', { name: 'Masuk' })).toBeInTheDocument()
+  })
+
+  it('user menu displays username and role without email and navigates to profile', async () => {
+    renderApp('/', 'admin')
+    const trigger = await screen.findByRole('button', { name: /Menu pengguna: Rina Wulandari/i })
+    await userEvent.click(trigger)
+    expect(await screen.findByText('Admin IT')).toBeInTheDocument()
+    expect(screen.queryByText('admin@example.com')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('menuitem', { name: /Profile/i }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Profil' })).toBeInTheDocument()
   })
 })
 

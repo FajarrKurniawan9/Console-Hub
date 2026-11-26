@@ -7,6 +7,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequestOtpRequest;
 use App\Http\Requests\RegisterVerifyRequest;
 use App\Http\Requests\RequestOtpRequest;
+use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Requests\VerifyOtpRequest;
 use App\Http\Resources\AuthUserResource;
 use App\Mail\OtpCodeMail;
@@ -203,6 +204,29 @@ class AuthController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+
+        return new AuthUserResource($user->load('role'));
+    }
+
+    public function updateProfile(UpdateProfileRequest $request, Audit $audit): AuthUserResource
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $newName = trim((string) $request->validated('name'));
+        $oldName = $user->name;
+
+        if ($newName !== $oldName) {
+            $user->forceFill(['name' => $newName])->save();
+
+            $audit->record(
+                'auth.profile_updated',
+                'user',
+                (string) $user->id,
+                old: ['name' => $oldName],
+                new: ['name' => $newName],
+                userId: $user->id,
+            );
+        }
 
         return new AuthUserResource($user->load('role'));
     }

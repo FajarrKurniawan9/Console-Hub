@@ -46,6 +46,7 @@ const ADMIN: [string, RegExp][] = [
   ['/rbac', /Pengguna & izin/],
   ['/rbac?tab=peran', /Pengguna & izin/],
   ['/audit', /^Audit$/],
+  ['/profile', /^Profil$/],
   ['/barang', /^Barang$/],
   ['/produksi', /^Produksi$/],
   ['/personel', /^Personel$/],
@@ -53,6 +54,7 @@ const ADMIN: [string, RegExp][] = [
 ]
 const USER: [string, RegExp][] = [
   ['/', /Halo/],
+  ['/profile', /^Profil$/],
   ['/barang', /^Barang$/],
   ['/produksi', /^Produksi$/],
   ['/personel', /^Personel$/],
