@@ -98,6 +98,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'require'),
+            // PgBouncer transaction pooling aborts transactions on pdo_pgsql server-side DEALLOCATE.
+            'options' => extension_loaded('pdo_pgsql') ? [
+                PDO::ATTR_EMULATE_PREPARES => true,
+            ] : [],
         ],
 
         // Neon direct host (no -pooler): migrations, seeders and the queue worker.
