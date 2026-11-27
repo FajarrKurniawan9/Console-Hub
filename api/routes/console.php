@@ -7,3 +7,5 @@ Schedule::command('consoles:check')->everyMinute()->withoutOverlapping();
 Schedule::command('logs:prune')->daily();
 Schedule::command('reports:process')->everyMinute()->withoutOverlapping();
 Schedule::command('reports:prune')->daily();
+Schedule::command('imports:process')->everyMinute()->withoutOverlapping();
+Schedule::command('imports:prune')->daily();

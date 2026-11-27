@@ -318,3 +318,128 @@ export const reportExportListEnvelope = z.object({
   data: z.array(reportExport),
 })
 
+// ---- Multi-Entity Data Import ----
+
+export const IMPORT_ENTITY_TYPES = ['users', 'personel', 'produksi', 'barang'] as const
+export const importEntityType = z.enum(IMPORT_ENTITY_TYPES)
+export type ImportEntityType = z.infer<typeof importEntityType>
+
+export const IMPORT_MODES = ['create_only', 'upsert'] as const
+export const importMode = z.enum(IMPORT_MODES)
+export type ImportMode = z.infer<typeof importMode>
+
+export const IMPORT_STATUSES = [
+  'preview',
+  'queued',
+  'processing',
+  'completed',
+  'failed',
+  'cancelled',
+  'expired',
+] as const
+export const importStatus = z.enum(IMPORT_STATUSES)
+export type ImportStatus = z.infer<typeof importStatus>
+
+export const importFileFormat = z.enum(['csv', 'xlsx'])
+export type ImportFileFormat = z.infer<typeof importFileFormat>
+
+export const importPlanAction = z.enum(['create', 'update', 'skip', 'invalid'])
+export type ImportPlanAction = z.infer<typeof importPlanAction>
+
+export const importResultStatus = z.enum([
+  'created',
+  'updated',
+  'skipped',
+  'failed',
+  'conflict',
+  'invalid',
+  'pending',
+])
+export type ImportResultStatus = z.infer<typeof importResultStatus>
+
+export const importActiveLock = z.object({
+  id: z.number(),
+  type: importEntityType,
+  status: z.enum(['queued', 'processing']),
+  requester_name: z.string().nullable(),
+  processed_rows: z.number(),
+  total_rows: z.number(),
+  started_at: iso.nullable(),
+  is_mine: z.boolean(),
+})
+export type ImportActiveLock = z.infer<typeof importActiveLock>
+
+export const importDiffEntry = z.object({
+  old: z.unknown(),
+  new: z.unknown(),
+})
+export type ImportDiffEntry = z.infer<typeof importDiffEntry>
+
+export const importPlanRow = z.object({
+  row_number: z.number(),
+  action: importPlanAction,
+  target_id: z.string().nullable(),
+  values: z.record(z.string(), z.string()),
+  diff: z.record(z.string(), importDiffEntry).nullable(),
+  reason: z.string().nullable(),
+  errors: z.record(z.string(), z.string()),
+})
+export type ImportPlanRow = z.infer<typeof importPlanRow>
+
+export const importExecutionResult = z.object({
+  row_number: z.number(),
+  status: importResultStatus,
+  action: z.string(),
+  target_id: z.string().nullable(),
+  reason: z.string().nullable(),
+})
+export type ImportExecutionResult = z.infer<typeof importExecutionResult>
+
+export const dataImportSummary = z.object({
+  id: z.number(),
+  type: importEntityType,
+  mode: importMode,
+  status: importStatus,
+  original_filename: z.string(),
+  file_format: importFileFormat,
+  total_rows: z.number(),
+  valid_rows: z.number(),
+  create_count: z.number(),
+  update_count: z.number(),
+  skip_count: z.number(),
+  invalid_count: z.number(),
+  processed_rows: z.number(),
+  created_count: z.number(),
+  updated_count: z.number(),
+  skipped_count: z.number(),
+  failed_count: z.number(),
+  error_message: z.string().nullable(),
+  cancel_requested: z.boolean(),
+  validated_at: iso.nullable(),
+  started_at: iso.nullable(),
+  completed_at: iso.nullable(),
+  cancelled_at: iso.nullable(),
+  created_at: iso,
+})
+export type DataImportSummary = z.infer<typeof dataImportSummary>
+
+export const dataImportDetail = dataImportSummary.extend({
+  plan_rows: z.array(importPlanRow),
+  execution_results: z.array(importExecutionResult),
+})
+export type DataImportDetail = z.infer<typeof dataImportDetail>
+
+export const dataImportEnvelope = z.object({
+  data: dataImportDetail,
+})
+
+export const dataImportListMeta = z.object({
+  active_locks: z.record(importEntityType, importActiveLock.nullable()),
+})
+
+export const dataImportListEnvelope = z.object({
+  data: z.array(dataImportSummary),
+  meta: dataImportListMeta,
+})
+
+

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Admin\OverviewController;
 use App\Http\Controllers\Api\Admin\RbacController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DataImportController;
 use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\Api\RecordController;
 use App\Http\Controllers\Api\ReportExportController;
@@ -53,6 +54,20 @@ Route::prefix('v1')->group(function () {
                 Route::post('export', 'store');
                 Route::post('exports/{export}/cancel', 'cancel')->whereNumber('export');
                 Route::get('exports/{export}/download', 'download')->whereNumber('export');
+            });
+
+        Route::prefix('imports')
+            ->middleware('perm:admin.rbac.manage,barang.create,produksi.create,personel.create')
+            ->controller(DataImportController::class)
+            ->group(function () {
+                Route::get('templates/{type}', 'template');
+                Route::get('/', 'index');
+                Route::post('preview', 'preview');
+                Route::post('{import}/revalidate', 'revalidate')->whereNumber('import');
+                Route::post('{import}/commit', 'commit')->whereNumber('import');
+                Route::get('{import}', 'show')->whereNumber('import');
+                Route::post('{import}/cancel', 'cancel')->whereNumber('import');
+                Route::get('{import}/report', 'report')->whereNumber('import');
             });
 
         Route::prefix('admin')->group(function () {

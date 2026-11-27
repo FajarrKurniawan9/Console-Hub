@@ -76,3 +76,18 @@ Kept `consolehub_test` (renaming a database is the Cloud role's job).
 - `ReportExport` resource fields added for scheduling/cancellation: `status` adds `'scheduled'` and `'cancelled'` (synced in `web/src/lib/api/schemas.ts`), plus `schedule_type`, `cron_expression`, `timezone`, `scheduled_at`, `cancelled_at`, `parent_export_id`.
 - Background runtime commands: `php artisan queue:work --queue=exports,default` and `php artisan schedule:work` (schedules `reports:process` every minute and `reports:prune` daily; `reports:prune` never deletes `scheduled`, `pending`, or `processing` tickets).
 
+## Multi-Entity Data Import (added 2026-11-27)
+
+- All `/api/v1/imports*` endpoints require `auth:sanctum`, `active`, and `perm:admin.rbac.manage,barang.create,produksi.create,personel.create`, plus per-type/mode authorization (`users` -> `admin.rbac.manage`; `personel|produksi|barang` `create_only` -> `*.create`; `upsert` -> `*.create` AND `*.update`).
+- `GET /api/v1/imports/templates/{type}?format=csv|xlsx`: streams official CSV (UTF-8 BOM) or XLSX template with header + 1 sample row.
+- `GET /api/v1/imports?type={optional}`: returns `{ data: DataImportSummary[], meta: { active_locks: Record<'users'|'personel'|'produksi'|'barang', ImportActiveLock|null> } }` (own history max 30; active locks across users expose only minimal metadata `{ id, type, status, requester_name, processed_rows, total_rows, started_at, is_mine }`).
+- `POST /api/v1/imports/preview`: accepts multipart `type`, `mode`, `file` (CSV/XLSX, `<= 2 MB`, `1..300` data rows, strict header validation); returns `201 Created` `{ data: DataImportDetail }` (`status: 'preview'`). Empty optional cells keep existing values unchanged on `upsert` (`update`), and resolve to `null` / `0` / `'pcs'` on `create`.
+- `POST /api/v1/imports/{import}/revalidate`: owner-only; recalculates `plan_rows` from stored `source_rows` against fresh snapshots (`200 OK` `{ data: DataImportDetail }`).
+- `POST /api/v1/imports/{import}/commit`: owner-only; checks `invalid_count === 0` (`422`), stale preview (`409` `details.reason = 'STALE_PREVIEW'`), and per-resource partial unique index lock (`409` `details.reason = 'RESOURCE_LOCKED'`, `details.active_import`); audits `import.started`, dispatches `ProcessDataImportChunk` on queue `default`, and returns `202 Accepted` `{ data: DataImportDetail }`.
+- `GET /api/v1/imports/{import}`: owner-only detail & progress (`200 OK` `{ data: DataImportDetail }`).
+- `POST /api/v1/imports/{import}/cancel`: owner-only; immediately cancels `preview` / `queued` (purging unreserved jobs and auditing `import.cancelled`), and sets `cancel_requested_at` on `processing` (`cancel_requested: true`) so the worker stops cleanly before releasing the lock.
+- `GET /api/v1/imports/{import}/report?scope=all|errors`: owner-only CSV download (`text/csv; charset=UTF-8`, UTF-8 BOM + formula protection) covering preview errors and execution results (`404 NOT_FOUND` if expired/cleaned).
+- Scheduler commands in `routes/console.php`: `imports:process` (every minute, marks stuck > 10m as `failed` and sweeps orphaned `queued` jobs) and `imports:prune` (daily, expires `preview` > 24h, clears `source_rows`/`plan_rows` > 7d, prunes terminal imports > 14d).
+- Contract synced to `web/src/lib/api/schemas.ts` (`DataImportSummary`, `DataImportDetail`, `ImportActiveLock`).
+
+

@@ -68,6 +68,17 @@ class SourceClient
     }
 
     /**
+     * Execute a write call (POST, PATCH, DELETE) and return the raw ConsoleResponse or ConsoleException.
+     *
+     * @param  array<string, mixed>|null  $body
+     * @param  array<string, scalar>  $query
+     */
+    public function sendWrite(string $method, ?string $id, ?array $body = null, array $query = []): ConsoleResponse|ConsoleException
+    {
+        return $this->call($method, $this->path($id).($query === [] ? '' : '?'.http_build_query($query)), $body);
+    }
+
+    /**
      * POST, PATCH or DELETE. Source errors the user can act on come back as ApiException:
      * 404 NOT_FOUND, 409 VERSION_CONFLICT, 409 DUPLICATE (as CONFLICT), 422 VALIDATION_ERROR.
      *
@@ -77,7 +88,7 @@ class SourceClient
      */
     public function write(string $method, ?string $id, ?array $body = null, array $query = []): array
     {
-        $response = $this->call($method, $this->path($id).($query === [] ? '' : '?'.http_build_query($query)), $body);
+        $response = $this->sendWrite($method, $id, $body, $query);
 
         if ($response instanceof ConsoleException) {
             throw $response;
